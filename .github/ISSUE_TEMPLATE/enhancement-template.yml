@@ -1,0 +1,37 @@
+name: Enhancement Report
+title: "[Enhancement]: "
+labels: ["enhancement"]
+assignees:
+  - shawnrhoads
+description:
+  Use this template to request new content or features
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to fill out this enhancement report! Please describe the enhancement in simple words.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is the enhancement (e.g., descriptions, code, feature, design, etc.)? Please tell us what you see. What do you want to see?
+      placeholder: Tell us how to improve!
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Please select any relevant labels.
+      multiple: true
+      options:
+        - content
+        - data viz
+        - documentation
+        - jupyter book
+        - notebook code
+
+  - type: textarea
+    attributes:
+      label: Other information
+      description:
+        Anything else that might be helpful? E.g., related issues/enhancements, suggestions on how to improve, links/references with relevant examples

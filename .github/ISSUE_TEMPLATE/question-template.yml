@@ -1,0 +1,16 @@
+name: Question
+title: "[Question]: "
+labels: ["question"]
+assignees:
+  - shawnrhoads
+description:
+  Use this template to ask content related questions.
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Please describe your question and any relevant efforts made searching for your answer (e.g., Google search, relevant readings or resources listed at the beginning of each module)
+      placeholder: State your question here.
+    validations:
+      required: true
