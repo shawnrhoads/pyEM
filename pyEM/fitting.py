@@ -5,12 +5,16 @@ from scipy.stats import norm
 from joblib import Parallel, delayed
 from pyEM.math import compGauss_ms
 
-def minimize_negLL(objfunc, param_values, param_bounds, behavioral_data, **kwargs):
-    # vanilla MLE fit
-    # objective_func (function): function to be minimized, should output negative log likelihood
-    # param_values (list): initial parameter values
-    # param_bounds (list): bounds on parameters
-    # behavioral_data (list of lists): data to be fit
+def minimize_negLL(objfunc, behavioral_data, param_values, param_bounds):
+    '''
+    Vanilla MLE fit
+
+    Inputs:
+        - objfunc (function): function to be minimized, should output negative log likelihood
+        - behavioral_data (list of lists): data to be fit, each item in list is a list containing numpy arrays for model fitting
+        - param_values (list): parameter value guesses
+        - param_bounds (list): bounds on parameters
+    '''
 
     result = minimize(objfunc, 
                       param_values,
@@ -18,11 +22,24 @@ def minimize_negLL(objfunc, param_values, param_bounds, behavioral_data, **kwarg
                       bounds=(x for x in param_bounds))
     return result
 
-def expectation_step(objfunc, objfunc_input, prior, nparams, param_bounds, **kwargs):
-    # subject-wise model fit 
-    # objective_func (function): function to be minimized, should output negative log likelihood
-    # func_args (dict): arguments for objective_func
+def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
+    '''
+    Subject-wise model fit 
 
+    Inputs:
+        - objfunc (function): function to be minimized, should output negative log likelihood
+        - objfunc_input (list): arguments for objfunc
+        - prior (dict): prior mean and variance of parameters with logpdf function
+        - nparams (int): number of parameters
+    
+    Returns:
+        - q_est (np.array): estimated parameters
+        - hess_mat (np.array): inverse hessian matrix
+        - fval (float): negative posterior likelihood
+        - nl_prior (float): negative log prior
+    '''
+
+    # check for kwargs
     for key, value in kwargs.items():
         # Check if the key is a valid variable name
         if not key.isidentifier():
@@ -40,10 +57,8 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, param_bounds, **kwa
         q = 0.1 * np.random.randn(nparams)
 
         # Perform the optimization
-    # return [x for x in objfunc_input]+[prior]
         result = minimize(objfunc, x0=q, 
-                          args=tuple([x for x in objfunc_input]+[prior]), 
-                          bounds=param_bounds)
+                          args=tuple([x for x in objfunc_input]+[prior]))
         q_est = result.x
         fval  = result.fun
         ex    = result.status
@@ -55,17 +70,28 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, param_bounds, **kwa
     # Return fitted parameters and their hessians
     return q_est, result.hess_inv, fval, -prior['logpdf'](q_est)
 
-def EMfit(all_data, objfunc, param_bounds, **kwargs):
+def EMfit(all_data, objfunc, param_names, **kwargs):
     '''
-    all_data (dict): data to be fit, each key is a subject ID
-    objfunc (function): function to be minimized, should output negative log likelihood
-    param_bounds (list): bounds on parameters
-    '''
+    Expectation Maximization with MAP
+    Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), and Jo Cutler (2021)
+
+    Inputs:
+        - all_data (list of lists): data to be fit, each item in list is a list containing numpy arrays for model fitting
+        - objfunc (dict): function to be minimized, should output negative log likelihood; this carries to expectation_step
+        - param_names (list): parameters names as strings; e.g.: ['beta', 'lr']
     
+    Returns:
+        - m (np.array): estimated parameters
+        - inv_h (np.array): inverse hessian matrix
+        - posterior (dict): posterior mean and variance of parameters with logpdf function
+        - NPL (np.array): negative posterior likelihood
+        - NLPrior (np.array): negative log prior
+        - NLL (np.array): negative log likelihood
+    '''
     # Set the number of fitting iterations
     max_iterations = 800
     convCrit       = .001
-    nparams        = len(param_bounds)
+    nparams        = len(param_names)
     nsubjects      = len(all_data)
 
     # Initialize group-level parameter mean and variance
@@ -83,12 +109,12 @@ def EMfit(all_data, objfunc, param_bounds, **kwargs):
         locals()[key] = value
 
     # initialise transient variables:
-    nextbreak   = 0
-    NPL_old     = -np.inf
-    prior       = {}
-    NPL      = np.zeros((nsubjects,1)) #posterior ikelihood
-    NLL      = np.zeros((nsubjects,1)) #NLL estimate per iteration
-    NLPrior  = np.zeros((nsubjects,1)) #negative LogPrior estimate per iteration
+    nextbreak  = 0
+    NPL_old    = -np.inf
+    prior      = {}
+    NPL        = np.zeros((nsubjects,1)) #posterior ikelihood
+    NLL        = np.zeros((nsubjects,1)) #NLL estimate per iteration
+    NLPrior    = np.zeros((nsubjects,1)) #negative LogPrior estimate per iteration
 
     NPL_list = []
     for iiter in range(max_iterations):
@@ -97,7 +123,7 @@ def EMfit(all_data, objfunc, param_bounds, **kwargs):
         m = np.zeros((nparams,nsubjects))
 
         # individual-level parameter variance estimate
-        h = np.zeros((nparams, nparams,nsubjects))
+        inv_h = np.zeros((nparams, nparams,nsubjects))
 
         # Assume you have the 'posterior' dictionary with 'mu' and 'sigma' keys
         # Build prior gaussian pdfs to calculate P(h|O):
@@ -105,17 +131,17 @@ def EMfit(all_data, objfunc, param_bounds, **kwargs):
         prior['sigma'] = deepcopy(posterior['sigma'].copy())
         prior['logpdf'] = lambda x: np.sum(norm.logpdf(x, prior['mu'], 
                                                         np.sqrt(prior['sigma']))) #calculates separate normpdfs per parameter and sums their logs
-
-        ### EXPECTATION STEP
+        
+        # ------ EXPECTATION STEP -------------------------------------------------
         # Loop over subjects
-        results = Parallel(n_jobs=-1)(delayed(expectation_step)(objfunc, all_data[subj_idx], prior, nparams, param_bounds) for subj_idx in range(nsubjects))
+        results = Parallel(n_jobs=-1)(delayed(expectation_step)(objfunc, all_data[subj_idx], prior, nparams) for subj_idx in range(nsubjects))
 
         # Store the results
         this_NPL = np.zeros((nsubjects,1))
         this_NLPrior = np.zeros((nsubjects,1))
         for subj_idx, (q_est, hess_mat, fval, nl_prior) in enumerate(results):
             m[:,subj_idx]     = deepcopy(q_est)
-            h[:, :,subj_idx]  = deepcopy(hess_mat.todense())
+            inv_h[:, :,subj_idx]  = deepcopy(hess_mat)
             this_NPL[subj_idx]      = deepcopy(fval)
             this_NLPrior[subj_idx]  = deepcopy(nl_prior)
         
@@ -126,9 +152,9 @@ def EMfit(all_data, objfunc, param_bounds, **kwargs):
             NPL = np.hstack((NPL, this_NPL))
             NLPrior = np.hstack((NLPrior, this_NLPrior))
 
-        ### MAXIMIZATION STEP
+        # ------ MAXIMIZATION STEP -------------------------------------------------
         # compute gaussians and sigmas per parameter
-        curmu, cursigma, flagcov, _ = compGauss_ms(m,h)
+        curmu, cursigma, flagcov, _ = compGauss_ms(m,inv_h)
 
         if flagcov == 1:
             posterior['mu'] = deepcopy(curmu)
@@ -155,4 +181,4 @@ def EMfit(all_data, objfunc, param_bounds, **kwargs):
         if iiter == (max_iterations-1):
             print('-maximum number of iterations reached\n')
 
-    return m, h, posterior, NPL, NLPrior, NLL
+    return m, inv_h, posterior, NPL, NLPrior, NLL
