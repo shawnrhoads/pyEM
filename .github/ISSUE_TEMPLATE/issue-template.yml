@@ -1,0 +1,37 @@
+name: Issue Report
+title: "[Issue]: "
+labels: ["bug"]
+assignees:
+  - shawnrhoads
+description:
+  Use this template to report issues regarding design/function of code
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to fill out this issue report! Please describe the issue in simple words.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is the issue (e.g., typos, bugs, inaccurate descriptions, etc.)? Please tell us what you see. What did you expect?
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Please select any relevant labels.
+      multiple: true
+      options:
+        - content
+        - data viz
+        - documentation
+        - jupyter book
+        - notebook code
+
+  - type: textarea
+    attributes:
+      label: Other information
+      description:
+        Anything else that might be helpful? E.g., related issues, suggestions how to fix, links/references for further context
