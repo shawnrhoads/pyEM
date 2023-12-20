@@ -5,10 +5,11 @@ import pandas as pd
 
 def plot_choices(choices_A, filename=None):
     """
-    plots the subject average EV over trials
+    Plots the subject average EV over trials
 
-    Args:
-        `ev` is a np.array of shape (nsubjects, nblocks, ntrials+1, 2)
+    Inputs:
+        - choices_A (np.array): subject choices for option A
+        - filename (str): filename to save figure to (if None, figure is not saved)
     """
     nsubjects, nblocks, ntrials = choices_A.shape
     choices_B = np.ones_like(choices_A) - choices_A
@@ -35,11 +36,11 @@ def plot_scatter(x, xlabel, y, ylabel, filename=None):
     """
     Plots a scatterplot of x vs y with a Pearson correlation coefficient in the top left corner
 
-    Args:
-        `x` is a np.array 
-        `xlabel` is a string with the x-axis label
-        `y` is a np.array 
-        `ylabel` is a string with the y-axis label
+    Inputs:
+        - `x` (np.array): x-axis data
+        - `xlabel` (str): x-axis label
+        - `y` (np.array): y-axis data
+        - `ylabel` (str): y-axis label
     """
     df = pd.DataFrame({xlabel:x, ylabel:y})
 
@@ -47,8 +48,8 @@ def plot_scatter(x, xlabel, y, ylabel, filename=None):
     ax = sns.scatterplot(x=xlabel, 
                         y=ylabel,
                         s=75,            # set size of points to 50
-                        alpha=0.15,      # set opacity to 0.15
-                        color='purple',  # set color to purple
+                        alpha=0.25,      # set opacity to 0.15
+                        color='royalblue',  # set color
                         data=df)
 
     # Compute the correlation between Loneliness and Depression

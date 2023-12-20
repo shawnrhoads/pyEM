@@ -7,12 +7,12 @@ def softmax(EVs, beta):
     return np.exp(beta*EVs) / np.sum(np.exp(beta*EVs))
 
 def norm2beta(beta):
-    # return maxval / (1 + np.exp(-beta))
-    return np.exp(beta)
+    return 10 / (1 + np.exp(-beta))
+    # return np.exp(beta)
 
 def beta2norm(beta):
-    # return np.log(beta / (maxval - beta))
-    return np.log(beta)
+    return np.log(beta / (10 - beta))
+    # return np.log(beta)
 
 def norm2alpha(alpha_norm):
     return expit(alpha_norm)
@@ -21,7 +21,22 @@ def alpha2norm(alpha):
     return -np.log(1.0/alpha - 1.0)
 
 def compGauss_ms(m, h, vargin=None):
-    # compute group-level gaussian from fminunc computed parameters and their covariances
+    '''
+    Computes group-level gaussian from computed parameters and their covariances
+    Edited from Marco Wittmann (2017)
+
+    Inputs:
+        - m (np.array):  fitted parameters (npar x nsub matrix)
+        - h (np.array):  individual-level inverse hessians (npar x npar x nsub)
+        - vargin (int): if set to 2, computes covariance matrix in addition
+    
+    Outputs:
+        - mu (np.array): group mu
+        - sigma (np.array): group sigma
+        - flagsigma (int): flag indicating whether model variance was calculated successfully
+        - covmat (np.array): full covariance matrix; is [] if no vargin specified
+    '''
+    # 
     # MKW, 2017
     #
     # INPUT:    - m:  fitted parameters (npar x nsub matrix)
