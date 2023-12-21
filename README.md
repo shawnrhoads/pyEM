@@ -9,7 +9,7 @@
 <b>If you use these materials for teaching or research, please use the following citation:</b>
 > Rhoads, S. A. (2023). pyEM: Expectation Maximization with MAP estimation in Python. Zenodo. <a href="https://doi.org/10.5281/zenodo.10415396">https://doi.org/10.5281/zenodo.10415396</a>
 
-This is a Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation. [See below](#key-concepts) for more information on the algorithm.
+This is a Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation for fitting models to behavioral data. [See below](#key-concepts) for more information on the algorithm.
 
 ## Relevant Modules
 * `pyEM.fitting`: contains the main function (`EMfit`) for fitting models
