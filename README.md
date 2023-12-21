@@ -94,3 +94,10 @@ We are effectively combining the likelihood and the prior in a way that biases t
 
 See also:
 <blockquote>Daw, N. D. (2011). Trial-by-trial data analysis using computational models. Decision making, affect, and learning: Attention and performance XXIII, 23(1). https://doi.org/10.1093/acprof:oso/9780199600434.003.0001 [<a href="https://www.princeton.edu/~ndaw/d10.pdf">pdf</a>]</blockquote>
+
+<blockquote>Huys, Q. J., Cools, R., Gölzer, M., Friedel, E., Heinz, A., Dolan, R. J., & Dayan, P. (2011). Disentangling the roles of approach, activation and valence in instrumental and pavlovian responding. PLoS computational biology, 7(4), e1002028. https://doi.org/10.1371/journal.pcbi.1002028 </blockquote>
+
+**For MATLAB flavors of this algorithm:**
+- https://github.com/sjgershm/mfit
+- https://github.com/mpc-ucl/emfit
+- https://osf.io/s7z6j
