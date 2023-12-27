@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np, pandas as pd
 from scipy.optimize import minimize
 from copy import deepcopy
 from scipy.stats import norm
@@ -57,8 +57,12 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
         q = 0.1 * np.random.randn(nparams)
 
         # Perform the optimization
-        result = minimize(objfunc, x0=q, 
-                          args=tuple([x for x in objfunc_input]+[prior]))
+        if type(objfunc_input) == pd.core.frame.DataFrame:
+            result = minimize(objfunc, x0=q,
+                            args=tuple([objfunc_input]+[prior]))
+        else:
+            result = minimize(objfunc, x0=q, 
+                            args=tuple([x for x in objfunc_input]+[prior]))
         q_est = result.x
         fval  = result.fun
         ex    = result.status
@@ -70,7 +74,7 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
     # Return fitted parameters and their hessians
     return q_est, result.hess_inv, fval, -prior['logpdf'](q_est)
 
-def EMfit(all_data, objfunc, param_names, **kwargs):
+def EMfit_old(all_data, objfunc, param_names, **kwargs):
     '''
     Expectation Maximization with MAP
     Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), and Jo Cutler (2021)
@@ -183,7 +187,7 @@ def EMfit(all_data, objfunc, param_names, **kwargs):
 
     return m, inv_h, posterior, NPL, NLPrior, NLL
 
-def EMfit2(all_data, objfunc, param_names, convergence_type='NPL', **kwargs):
+def EMfit(all_data, objfunc, param_names, convergence_type='NPL', **kwargs):
     '''
     Expectation Maximization with MAP
     Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), and Jo Cutler (2021)
@@ -192,6 +196,7 @@ def EMfit2(all_data, objfunc, param_names, convergence_type='NPL', **kwargs):
         - all_data (list of lists): data to be fit, each item in list is a list containing numpy arrays for model fitting
         - objfunc (dict): function to be minimized, should output negative log likelihood; this carries to expectation_step
         - param_names (list): parameters names as strings; e.g.: ['beta', 'lr']
+        - convergence_type (str): 'NPL' or 'LME'
     
     Returns:
         - m (np.array): estimated parameters
@@ -263,6 +268,7 @@ def EMfit2(all_data, objfunc, param_names, convergence_type='NPL', **kwargs):
             NPL = deepcopy(this_NPL)
             NLPrior = deepcopy(this_NLPrior)
             LME = deepcopy(this_LME)
+            goodHessian    = np.zeros((nsubjects,))
         else:
             NPL = np.hstack((NPL, this_NPL))
             NLPrior = np.hstack((NLPrior, this_NLPrior))
