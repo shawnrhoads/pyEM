@@ -46,12 +46,12 @@ To install the package, you can use `pip install` in a new Anaconda environment 
 ```
 conda create --name emfit pip python=3.7.10
 conda activate emfit
-pip install git+https://github.com/shawnrhoads/pyEM.git
+python -m pip install git+https://github.com/shawnrhoads/pyEM.git
 ```
 
 To update the package, you can use pip:
 ```
-pip install --upgrade git+https://github.com/shawnrhoads/pyEM.git
+python -m pip install --upgrade git+https://github.com/shawnrhoads/pyEM.git
 ```
 
 ## Examples
