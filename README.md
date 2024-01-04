@@ -44,7 +44,7 @@ sys
 ## Installation
 To install the package, you can use `pip install` in a new Anaconda environment (recommended), but you can also just `pip install` it into your current environment:
 ```
-conda create --name emfit pip requests python=3.7.10
+conda create --name emfit pip python=3.7.10
 conda activate emfit
 pip install git+https://github.com/shawnrhoads/pyEM.git
 ```
