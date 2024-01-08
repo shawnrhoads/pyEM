@@ -21,6 +21,54 @@ Users should create new functions based on their modeling needs:
 1. Simulation function to simulate behavior (see `examples.rw_models.simulate`)
 2. Fit function to fit the model to the behavior (see `examples.rw_models.fit`)
 
+You will use `EMfit()` to fit the model to the data. This function takes the following inputs:
+- all behavioral data: a list of lists (level 1: subject, level 2: relevant `np.array` containing behavior for each subject) or a list of pd.DataFrames (level 1: subject, level 2: relevant `pd.DataFrame` containing behavior for each subject)
+- objective function (e.g., `examples.rw_models.fit`): a function that takes level 2 inputs from above: (e.g., single `np.array` or `pd.DataFrame` for a single subject) and outputs the negative posterior likelihood based on likelihood and prior probabilities (see explanation of implementation below)
+- parameter names: a list of parameter names in the correct order (e.g., `['alpha', 'beta']`)
+
+### Setting Up Your Objective Function
+Your objective function `fit()` function is that main implementation of your custom model. It should take the following inputs:
+- `params` (list): list of parameter estimates
+- `behavioral_data`: this can be a `np.array` or `pd.DataFrame` (choose whichever is more convenient for your model)
+- `prior=None`: this is for the EM algorithm, and should have a default value as `None` (see below for more information)
+- `output='npl'` (str): this is also for the EM algorithm, and should have a default value as `'npl'` (see below for more information)
+
+You can also add additional inputs as needed.
+
+At the top of your function, please include code to convert relevant parameters from Gaussian space to parameter space (see Daw et al., 2011 below). For example, if you have a parameter `lr` that is bounded between 0 and 1, you can convert it from Gaussian space to parameter space using the following code (you can add custom functions if needed):
+```python
+lr = norm2alpha(params[0])
+```
+
+After your transformation, please also ensure that your parameters are in the correct range. For example, if you have parameters `lr` (bounded between 0 and 1) and `inv_tmp` (bounded between 0.00001 and 10), you can add the following code to ensure that the parameter is in the correct range. Here, we are returning a very large number if the parameter is out of range, which will effectively prevent the algorithm from using that parameter value:
+```python
+this_alpha_bounds = [0, 1]
+if lr < min(this_alpha_bounds) or lr > max(this_alpha_bounds):
+    return 10000000
+
+this_beta_bounds = [0.00001, 10]
+if inv_tmp < min(this_beta_bounds) or inv_tmp > max(this_beta_bounds):
+    return 10000000
+```
+
+At the bottom of your function, please return the negative posterior likelihood. This is the negative log-likelihood (e.g., from your choice likelihoods) multiplied by the prior probability. You can use the following code to return the negative posterior likelihood:
+```python
+# you can compute your negative log likelihood first (this might change depending on your model)
+# here, we are assuming you have a list or np.array of choice likelihoods
+negll = -np.log(np.nansum(choice_likelihoods))
+
+# then compute the negative posterior likelihood
+# you can copy and paste the following code (assuming that your negative log likelihood is `negll`)
+if output == 'npl':
+    if prior is not None: # EM-fit: P(Choices | h) * P(h | O)
+        fval = -(-negll + prior['logpdf'](params))       
+        if np.isinf(fval):
+            fval = 10000000
+        return fval
+    else: # NLL fit 
+        return negll
+```
+
 ## Requirements
 This algorithm requires Python 3.7.10 with the following packages:
 ```
