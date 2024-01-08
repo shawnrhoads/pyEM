@@ -55,7 +55,7 @@ At the bottom of your function, please return the negative posterior likelihood.
 ```python
 # you can compute your negative log likelihood first (this might change depending on your model)
 # here, we are assuming you have a list or np.array of choice likelihoods
-negll = -np.log(np.nansum(choice_likelihoods))
+negll = -np.nansum(np.log(choice_likelihoods))
 
 # then compute the negative posterior likelihood
 # you can copy and paste the following code (assuming that your negative log likelihood is `negll`)
