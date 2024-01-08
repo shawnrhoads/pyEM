@@ -74,7 +74,7 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
     # Return fitted parameters and their hessians
     return q_est, result.hess_inv, fval, -prior['logpdf'](q_est)
 
-def EMfit(all_data, objfunc, param_names, convergence_type='NPL', **kwargs):
+def EMfit(all_data, objfunc, param_names, convergence_type='NPL', verbose=True, **kwargs):
     '''
     Expectation Maximization with MAP
     Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), and Jo Cutler (2021)
@@ -179,7 +179,8 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', **kwargs):
         if convergence_type == 'NPL':
             NPL_list += [sum(NPL[:,iiter])]
             if sum(NPL[:,iiter]) <= min(NPL_list):
-                print(f'{sum(NPL[:,iiter]):.3f} ({iiter:03d})', end=', ')
+                if verbose:
+                    print(f'{sum(NPL[:,iiter]):.3f} ({iiter:03d})', end=', ')
             
             if abs(sum(NPL[:,iiter]) - NPL_old) < convCrit and flagcov == 1:
                 print(' -- converged!!!!! ')
@@ -210,11 +211,12 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', **kwargs):
             LME_list += [LME[iiter]]
 
             if sum(NPL[:,iiter]) <= min(NPL_list):
-                print(f'{LME[iiter]:.3f} ({iiter:03d})', end=', ')
+                if verbose:
+                    print(f'{LME[iiter]:.3f} ({iiter:03d})', end=', ')
             
             if iiter > 2:
                 if abs(LME[iiter] - LME[iiter-1]) < convCrit and flagcov == 1:
-                    print(' -- converged!!!!! ')
+                    print(' -- CONVERGED!!!!! ')
                     nextbreak = 1
 
         if nextbreak == 1:
