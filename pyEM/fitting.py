@@ -183,7 +183,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', verbose=True, 
                     print(f'{sum(NPL[:,iiter]):.3f} ({iiter:03d})', end=', ')
             
             if abs(sum(NPL[:,iiter]) - NPL_old) < convCrit and flagcov == 1:
-                print(' -- converged!!!!! ')
+                print(' -- CONVERGED!!!!!')
                 nextbreak = 1
             NPL_old = sum(NPL[:,iiter])
 
@@ -197,33 +197,31 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', verbose=True, 
                     Laplace_approx = -NPL[:,iiter] - 0.5 * np.log(1 / det_inv_hessian) + (nparams / 2) * np.log(2 * np.pi)
                     goodHessian[subj_idx] = 1
                 except:
-                    print('Hessian is not positive definite')
                     try:
                         hHere = np.linalg.slogdet(inv_h[:,:,subj_idx])[1]
                         Laplace_approx = np.nan
                         goodHessian[subj_idx] = 0
                     except:
-                        print('could not calculate')
                         goodHessian[subj_idx] = -1
                         Laplace_approx = np.nan
             Laplace_approx[np.isnan(Laplace_approx)] = np.nanmean(Laplace_approx)
             LME[iiter] = np.sum(Laplace_approx) - nparams*np.log(nsubjects)
             LME_list += [LME[iiter]]
 
-            if sum(NPL[:,iiter]) <= min(NPL_list):
+            if sum(LME[:,iiter]) <= min(LME_list):
                 if verbose:
                     print(f'{LME[iiter]:.3f} ({iiter:03d})', end=', ')
             
             if iiter > 2:
                 if abs(LME[iiter] - LME[iiter-1]) < convCrit and flagcov == 1:
-                    print(' -- CONVERGED!!!!! ')
+                    print(' -- CONVERGED!!!!!')
                     nextbreak = 1
 
         if nextbreak == 1:
             break 
 
         if iiter == (max_iterations-1):
-            print('-maximum number of iterations reached\n')
+            print('-MAXIMUM NUMBER OF ITERATIONS REACHED\n')
 
     if convergence_type == 'NPL':
         return m, inv_h, posterior, NPL, NLPrior, NLL
