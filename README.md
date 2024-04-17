@@ -27,6 +27,8 @@ You will use `EMfit()` to fit the model to the data. This function takes the fol
 - parameter names: a list of parameter names in the correct order (e.g., `['alpha', 'beta']`)
 
 ### Setting Up Your Objective Function
+An example `fit()` function is provided in [`examples.template_model.fit`](examples/template_model.py). You can copy this file and modify it to fit your model.
+
 Your objective function `fit()` function is that main implementation of your custom model. It should take the following inputs:
 - `params` (list): list of parameter estimates
 - `behavioral_data`: this can be a `np.array` or `pd.DataFrame` (choose whichever is more convenient for your model)
@@ -58,7 +60,9 @@ At the bottom of your function, please return the negative posterior likelihood.
 negll = -np.nansum(np.log(choice_likelihoods))
 
 # then compute the negative posterior likelihood
-# you can copy and paste the following code (assuming that your negative log likelihood is `negll`)
+# you can use the provided function `math.calc_fval` to compute the negative posterior likelihood
+# e.g.: `fval = calc_fval(choice_nll, prior, params, output)`
+# ...or you can copy and paste or modify the following code (assuming that your negative log likelihood is `negll`)
 if output == 'npl':
     if prior is not None: # EM-fit: P(Choices | h) * P(h | O)
         fval = -(-negll + prior['logpdf'](params))       
@@ -139,6 +143,10 @@ We are effectively combining the likelihood and the prior in a way that biases t
 
 **Code originally adapted for Python from:**
 <blockquote>Wittmann, M. K., Fouragnan, E., Folloni, D., Klein-Flügge, M. C., Chau, B. K., Khamassi, M., & Rushworth, M. F. (2020). Global reward state affects learning and activity in raphe nucleus and anterior insula in monkeys. Nature Communications, 11(1), 3771. https://doi.org/10.1038/s41467-020-17343-w</blockquote>
+
+<blockquote>Cutler, J., Wittmann, M. K., Abdurahman, A., Hargitai, L. D., Drew, D., Husain, M., & Lockwood, P. L. (2021). Ageing is associated with disrupted reinforcement learning whilst learning to help others is preserved. Nature Communications, 12(1), 4440. https://doi.org/10.1038/s41467-021-24576-w</blockquote>
+
+<blockquote>Rhoads, S. A., Gan, L., Berluti, K., OConnell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2023). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. PsyArXiv. https://doi.org/10.31234/osf.io/rf4x9</blockquote>
 
 See also:
 <blockquote>Daw, N. D. (2011). Trial-by-trial data analysis using computational models. Decision making, affect, and learning: Attention and performance XXIII, 23(1). https://doi.org/10.1093/acprof:oso/9780199600434.003.0001 [<a href="https://www.princeton.edu/~ndaw/d10.pdf">pdf</a>]</blockquote>

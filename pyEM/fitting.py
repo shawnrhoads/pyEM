@@ -77,7 +77,7 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
 def EMfit(all_data, objfunc, param_names, convergence_type='NPL', verbose=True, **kwargs):
     '''
     Expectation Maximization with MAP
-    Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), and Jo Cutler (2021)
+    Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), Jo Cutler (2021), & Shawn Rhoads (2024)
 
     Inputs:
         - all_data (list of lists) or (lists of pandas DataFrames): data to be fit, each item in list is either (A) a list containing numpy arrays or (B) a pandas DataFrame, each containing data for model fitting

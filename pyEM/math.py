@@ -20,6 +20,17 @@ def norm2alpha(alpha_norm):
 def alpha2norm(alpha):
     return -np.log(1.0/alpha - 1.0)
 
+def calc_fval(negll, prior, params, output='npl'):
+    if output == 'npl':
+        if prior is not None:
+            # P(Choices | h) * P(h | O) should be maximized, therefore same as minimizing it with negative sign
+            fval = -(-negll + prior['logpdf'](params))            
+            if np.isinf(fval):
+                fval = 10000000
+            return fval
+        else: # NLL fit 
+            return negll
+        
 def compGauss_ms(m, h, vargin=None):
     '''
     Computes group-level gaussian from computed parameters and their covariances
