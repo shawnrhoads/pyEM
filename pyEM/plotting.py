@@ -32,7 +32,7 @@ def plot_choices(choices_A, filename=None):
 
     plt.show()
 
-def plot_scatter(x, xlabel, y, ylabel, filename=None):
+def plot_scatter(x, xlabel, y, ylabel, filename=None, colorname='royalblue'):
     """
     Plots a scatterplot of x vs y with a Pearson correlation coefficient in the top left corner
 
@@ -44,12 +44,12 @@ def plot_scatter(x, xlabel, y, ylabel, filename=None):
     """
     df = pd.DataFrame({xlabel:x, ylabel:y})
 
-    # Plot a pointplot of Mean Loneliness as a function of Depression
+    # Plot a scatterplot
     ax = sns.scatterplot(x=xlabel, 
                         y=ylabel,
                         s=75,            # set size of points to 50
                         alpha=0.25,      # set opacity to 0.15
-                        color='royalblue',  # set color
+                        color=colorname,  # set color
                         data=df)
 
     # Compute the correlation between Loneliness and Depression
@@ -59,12 +59,12 @@ def plot_scatter(x, xlabel, y, ylabel, filename=None):
     ax.annotate(f'Pearson r = {corr:.2f}', xy=(0.05, 0.95), xycoords='axes fraction', fontsize=12)
 
     # Set the axis ranges
-    if 'beta' in xlabel:
-        ax.set_xlim([0, 10.05])
-        ax.set_ylim([0, 10.05])
-    elif 'lr' in xlabel:
-        ax.set_xlim([-.02, 1.02])
-        ax.set_ylim([-.02, 1.02])
+    # if 'beta' in xlabel:
+    #     ax.set_xlim([0, 10.05])
+    #     ax.set_ylim([0, 10.05])
+    # elif 'lr' in xlabel:
+    #     ax.set_xlim([-.02, 1.02])
+    #     ax.set_ylim([-.02, 1.02])
 
     # we can also tidy up some more by removing the top and right spines
     sns.despine()
