@@ -74,7 +74,25 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
     # Return fitted parameters and their hessians
     return q_est, result.hess_inv, fval, -prior['logpdf'](q_est)
 
-def EMfit(all_data, objfunc, param_names, convergence_type='NPL', verbose=True, **kwargs):
+def hierachical_convergence(criterion_list, method='sum'):
+    '''
+    Convergence criterion for hierarchical fitting
+
+    Inputs:
+        - criterion_list (list): list of fit criterion (e.g., negative posterior likelihoods)
+        - method (str): 'sum' or 'mean'
+    
+    Returns:
+        - True if converged, False otherwise
+    '''
+    if method == 'sum':
+        return np.sum(criterion_list)
+    elif method == 'mean':
+        return np.mean(criterion_list)
+    elif method == 'median':
+        return np.median(criterion_list)
+
+def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_method='sum', verbose=True, **kwargs):
     '''
     Expectation Maximization with MAP
     Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), Jo Cutler (2021), & Shawn Rhoads (2024)
@@ -171,21 +189,21 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', verbose=True, 
             posterior['mu'] = deepcopy(curmu)
             posterior['sigma'] = deepcopy(cursigma)
 
-        if sum(NPL[:,iiter]) == 10000000 * nsubjects:
+        if hierachical_convergence(NPL[:,iiter], convergence_method) == 10000000 * nsubjects:
             flagcov = 0
             print('-[badfit]-')
 
         # check whether fit has converged
         if convergence_type == 'NPL':
-            NPL_list += [sum(NPL[:,iiter])]
-            if sum(NPL[:,iiter]) <= min(NPL_list):
+            NPL_list += [hierachical_convergence(NPL[:,iiter], convergence_method)]
+            if hierachical_convergence(NPL[:,iiter], convergence_method) <= min(NPL_list):
                 if verbose:
-                    print(f'{sum(NPL[:,iiter]):.3f} ({iiter:03d})', end=', ')
+                    print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
             
-            if abs(sum(NPL[:,iiter]) - NPL_old) < convCrit and flagcov == 1:
+            if abs(hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old) < convCrit and flagcov == 1:
                 print(' -- CONVERGED!!!!!')
                 nextbreak = 1
-            NPL_old = sum(NPL[:,iiter])
+            NPL_old = hierachical_convergence(NPL[:,iiter], convergence_method)
 
         elif convergence_type == 'LME':
             goodHessian    = np.zeros((nsubjects,))
