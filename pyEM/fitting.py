@@ -92,7 +92,7 @@ def hierachical_convergence(criterion_list, method='sum'):
     elif method == 'median':
         return np.median(criterion_list)
 
-def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_method='sum', verbose=True, **kwargs):
+def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_method='sum', verbose=1, max_iterations=800, **kwargs):
     '''
     Expectation Maximization with MAP
     Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), Jo Cutler (2021), & Shawn Rhoads (2024)
@@ -114,7 +114,6 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         - goodHessian (np.array): which hessians are positive definite [only for convergence_type='LME']
     '''
     # Set the number of fitting iterations
-    max_iterations = 800
     convCrit       = .001
     nparams        = len(param_names)
     nsubjects      = len(all_data)
@@ -148,7 +147,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         m = np.zeros((nparams,nsubjects))
 
         # individual-level parameter variance estimate
-        inv_h = np.zeros((nparams, nparams,nsubjects))
+        inv_h = np.zeros((nparams, nparams, nsubjects))
 
         # Assume you have the 'posterior' dictionary with 'mu' and 'sigma' keys
         # Build prior gaussian pdfs to calculate P(h|O):
@@ -196,9 +195,11 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         # check whether fit has converged
         if convergence_type == 'NPL':
             NPL_list += [hierachical_convergence(NPL[:,iiter], convergence_method)]
-            if hierachical_convergence(NPL[:,iiter], convergence_method) <= min(NPL_list):
-                if verbose:
+            if verbose == 1:
+                if hierachical_convergence(NPL[:,iiter], convergence_method) <= min(NPL_list):
                     print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
+            elif verbose == 2:
+                print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
             
             if abs(hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old) < convCrit and flagcov == 1:
                 print(' -- CONVERGED!!!!!')
