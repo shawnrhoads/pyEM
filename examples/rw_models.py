@@ -194,3 +194,104 @@ def fit(params, choices, rewards, prior=None, output='npl'):
                      'negll'      : negll,
                      'BIC'        : nparams * np.log(ntrials*nblocks) + 2*negll}
         return subj_dict
+
+def fit_slot(params, choices, rewards, prior=None, output='npl'):
+    ''' 
+    Fit the basic RW model to a single subject's data.
+        choices is a np.array with 1 or 0 for each trial choosing the optimal slot
+        rewards is a np.array with 1 (reward) or 0 (no) for each trial [seperate this by block!]
+        output is a string that specifies what to return (either 'nll' or 'all')
+    '''
+    nparams = len(params)
+    lr_rew = norm2alpha(params[0])
+    lr_pun = norm2alpha(params[1])
+    beta = norm2beta(params[3])
+    # lr   = norm2alpha(params[1])
+
+    # make sure params are in range
+    this_alpha_bounds = [0, 1]
+    if lr_rew < min(this_alpha_bounds) or lr_rew > max(this_alpha_bounds):
+        # print(f'lr = {i_alpha:.3f} not in range')
+        return 10000000
+    this_alpha_bounds = [0, 1]
+    if lr_pun < min(this_alpha_bounds) or lr_pun > max(this_alpha_bounds):
+        # print(f'lr = {i_alpha:.3f} not in range')
+        return 10000000
+    this_beta_bounds = [0.00001, 10]
+    if beta < min(this_beta_bounds) or beta > max(this_beta_bounds):
+        # print(f'beta = {beta:.3f} not in range')
+        return 10000000
+
+    nblocks, ntrials = rewards.shape #what is this block doing, or where is block information? 
+    # should be 3 blocks, 35 trials
+
+    ev          = np.zeros((nblocks, ntrials+1, 2))
+    ch_prob     = np.zeros((nblocks, ntrials,   2))
+    choices_A   = np.zeros((nblocks, ntrials,))
+    pe          = np.zeros((nblocks, ntrials,))
+    choice_nll  = 0
+
+    for b in range(nblocks): #if nblocks==1, use reversals
+        for t in range(ntrials):
+            if t == 0:
+                ev[b, t,:]    = [.5, .5]
+
+            # get choice index
+            if choices[b, t] == 1: #edited, double check
+                c = 1
+                choices_A[b, t] = 1
+            else:
+                c = 0
+                choices_A[b, t] = 0
+
+            # calculate choice probability
+            ch_prob[b, t,:] = softmax(ev[b, t, :], beta)
+            
+            # calculate PE
+            pe[b, t] = rewards[b, t] - ev[b, t, c]
+
+            # update EV (modified for outcome trial type double check)
+            if rewards[b, t] == 1: #if rewarded trial
+                lr_pun = 0
+                ev[b, t+1, :] = ev[b, t, :].copy()
+                ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t]) + (lr_pun * pe[b, t])
+            else: #if not rewarded
+                lr_rew = 0
+                ev[b, t+1, :] = ev[b, t, :].copy()
+                ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t]) + (lr_pun * pe[b, t])
+            # add to sum of choice nll for the block
+            choice_nll += -np.log(ch_prob[b, t, c])
+        
+    # get the total negative log likelihood
+    negll = choice_nll
+    
+    if output == 'npl':
+        if prior is not None:  # EM-fit: P(Choices | h) * P(h | O) should be maximised, therefore same as minimizing it with negative sign
+            fval = -(-negll + prior['logpdf'](params))
+
+            if any(prior['sigma'] == 0):
+                this_mu = prior['mu']
+                this_sigma = prior['sigma']
+                this_logprior = prior['logpdf'](params)
+                print(f'mu: {this_mu}')
+                print(f'sigma: {this_sigma}')
+                print(f'logpdf: {this_logprior}')
+                print(f'fval: {fval}')
+            
+            if np.isinf(fval):
+                fval = 10000000
+            return fval
+        else: # NLL fit 
+            return negll
+        
+    elif output == 'all':
+        subj_dict = {'params'     : [beta, lr],
+                     'ev'         : ev, 
+                     'ch_prob'    : ch_prob, 
+                     'choices'    : choices, 
+                     'choices_optimal'  : choices_A, 
+                     'rewards'    : rewards, 
+                     'pe'         : pe, 
+                     'negll'      : negll,
+                     'BIC'        : nparams * np.log(ntrials*nblocks) + 2*negll}
+        return subj_dict
