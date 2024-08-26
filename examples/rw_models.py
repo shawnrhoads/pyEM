@@ -205,7 +205,7 @@ def fit_slot(params, choices, rewards, prior=None, output='npl'):
     nparams = len(params)
     lr_rew = norm2alpha(params[0])
     lr_pun = norm2alpha(params[1])
-    beta = norm2beta(params[3])
+    beta = norm2beta(params[2])
     # lr   = norm2alpha(params[1])
 
     # make sure params are in range
@@ -227,22 +227,26 @@ def fit_slot(params, choices, rewards, prior=None, output='npl'):
 
     ev          = np.zeros((nblocks, ntrials+1, 2))
     ch_prob     = np.zeros((nblocks, ntrials,   2))
-    choices_A   = np.zeros((nblocks, ntrials,))
+    choices_L   = np.zeros((nblocks, ntrials,))
     pe          = np.zeros((nblocks, ntrials,))
     choice_nll  = 0
 
     for b in range(nblocks): #if nblocks==1, use reversals
         for t in range(ntrials):
             if t == 0:
-                ev[b, t,:]    = [.5, .5]
+                ev[b, t,:] = [0, 0] # for this 3 block design task, initiate to 0
 
             # get choice index
-            if choices[b, t] == 1: #edited, double check
+            if choices[b, t] == 1: 
                 c = 1
-                choices_A[b, t] = 1
+                choices_L[b, t] = 1 # choose the left slot machine (participant choice)
+                # actual slot machine choice double check  (use the action variable, the choice participant make)
+                # choice encoding is consistent with block and reversal. 
+                # confirm action column: if it always just encode the choice they make
+                
             else:
                 c = 0
-                choices_A[b, t] = 0
+                choices_L[b, t] = 0 # choose the right slot machine (participant choice)
 
             # calculate choice probability
             ch_prob[b, t,:] = softmax(ev[b, t, :], beta)
@@ -250,15 +254,14 @@ def fit_slot(params, choices, rewards, prior=None, output='npl'):
             # calculate PE
             pe[b, t] = rewards[b, t] - ev[b, t, c]
 
-            # update EV (modified for outcome trial type double check)
+            # update EV using outcome-based RL model (see reference)
+            # don't hardcode your parameter
             if rewards[b, t] == 1: #if rewarded trial
-                lr_pun = 0
                 ev[b, t+1, :] = ev[b, t, :].copy()
-                ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t]) + (lr_pun * pe[b, t])
+                ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t])
             else: #if not rewarded
-                lr_rew = 0
                 ev[b, t+1, :] = ev[b, t, :].copy()
-                ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t]) + (lr_pun * pe[b, t])
+                ev[b, t+1, c] = ev[b, t, c] + (lr_pun * pe[b, t])
             # add to sum of choice nll for the block
             choice_nll += -np.log(ch_prob[b, t, c])
         
@@ -285,11 +288,11 @@ def fit_slot(params, choices, rewards, prior=None, output='npl'):
             return negll
         
     elif output == 'all':
-        subj_dict = {'params'     : [beta, lr],
+        subj_dict = {'params'     : [lr_rew, lr_pun, beta],
                      'ev'         : ev, 
                      'ch_prob'    : ch_prob, 
                      'choices'    : choices, 
-                     'choices_optimal'  : choices_A, 
+                     'choices_A'  : choices_L, #double check here
                      'rewards'    : rewards, 
                      'pe'         : pe, 
                      'negll'      : negll,
