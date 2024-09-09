@@ -207,7 +207,6 @@ def fit_slot_outcome(params, choices, outcomes, blocks, prior=None, output='npl'
     lr_rew = norm2alpha(params[0])
     lr_pun = norm2alpha(params[1])
     beta = norm2beta(params[2])
-    # lr   = norm2alpha(params[1])
 
     # make sure params are in range
     this_alpha_bounds = [0, 1]
@@ -253,7 +252,7 @@ def fit_slot_outcome(params, choices, outcomes, blocks, prior=None, output='npl'
             # calculate PE
             pe[b, t] = outcomes[b, t] - ev[b, t, c]
 
-            # update EV using outcome-based RL model (see reference) double check
+            # update EV using outcome-based RL model (see reference)
             # don't hardcode your parameter
             if outcomes[b, t] == 1:                             #if rewarded trial
                 ev[b, t+1, :] = ev[b, t, :].copy()
@@ -267,9 +266,6 @@ def fit_slot_outcome(params, choices, outcomes, blocks, prior=None, output='npl'
             elif outcomes[b, t] == 0 and blocks[b, t] == 'numberbar_pos':  
                 ev[b, t+1, :] = ev[b, t, :].copy()
                 ev[b, t+1, c] = ev[b, t, c] + (lr_pun * pe[b, t])
-            # else:                                               #if nothing DOUBLE CHECK what the update rule is like!
-            #     ev[b, t+1, :] = ev[b, t, :].copy()
-            #     ev[b, t+1, c] = ev[b, t, c]
             
             # add to sum of choice nll for the block
             choice_nll += -np.log(ch_prob[b, t, c])
@@ -301,7 +297,7 @@ def fit_slot_outcome(params, choices, outcomes, blocks, prior=None, output='npl'
                      'ev'         : ev, 
                      'ch_prob'    : ch_prob, 
                      'choices'    : choices, 
-                     'choices_L'  : choices_L, #double check here
+                     'choices_L'  : choices_L,
                      'blocks'     : blocks,
                      'outcomes'   : outcomes, 
                      'pe'         : pe, 
@@ -309,7 +305,7 @@ def fit_slot_outcome(params, choices, outcomes, blocks, prior=None, output='npl'
                      'BIC'        : nparams * np.log(ntrials*nblocks) + 2*negll}
         return subj_dict
 
-def fit_slot_outcome_PE(params, choices, outcomes, blocks, prior=None, output='npl'):
+def fit_slot_valence(params, choices, outcomes, blocks, prior=None, output='npl'):
     ''' 
     Fit the basic RW model to a single subject's data.
         choices is a np.array with 1 or 0 for each trial choosing the left slot machine
@@ -318,18 +314,17 @@ def fit_slot_outcome_PE(params, choices, outcomes, blocks, prior=None, output='n
         output is a string that specifies what to return (either 'nll' or 'all')
     '''
     nparams = len(params)
-    lr_rew = norm2alpha(params[0])
-    lr_pun = norm2alpha(params[1])
+    lr_pos = norm2alpha(params[0])
+    lr_neg = norm2alpha(params[1])
     beta = norm2beta(params[2])
-    # lr   = norm2alpha(params[1])
 
     # make sure params are in range
     this_alpha_bounds = [0, 1]
-    if lr_rew < min(this_alpha_bounds) or lr_rew > max(this_alpha_bounds):
+    if lr_pos < min(this_alpha_bounds) or lr_pos > max(this_alpha_bounds):
         # print(f'lr = {i_alpha:.3f} not in range')
         return 10000000
     this_alpha_bounds = [0, 1]
-    if lr_pun < min(this_alpha_bounds) or lr_pun > max(this_alpha_bounds):
+    if lr_neg < min(this_alpha_bounds) or lr_neg > max(this_alpha_bounds):
         # print(f'lr = {i_alpha:.3f} not in range')
         return 10000000
     this_beta_bounds = [0.00001, 10]
@@ -347,7 +342,7 @@ def fit_slot_outcome_PE(params, choices, outcomes, blocks, prior=None, output='n
     pe          = np.zeros((nblocks, ntrials,))
     choice_nll  = 0
 
-    for b in range(nblocks): #if nblocks==1, use reversals
+    for b in range(nblocks): 
         for t in range(ntrials):
             if t == 0:
                 ev[b, t,:] = [0, 0] # for this 3 block design task, initiate to 0
@@ -371,10 +366,10 @@ def fit_slot_outcome_PE(params, choices, outcomes, blocks, prior=None, output='n
             # don't hardcode your parameter
             if pe[b, t] >= 0:                             #if positive prediction error
                 ev[b, t+1, :] = ev[b, t, :].copy()
-                ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t])
+                ev[b, t+1, c] = ev[b, t, c] + (lr_pos * pe[b, t])
             elif pe[b, t] < 0:                          #if negative prediction error 
                 ev[b, t+1, :] = ev[b, t, :].copy()
-                ev[b, t+1, c] = ev[b, t, c] + (lr_pun * pe[b, t])
+                ev[b, t+1, c] = ev[b, t, c] + (lr_neg * pe[b, t])
             
             # add to sum of choice nll for the block
             choice_nll += -np.log(ch_prob[b, t, c])
@@ -402,11 +397,11 @@ def fit_slot_outcome_PE(params, choices, outcomes, blocks, prior=None, output='n
             return negll
         
     elif output == 'all':
-        subj_dict = {'params'     : [lr_rew, lr_pun, beta],
+        subj_dict = {'params'     : [lr_pos, lr_neg, beta],
                      'ev'         : ev, 
                      'ch_prob'    : ch_prob, 
                      'choices'    : choices, 
-                     'choices_L'  : choices_L, #double check here
+                     'choices_L'  : choices_L,
                      'blocks'     : blocks,
                      'outcomes'   : outcomes, 
                      'pe'         : pe, 
@@ -414,8 +409,7 @@ def fit_slot_outcome_PE(params, choices, outcomes, blocks, prior=None, output='n
                      'BIC'        : nparams * np.log(ntrials*nblocks) + 2*negll}
         return subj_dict
 
-
-def fit_slot(params, choices, rewards, prior=None, output='npl'):
+def fit_slot_basic(params, choices, outcomes, blocks, prior=None, output='npl'):
     ''' 
     Fit the basic RW model to a single subject's data.
         choices is a np.array with 1 or 0 for each trial choosing the optimal slot
@@ -423,18 +417,12 @@ def fit_slot(params, choices, rewards, prior=None, output='npl'):
         output is a string that specifies what to return (either 'nll' or 'all')
     '''
     nparams = len(params)
-    lr_rew = norm2alpha(params[0])
-    lr_pun = norm2alpha(params[1])
-    beta = norm2beta(params[2])
-    # lr   = norm2alpha(params[1])
+    lr = norm2alpha(params[0])
+    beta = norm2beta(params[1])
 
     # make sure params are in range
     this_alpha_bounds = [0, 1]
-    if lr_rew < min(this_alpha_bounds) or lr_rew > max(this_alpha_bounds):
-        # print(f'lr = {i_alpha:.3f} not in range')
-        return 10000000
-    this_alpha_bounds = [0, 1]
-    if lr_pun < min(this_alpha_bounds) or lr_pun > max(this_alpha_bounds):
+    if lr < min(this_alpha_bounds) or lr > max(this_alpha_bounds):
         # print(f'lr = {i_alpha:.3f} not in range')
         return 10000000
     this_beta_bounds = [0.00001, 10]
@@ -442,16 +430,17 @@ def fit_slot(params, choices, rewards, prior=None, output='npl'):
         # print(f'beta = {beta:.3f} not in range')
         return 10000000
 
-    nblocks, ntrials = rewards.shape #what is this block doing, or where is block information? 
-    # should be 3 blocks, 35 trials
+    nblocks, ntrials = outcomes.shape
+    # 3 blocks, 35 trials
 
     ev          = np.zeros((nblocks, ntrials+1, 2))
     ch_prob     = np.zeros((nblocks, ntrials,   2))
     choices_L   = np.zeros((nblocks, ntrials,))
+    blocks      = np.zeros((nblocks, ntrials,))
     pe          = np.zeros((nblocks, ntrials,))
     choice_nll  = 0
 
-    for b in range(nblocks): #if nblocks==1, use reversals
+    for b in range(nblocks):
         for t in range(ntrials):
             if t == 0:
                 ev[b, t,:] = [0, 0] # for this 3 block design task, initiate to 0
@@ -472,16 +461,12 @@ def fit_slot(params, choices, rewards, prior=None, output='npl'):
             ch_prob[b, t,:] = softmax(ev[b, t, :], beta)
             
             # calculate PE
-            pe[b, t] = rewards[b, t] - ev[b, t, c]
+            pe[b, t] = outcomes[b, t] - ev[b, t, c]
 
-            # update EV using outcome-based RL model (see reference)
-            # don't hardcode your parameter
-            if rewards[b, t] == 1: #if rewarded trial
-                ev[b, t+1, :] = ev[b, t, :].copy()
-                ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t])
-            else: #if not rewarded
-                ev[b, t+1, :] = ev[b, t, :].copy()
-                ev[b, t+1, c] = ev[b, t, c] + (lr_pun * pe[b, t])
+            # update EV 
+            ev[b, t+1, :] = ev[b, t, :].copy()
+            ev[b, t+1, c] = ev[b, t, c] + (lr * pe[b, t])
+
             # add to sum of choice nll for the block
             choice_nll += -np.log(ch_prob[b, t, c])
         
@@ -508,12 +493,13 @@ def fit_slot(params, choices, rewards, prior=None, output='npl'):
             return negll
         
     elif output == 'all':
-        subj_dict = {'params'     : [lr_rew, lr_pun, beta],
+        subj_dict = {'params'     : [lr, beta],
                      'ev'         : ev, 
                      'ch_prob'    : ch_prob, 
                      'choices'    : choices, 
-                     'choices_A'  : choices_L, #double check here
-                     'rewards'    : rewards, 
+                     'choices_L'  : choices_L,
+                     'blocks'     : blocks,
+                     'outcomes'   : outcomes, 
                      'pe'         : pe, 
                      'negll'      : negll,
                      'BIC'        : nparams * np.log(ntrials*nblocks) + 2*negll}
