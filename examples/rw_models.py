@@ -369,15 +369,12 @@ def fit_slot_outcome_PE(params, choices, outcomes, blocks, prior=None, output='n
 
             # update EV using Prediction error based RL model  
             # don't hardcode your parameter
-            if pe[b, t] > 0:                             #if positive prediction error
+            if pe[b, t] >= 0:                             #if positive prediction error
                 ev[b, t+1, :] = ev[b, t, :].copy()
                 ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t])
             elif pe[b, t] < 0:                          #if negative prediction error 
                 ev[b, t+1, :] = ev[b, t, :].copy()
                 ev[b, t+1, c] = ev[b, t, c] + (lr_pun * pe[b, t])
-            else:                                               #if nothing DOUBLE CHECK what the update rule is like!
-                ev[b, t+1, :] = ev[b, t, :].copy()
-                ev[b, t+1, c] = ev[b, t, c]
             
             # add to sum of choice nll for the block
             choice_nll += -np.log(ch_prob[b, t, c])
