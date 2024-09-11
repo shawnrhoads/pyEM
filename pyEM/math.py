@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.special import expit
+from scipy.stats import norm
+from joblib import Parallel, delayed
 
 def softmax(EVs, beta):
     if type(EVs) is list:
@@ -100,3 +102,47 @@ def compGauss_ms(m, h, vargin=None):
         print('Negative/zero determinant - prior covariance not updated')
 
     return mu, sigma, flagsigma, covmat
+
+def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000):
+    """
+    Calculates the integrated BIC.
+
+    Parameters:
+        all_data (list): A list of lists of behavior data arrays with shape (nblocks, ntrials) for each subject e.g., [[choices, rewards], [choices, rewards]].
+        param_names (list): List of parameter names.
+        mu (numpy.ndarray): Array of parameter mean estimates of sample with shape (n_params,) from posterior.
+        sigma (numpy.ndarray): Array of parameter variances of sample with shape (n_params, ) from posterior.
+        fit_func (callable): A function that fits the model given a sample of parameters and outputs a dictionary containing the key 'negll' corresponding to the negative log-likelihood (NLL).
+        nsamples (int, optional): Number of samples drawn. Defaults to 2000.
+
+    Returns:
+        bicint (numpy.ndarray): Array of integrated BIC values per subject.
+
+    Example: `bicint = calc_BICint(all_data, param_names, posterior['mu'], posterior['sigma'], rw_models.fit)`
+    
+    """
+    # Define settings
+    npar = len(param_names)
+    nblocks, ntrials = all_data[0][0].shape
+
+    # Convert to std dev
+    sigmasqrt = np.sqrt(sigma)
+
+    # Initialize
+    iLog = np.empty(len(all_data))
+    
+    # Start computing
+    for isub, beh in enumerate(all_data):        
+        # Sample parameters from the Gaussian distribution
+        Gsamples = norm.rvs(loc=np.tile(mu[:, np.newaxis], (1, nsamples)), scale=np.tile(sigmasqrt[:, np.newaxis], (1, nsamples)))
+
+        # Compute negative log likelihood for each sample
+        subnll = Parallel(n_jobs=-1)(delayed(lambda k: fit_func(*([Gsamples[:, k]] + beh), output='all')['negll'])(k) for k in range(nsamples))
+
+        # Compute integrated log likelihood
+        iLog[isub] = np.log(np.sum(np.exp(-np.array(subnll))) / nsamples)
+
+    # Compute BICint
+    bicint = -2 * np.sum(iLog) + npar * np.log(ntrials*nblocks)
+
+    return bicint
