@@ -116,7 +116,7 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000):
         nsamples (int, optional): Number of samples drawn. Defaults to 2000.
 
     Returns:
-        bicint (numpy.ndarray): Array of integrated BIC values per subject.
+        bicint (float): Integrated BIC value for model.
 
     Example: `bicint = calc_BICint(all_data, param_names, posterior['mu'], posterior['sigma'], rw_models.fit)`
     
