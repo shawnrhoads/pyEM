@@ -9,8 +9,7 @@ def softmax(EVs, beta):
     return np.exp(beta*EVs) / np.sum(np.exp(beta*EVs))
 
 def norm2beta(beta):
-    return 10 / (1 + np.exp(-beta))
-    # return np.exp(beta)
+    return 4 / (1 + np.exp(-beta))
 
 def beta2norm(beta):
     return np.log(beta / (10 - beta))
