@@ -146,3 +146,45 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000):
     bicint = -2 * np.sum(iLog) + npar * np.log(ntrials*nblocks)
 
     return bicint
+
+def calc_LME(inv_h, NPL, nparams):
+    """
+    Calculate the Laplace approximation and log model evidence (LME) for a given set of subjects.
+    
+    Parameters:
+        inv_h (np.ndarray): The inverse Hessian matrix of shape (nparams, nparams, nsubjects).
+        NPL (np.ndarray): Array of negative log posterior likelihoods of shape (nsubjects, niterations).
+        nparams (int): The number of parameters in the model.
+        
+    Returns:
+        Laplace_approx (np.ndarray): Laplace approximation values for each subject.
+        lme (float): Log model evidence value.
+        goodHessian (np.ndarray): Array indicating the status of the Hessian for each subject.
+    """
+    nsubjects = inv_h.shape[2]  # Infer number of subjects from the third dimension of inv_h
+    goodHessian = np.zeros(nsubjects)
+    Laplace_approx = np.zeros(nsubjects)
+
+    for subj_idx in range(nsubjects):
+        try:
+            det_inv_hessian = np.linalg.det(inv_h[:, :, subj_idx])
+            hHere = np.linalg.slogdet(inv_h[:, :, subj_idx])[1]
+            Laplace_approx[subj_idx] = (
+                -NPL[subj_idx, -1] 
+                - 0.5 * np.log(1 / det_inv_hessian) 
+                + (nparams / 2) * np.log(2 * np.pi)
+            )
+            goodHessian[subj_idx] = 1
+        except:
+            try:
+                hHere = np.linalg.slogdet(inv_h[:, :, subj_idx])[1]
+                Laplace_approx[subj_idx] = np.nan
+                goodHessian[subj_idx] = 0
+            except:
+                goodHessian[subj_idx] = -1
+                Laplace_approx[subj_idx] = np.nan
+    
+    Laplace_approx[np.isnan(Laplace_approx)] = np.nanmean(Laplace_approx)
+    lme = np.sum(Laplace_approx) - nparams * np.log(nsubjects)
+
+    return Laplace_approx, lme, goodHessian
