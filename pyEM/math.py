@@ -103,12 +103,12 @@ def compGauss_ms(m, h, vargin=None):
 
     return mu, sigma, flagsigma, covmat
 
-def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000):
+def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000, func_output='all', nll_output='negll'):
     """
     Calculates the integrated BIC.
 
     Parameters:
-        all_data (list): A list of lists of behavior data arrays with shape (nblocks, ntrials) for each subject e.g., [[choices, rewards], [choices, rewards]].
+        all_data (list): A list of lists of behavior data arrays for each subject e.g., [[choices, rewards], [choices, rewards]].
         param_names (list): List of parameter names.
         mu (numpy.ndarray): Array of parameter mean estimates of sample with shape (n_params,) from posterior.
         sigma (numpy.ndarray): Array of parameter variances of sample with shape (n_params, ) from posterior.
@@ -122,8 +122,8 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000):
     
     """
     # Define settings
-    npar = len(param_names)
-    nblocks, ntrials = all_data[0][0].shape
+    npar = len(param_names)        
+    total_trials = all_data[0][0].size
 
     # Convert to std dev
     sigmasqrt = np.sqrt(sigma)
@@ -137,13 +137,13 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000):
         Gsamples = norm.rvs(loc=np.tile(mu[:, np.newaxis], (1, nsamples)), scale=np.tile(sigmasqrt[:, np.newaxis], (1, nsamples)))
 
         # Compute negative log likelihood for each sample
-        subnll = Parallel(n_jobs=-1)(delayed(lambda k: fit_func(*([Gsamples[:, k]] + beh), output='all')['negll'])(k) for k in range(nsamples))
+        subnll = Parallel(n_jobs=-1)(delayed(lambda k: fit_func(*([Gsamples[:, k]] + beh), output=func_output)[nll_output])(k) for k in range(nsamples))
 
         # Compute integrated log likelihood
         iLog[isub] = np.log(np.sum(np.exp(-np.array(subnll))) / nsamples)
 
     # Compute BICint
-    bicint = -2 * np.sum(iLog) + npar * np.log(ntrials*nblocks)
+    bicint = -2 * np.sum(iLog) + npar * np.log(total_trials)
 
     return bicint
 
@@ -188,3 +188,20 @@ def calc_LME(inv_h, NPL, nparams):
     lme = np.sum(Laplace_approx) - nparams * np.log(nsubjects)
 
     return Laplace_approx, lme, goodHessian
+
+def check_bounds(param_val, lower_bound, upper_bound, penalty=1e6):
+    """
+    Checks if a parameter value is within the specified bounds.
+    
+    Args:
+        param (float): The parameter value to check.
+        lower_bound (float): The lower bound of the parameter.
+        upper_bound (float): The upper bound of the parameter.
+        penalty (float, optional): The penalty value to return if the parameter is out of bounds. Default is 10000000.
+    
+    Returns:
+        float: 0 if the parameter is within bounds, otherwise the penalty value.
+    """
+    if param_val < lower_bound or param_val > upper_bound:
+        return penalty
+    return None
