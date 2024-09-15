@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 from copy import deepcopy
 from scipy.stats import norm
 from joblib import Parallel, delayed
-from pyEM.math import compGauss_ms
+from pyEM.math import compGauss_ms, calc_LME
 
 def minimize_negLL(objfunc, behavioral_data, param_values, param_bounds):
     '''
@@ -22,7 +22,7 @@ def minimize_negLL(objfunc, behavioral_data, param_values, param_bounds):
                       bounds=(x for x in param_bounds))
     return result
 
-def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
+def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=10, **kwargs):
     '''
     Subject-wise model fit 
 
@@ -49,10 +49,12 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
         locals()[key] = value 
 
     # fit model, calculate P(Choices | h) * P(h | O) 
-    ex = -1
+    ex = False
     tmp = 0
 
-    while ex < 0:
+    # can try different methods for optimization methods = ['BFGS', 'Nelder-Mead', 'Powell', 'CG', 'L-BFGS-B']
+    fval = 1e6
+    while ex == False:
         # Set free parameters to random values
         q = 0.1 * np.random.randn(nparams)
 
@@ -65,11 +67,14 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, **kwargs):
                             args=tuple([x for x in objfunc_input]+[prior]))
         q_est = result.x
         fval  = result.fun
-        ex    = result.status
+        ex    = result.success
 
-        if ex < 0:
+        if ex == False:
             tmp += 1
-            print(f'didn\'t converge {tmp} times exit status {ex}')
+
+            if tmp > maxit:
+                print(f'didn\'t converge {tmp} times...')
+                break
 
     # Return fitted parameters and their hessians
     return q_est, result.hess_inv, fval, -prior['logpdf'](q_est)
@@ -137,7 +142,6 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
     NPL_old    = -np.inf
     prior      = {}
     NPL        = np.zeros((nsubjects,1)) #posterior ikelihood
-    NLL        = np.zeros((nsubjects,1)) #NLL estimate per iteration
     NLPrior    = np.zeros((nsubjects,1)) #negative LogPrior estimate per iteration
     LME_list = [] #LME estimate per iteration 
     NPL_list = []
@@ -203,28 +207,12 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
             
             if abs(hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old) < convCrit and flagcov == 1:
                 print(' -- CONVERGED!!!!!')
+                convergence = True
                 nextbreak = 1
             NPL_old = hierachical_convergence(NPL[:,iiter], convergence_method)
 
         elif convergence_type == 'LME':
-            goodHessian    = np.zeros((nsubjects,))
-            Laplace_approx = np.zeros((nsubjects,))
-            for subj_idx in range(nsubjects):
-                try:
-                    det_inv_hessian = np.linalg.det(inv_h[:, :, subj_idx])
-                    hHere = np.linalg.slogdet(inv_h[:, :, subj_idx])[1]
-                    Laplace_approx = -NPL[:,iiter] - 0.5 * np.log(1 / det_inv_hessian) + (nparams / 2) * np.log(2 * np.pi)
-                    goodHessian[subj_idx] = 1
-                except:
-                    try:
-                        hHere = np.linalg.slogdet(inv_h[:,:,subj_idx])[1]
-                        Laplace_approx = np.nan
-                        goodHessian[subj_idx] = 0
-                    except:
-                        goodHessian[subj_idx] = -1
-                        Laplace_approx = np.nan
-            Laplace_approx[np.isnan(Laplace_approx)] = np.nanmean(Laplace_approx)
-            LME[iiter] = np.sum(Laplace_approx) - nparams*np.log(nsubjects)
+            Laplace_approx, LME[iiter], goodHessian = calc_LME(inv_h, NPL, nparams)
             LME_list += [LME[iiter]]
 
             if sum(LME[:,iiter]) <= min(LME_list):
@@ -234,6 +222,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
             if iiter > 2:
                 if abs(LME[iiter] - LME[iiter-1]) < convCrit and flagcov == 1:
                     print(' -- CONVERGED!!!!!')
+                    convergence = True
                     nextbreak = 1
 
         if nextbreak == 1:
@@ -241,8 +230,10 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
 
         if iiter == (max_iterations-1):
             print('-MAXIMUM NUMBER OF ITERATIONS REACHED\n')
+            convergence = False
 
+    NLL = NPL - NLPrior
     if convergence_type == 'NPL':
-        return m, inv_h, posterior, NPL, NLPrior, NLL
+        return {'m': m, 'inv_h': inv_h, 'posterior': posterior, 'NPL': NPL, 'NLPrior': NLPrior, 'NLL': NLL, 'convergence': convergence}
     elif convergence_type == 'LME':
-        return m, inv_h, posterior, NPL, NLPrior, NLL, LME, goodHessian
+        return {'m': m, 'inv_h': inv_h, 'posterior': posterior, 'NPL': NPL, 'NLPrior': NLPrior, 'NLL': NLL, 'LME': LME, 'goodHessian': goodHessian, 'convergence': convergence}
