@@ -22,7 +22,7 @@ def minimize_negLL(objfunc, behavioral_data, param_values, param_bounds):
                       bounds=(x for x in param_bounds))
     return result
 
-def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=10, **kwargs):
+def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=None, **kwargs):
     '''
     Subject-wise model fit 
 
@@ -38,6 +38,8 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=10, **kwargs)
         - fval (float): negative posterior likelihood
         - nl_prior (float): negative log prior
     '''
+    if maxit is None:
+        maxit = 0
 
     # check for kwargs
     for key, value in kwargs.items():
@@ -74,7 +76,7 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=10, **kwargs)
 
             if tmp > maxit:
                 print(f'didn\'t converge {tmp} times...')
-                break
+                ex = True
 
     # Return fitted parameters and their hessians
     return q_est, result.hess_inv, fval, -prior['logpdf'](q_est)
@@ -97,7 +99,7 @@ def hierachical_convergence(criterion_list, method='sum'):
     elif method == 'median':
         return np.median(criterion_list)
 
-def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_method='sum', verbose=1, max_iterations=800, **kwargs):
+def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_method='sum', verbose=1, mstep_maxit=800, estep_maxit=None, **kwargs):
     '''
     Expectation Maximization with MAP
     Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), Jo Cutler (2021), & Shawn Rhoads (2024)
@@ -145,7 +147,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
     NLPrior    = np.zeros((nsubjects,1)) #negative LogPrior estimate per iteration
     LME_list = [] #LME estimate per iteration 
     NPL_list = []
-    for iiter in range(max_iterations):
+    for iiter in range(mstep_maxit):
 
         # individual-level parameter mean estimate
         m = np.zeros((nparams,nsubjects))
@@ -162,7 +164,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         
         # ------ EXPECTATION STEP -------------------------------------------------
         # Loop over subjects
-        results = Parallel(n_jobs=-1)(delayed(expectation_step)(objfunc, all_data[subj_idx], prior, nparams) for subj_idx in range(nsubjects))
+        results = Parallel(n_jobs=-1)(delayed(expectation_step)(objfunc, all_data[subj_idx], prior, nparams, estep_maxit) for subj_idx in range(nsubjects))
 
         # Store the results
         this_NPL = np.zeros((nsubjects,1))
@@ -228,7 +230,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         if nextbreak == 1:
             break 
 
-        if iiter == (max_iterations-1):
+        if iiter == (mstep_maxit-1):
             print('-MAXIMUM NUMBER OF ITERATIONS REACHED\n')
             convergence = False
 
