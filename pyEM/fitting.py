@@ -214,7 +214,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
             NPL_old = hierachical_convergence(NPL[:,iiter], convergence_method)
 
         elif convergence_type == 'LME':
-            Laplace_approx, LME[iiter], goodHessian = calc_LME(inv_h, NPL, nparams)
+            Laplace_approx, LME[iiter], goodHessian = calc_LME(inv_h, NPL)
             LME_list += [LME[iiter]]
 
             if sum(LME[:,iiter]) <= min(LME_list):
