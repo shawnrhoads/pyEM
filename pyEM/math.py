@@ -147,7 +147,7 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000, func_
 
     return bicint
 
-def calc_LME(inv_h, NPL, nparams):
+def calc_LME(inv_h, NPL):
     """
     Calculate the Laplace approximation and log model evidence (LME) for a given set of subjects.
     
@@ -161,6 +161,7 @@ def calc_LME(inv_h, NPL, nparams):
         lme (float): Log model evidence value.
         goodHessian (np.ndarray): Array indicating the status of the Hessian for each subject.
     """
+    nparams = inv_h.shape[0]  # Number of parameters
     nsubjects = inv_h.shape[2]  # Infer number of subjects from the third dimension of inv_h
     goodHessian = np.zeros(nsubjects)
     Laplace_approx = np.zeros(nsubjects)
