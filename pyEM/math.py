@@ -153,7 +153,7 @@ def calc_LME(inv_h, NPL):
     
     Parameters:
         inv_h (np.ndarray): The inverse Hessian matrix of shape (nparams, nparams, nsubjects).
-        NPL (np.ndarray): Array of negative log posterior likelihoods of shape (nsubjects, niterations).
+        NPL (np.ndarray): Array of negative log posterior likelihoods of shape (nsubjects, ).
         nparams (int): The number of parameters in the model.
         
     Returns:
@@ -171,7 +171,7 @@ def calc_LME(inv_h, NPL):
             det_inv_hessian = np.linalg.det(inv_h[:, :, subj_idx])
             hHere = np.linalg.slogdet(inv_h[:, :, subj_idx])[1]
             Laplace_approx[subj_idx] = (
-                -NPL[subj_idx, -1] 
+                -NPL[subj_idx] 
                 - 0.5 * np.log(1 / det_inv_hessian) 
                 + (nparams / 2) * np.log(2 * np.pi)
             )
@@ -187,6 +187,9 @@ def calc_LME(inv_h, NPL):
     
     Laplace_approx[np.isnan(Laplace_approx)] = np.nanmean(Laplace_approx)
     lme = np.sum(Laplace_approx) - nparams * np.log(nsubjects)
+
+    # count 1s in goodHessian,
+    print(f'Good Hessians: {np.sum(goodHessian == 1)} out of {nsubjects}')
 
     return Laplace_approx, lme, goodHessian
 
