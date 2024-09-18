@@ -50,6 +50,10 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=None, **kwarg
         # Dynamically assign variable names (be cautious with this approach)
         locals()[key] = value 
 
+    # Set optimization options
+    opts = {'gtol': 1e-3,# Equivalent to 'TolFun', 1e-3
+           'eps': 0.0001}# Equivalent to 'TolX', 0.0001
+    
     # fit model, calculate P(Choices | h) * P(h | O) 
     ex = False
     tmp = 0
@@ -58,15 +62,17 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=None, **kwarg
     fval = 1e6
     while ex == False:
         # Set free parameters to random values
-        q = 0.1 * np.random.randn(nparams)
+        q = 0.1 * np.random.randn(nparams) #np.concatenate([0.1 * np.random.randn(4, ), 1.0 * np.random.randn(4, ), 0.1 * np.random.randn(1,)]) #0.5 * np.random.randn(nparams)
 
         # Perform the optimization
         if type(objfunc_input) == pd.core.frame.DataFrame:
             result = minimize(objfunc, x0=q,
-                            args=tuple([objfunc_input]+[prior]))
+                              args=tuple([objfunc_input]+[prior]),
+                              method='BFGS', options=opts)
         else:
             result = minimize(objfunc, x0=q, 
-                            args=tuple([x for x in objfunc_input]+[prior]))
+                              args=tuple([x for x in objfunc_input]+[prior]),
+                              method='BFGS', options=opts)
         q_est = result.x
         fval  = result.fun
         ex    = result.success
@@ -79,7 +85,9 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=None, **kwarg
                 ex = True
 
     # Return fitted parameters and their hessians
-    return q_est, result.hess_inv, fval, -prior['logpdf'](q_est)
+    inv_h = result.hess_inv
+    nl_prior = -prior['logpdf'](q_est)
+    return q_est, inv_h, fval, nl_prior
 
 def hierachical_convergence(criterion_list, method='sum'):
     '''
@@ -175,7 +183,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
             inv_h[:, :,subj_idx]  = deepcopy(hess_mat)
             this_NPL[subj_idx]      = deepcopy(fval)
             this_NLPrior[subj_idx]  = deepcopy(nl_prior)
-        
+
         if iiter == 0:
             NPL = deepcopy(this_NPL)
             NLPrior = deepcopy(this_NLPrior)
@@ -236,6 +244,6 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
 
     NLL = NPL - NLPrior
     if convergence_type == 'NPL':
-        return {'m': m, 'inv_h': inv_h, 'posterior': posterior, 'NPL': NPL, 'NLPrior': NLPrior, 'NLL': NLL, 'convergence': convergence}
+        return {'m': m, 'inv_h': inv_h, 'posterior': posterior, 'NPL': NPL[:,-1], 'NLPrior': NLPrior[:,-1], 'NLL': NLL[:,-1], 'convergence': convergence}
     elif convergence_type == 'LME':
-        return {'m': m, 'inv_h': inv_h, 'posterior': posterior, 'NPL': NPL, 'NLPrior': NLPrior, 'NLL': NLL, 'LME': LME, 'goodHessian': goodHessian, 'convergence': convergence}
+        return {'m': m, 'inv_h': inv_h, 'posterior': posterior, 'NPL': NPL[:,-1], 'NLPrior': NLPrior[:,-1], 'NLL': NLL[:,-1], 'LME': LME, 'goodHessian': goodHessian, 'convergence': convergence}
