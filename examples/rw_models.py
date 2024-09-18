@@ -4,9 +4,12 @@ import sys
 sys.path.append('../')
 from pyEM.math import softmax, norm2beta, norm2alpha
 
-def simulate(params, nblocks=3, ntrials=24, outcomes=None):
+def simulate(params, nblocks=3, ntrials=35, outcomes=None, policy='basic', blocks=None): #can feed in actual reward result here for outcome
     """
-    Simulate the basic RW model.
+    Simulate the basic RW model. Other notes for slot machine: 
+    'opt_act' already encoded reversal: 0-left, 1-right. 
+    'reward' already encoded probabalistic outcome: 0-no, 1-yes. 
+    'choice' represents which machine was picked: 0-right, 1-left.
 
     Args:
         `params` is a np.array of shape (nsubjects, nparams)
@@ -26,72 +29,118 @@ def simulate(params, nblocks=3, ntrials=24, outcomes=None):
                 - `beta` is the softmax inverse temperature
                 - `lr` is the learning rate
     """
-
-    reverse     = 0
+    # initializing data structure 
+    # reverse     = 0
     nsubjects   = params.shape[0]
     ev          = np.zeros((nsubjects, nblocks, ntrials+1, 2))
     ch_prob     = np.zeros((nsubjects, nblocks, ntrials,   2))
     choices     = np.empty((nsubjects, nblocks, ntrials,), dtype='object')
-    choices_A   = np.zeros((nsubjects, nblocks, ntrials,))
+    choices_L   = np.zeros((nsubjects, nblocks, ntrials,))
     rewards     = np.zeros((nsubjects, nblocks, ntrials,))
     pe          = np.zeros((nsubjects, nblocks, ntrials,))
     choice_nll  = np.zeros((nsubjects, nblocks, ntrials,))
 
     subj_dict = {}
-    this_block_probs = [.8,.2]
+    this_block_probs = [.8,.2] #slot probabilities
+
     for subj_idx in tqdm(range(nsubjects)):
-        beta, lr = params[subj_idx,:]
+        if policy == 'basic':
+            lr, beta = params[subj_idx,:]
+        if policy == 'context':
+            lr_opt, lr_pes, lr_mix, beta = params[subj_idx, :]
+        if policy == 'valence':
+            lr_pos, lr_neg, beta = params[subj_idx, :]
             
         for b in range(nblocks): # if nblocks == 1, then use reversals
+            # check for reversal order here maybe
+
             for t in range(ntrials):
-                if nblocks == 1:
-                    if (t+1) in [12, 24, 36 ,48, 60, 72, 84, 96, 108, 120]: # reverse
-                        this_block_probs = this_block_probs[::-1]
-                        if reverse == 1:
-                            reverse = 0
-                        elif reverse == 0:
-                            reverse = 1
+                # if nblocks == 1: #block dependent reversal coding here. 
+                #     if (t+1) in [12, 24, 36 ,48, 60, 72, 84, 96, 108, 120]: # reverse
+                #         this_block_probs = this_block_probs[::-1]
+                #         if reverse == 1:
+                #             reverse = 0
+                #         elif reverse == 0:
+                #             reverse = 1
 
                 if t == 0:
                     ev[subj_idx, b, t,:]    = [.5,.5]
 
                 # calculate choice probability
+                # print('sub', subj_idx, 'block', b, 'trial', t)
+                # print(ev[subj_idx, b, t,:], beta)
                 ch_prob[subj_idx, b, t,:] = softmax(ev[subj_idx, b, t, :], beta)
 
-                # make choice
-                choices[subj_idx, b, t]   = np.random.choice(['A', 'B'], 
+                # make choice: "opt_act": which is best (block reversal considered) 0-left, 1-right (true machine)
+                choices[subj_idx, b, t]   = np.random.choice([0, 1], #"action" 0-left, 1-right (subject choice)
                                                 size=1, 
                                                 p=ch_prob[subj_idx, b, t,:])[0]
 
                 # get choice index
-                if choices[subj_idx, b, t] == 'A':
-                    c = 0
-                    choices_A[subj_idx, b, t] = 1
+                if choices[subj_idx, b, t] == 1: #picking the left machine
+                    c = 1
+                    choices_L[subj_idx, b, t] = 1
                     # get outcome
                     if outcomes is None:
                         rewards[subj_idx, b, t]   = np.random.choice([1, 0], 
                                                         size=1, 
                                                         p=this_block_probs)[0]
-                    else:
-                        rewards[subj_idx, b, t]   = outcomes[b, t, c]
+                    else: #DOUBLE CHECK HERE
+                        rewards[subj_idx, b, t]   = outcomes[subj_idx][b][t] #use this line here CUZ YOU HAVE OUTCOME 
                 else:
-                    c = 1
-                    choices_A[subj_idx, b, t] = 0
+                    c = 0
+                    choices_L[subj_idx, b, t] = 0
                     # get outcome
                     if outcomes is None:
                         rewards[subj_idx, b, t]   = np.random.choice([1, 0], 
                                                         size=1, 
                                                         p=this_block_probs[::-1])[0]
                     else:
-                        rewards[subj_idx, b, t]   = outcomes[b, t, c]
+                        rewards[subj_idx, b, t]   = outcomes[subj_idx][b][t] #use this line here CUZ YOU HAVE THE REWARD DATA
 
                 # calculate PE
                 pe[subj_idx, b, t] = rewards[subj_idx, b, t] - ev[subj_idx, b, t, c]
+                # print('PE', pe[subj_idx, b, t])
 
-                # update EV
-                ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
-                ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr * pe[subj_idx, b, t])
-                
+                # update EV (this is model dependent EV update) need to modify for all models. 
+                # try this first for the basic 1 LR model (should be very much the same expect changing the reversal)
+                # here is the decision policy needs to be modified base on models 
+                if policy == 'basic':
+                    ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
+                    ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr * pe[subj_idx, b, t])
+                    # print('alpha', lr)
+                if policy == 'context':
+                    if blocks[subj_idx][b][t]   == 'numberbar_pos':                          #if optimistic context
+                        ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
+                        ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr_opt * pe[subj_idx, b, t])
+                    elif blocks[subj_idx][b][t] == 'numberbar_neg':                          #if perssimistic context
+                        ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
+                        ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr_pes * pe[subj_idx, b, t])
+                    elif blocks[subj_idx][b][t] == 'numberbar_mixed': 
+                        ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
+                        ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr_mix * pe[subj_idx, b, t])
+                if policy == 'outcome':
+                    if outcomes[b, t] == 1:                             #if rewarded trial
+                        ev[b, t+1, :] = ev[b, t, :].copy()
+                        ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t])
+                    elif outcomes[b, t] == -1:                          #if punishment trial
+                        ev[b, t+1, :] = ev[b, t, :].copy()
+                        ev[b, t+1, c] = ev[b, t, c] + (lr_pun * pe[b, t])
+                    elif outcomes[b, t] == 0 and blocks[b, t] == 'numberbar_neg':  
+                        ev[b, t+1, :] = ev[b, t, :].copy()
+                        ev[b, t+1, c] = ev[b, t, c] + (lr_rew * pe[b, t])
+                    elif outcomes[b, t] == 0 and blocks[b, t] == 'numberbar_pos':  
+                        ev[b, t+1, :] = ev[b, t, :].copy()
+                        ev[b, t+1, c] = ev[b, t, c] + (lr_pun * pe[b, t])
+                if policy == 'valence':
+                    if pe[subj_idx, b, t] >= 0:                             #if positive prediction error
+                        ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
+                        ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr_pos * pe[subj_idx, b, t])
+                    elif pe[subj_idx, b, t] < 0:                            #if negative prediction error 
+                        ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
+                        ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr_neg * pe[subj_idx, b, t])
+
+
                 choice_nll[subj_idx, b, t] = ch_prob[subj_idx, b, t, c].copy()
 
     # store params
@@ -99,7 +148,7 @@ def simulate(params, nblocks=3, ntrials=24, outcomes=None):
                  'ev'        : ev, 
                  'ch_prob'   : ch_prob, 
                  'choices'   : choices, 
-                 'choices_A' : choices_A, 
+                 'choices_L' : choices_L, 
                  'rewards'   : rewards, 
                  'pe'        : pe, 
                  'choice_nll': choice_nll}
