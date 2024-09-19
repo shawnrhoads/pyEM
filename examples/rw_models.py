@@ -12,6 +12,37 @@ def simulate(params, nblocks=3, ntrials=35, opt_act=None, outcomes=None, policy=
     'reward' whether rewarded or not (context depended), already encoded probabalistic outcome: 0-no, 1-yes. 
     'choice' represents which machine was picked by agent/participant: 0-right, 1-left.
 
+    outcome structre: not exactly 80vs20 probability 
+    create your own outcome sequence 
+    determine left vs right outcome based on opt_act
+    use opt_act for reversal coding 
+    assign probaility to opt_action 
+    
+    use opt_act to determine which one has 80%
+    opt_act = 1-right, probabilty[0.2, 0.8] (right is winning machine)
+    0-left, probability[0.8, 0.2] (left is winning now)
+    L_block_probs = [.8, .2]
+    R_block_probs = []
+
+    on each trial:
+    determine the L (0) and R (1) outcome based on opt_act
+    ```
+    opt_act == 0:
+    L_this_block_probs = [.8, .2] #make it clean just doing it for Left choice
+    else:
+    R_this_block_probs = [.2, .8]
+    ```
+    ```
+    if choice[subj_idx, b, t] == 'L':
+    rewards[subj_idx, b, t] = np.random.choice([1, 0],
+    size=1,
+    p=L_blcok_prob[0]
+    else
+    rewards[subj_idx, b, t] = np.random.choice([1, 0],
+    size=1,
+    p=R_block_prob([0])
+    ```
+
     Args:
         `params` is a np.array of shape (nsubjects, nparams)
         `nblocks` is the number of blocks to simulate
@@ -42,7 +73,7 @@ def simulate(params, nblocks=3, ntrials=35, opt_act=None, outcomes=None, policy=
     choice_nll  = np.zeros((nsubjects, nblocks, ntrials,))
 
     subj_dict = {}
-    this_block_probs = [.8,.2] #slot probabilities
+    # this_block_probs = [.8,.2] #slot probabilities
 
     for subj_idx in tqdm(range(nsubjects)):
         # set params basic on models 
@@ -62,6 +93,17 @@ def simulate(params, nblocks=3, ntrials=35, opt_act=None, outcomes=None, policy=
                 #             reverse = 0
                 #         elif reverse == 0:
                 #             reverse = 1
+                # # set reverse == opt_act (maintain the reversal structure)
+                # no need to feed in outcome, need to save the outcome later.
+                # save the reversal coding in the data. 
+                if opt_act[subj_idx][b][t]  == 0: # picking the left is optimal (double check with the data to)
+                    L_block_probs = [.8, .2]
+                    R_block_probs = [.2, .8]
+                else: # ==1 right is optimal 
+                    L_block_probs = [.2, .8]
+                    R_block_probs = [.8, .2]
+                    # this_block_probs = [.2, .8]
+
 
                 if t == 0:
                     ev[subj_idx, b, t,:]    = [.5,.5] # initialize expected value
@@ -75,29 +117,44 @@ def simulate(params, nblocks=3, ntrials=35, opt_act=None, outcomes=None, policy=
                                                 size=1, 
                                                 p=ch_prob[subj_idx, b, t,:])[0]
 
+                # sanity check to always pick Left/0
+
                 # get choice index
                 # choice  0=right, 1=left
                 # opt_act 0=left,  1=right
-                if choices[subj_idx, b, t] != opt_act[subj_idx][b][t]: # picking the left machine is the optimal choice: 80% reward
-                    c = 1
-                    choices_L[subj_idx, b, t] = 1
-                    # get outcome
-                    if outcomes is None:
-                        rewards[subj_idx, b, t]   = np.random.choice([1, 0], 
-                                                        size=1, 
-                                                        p=this_block_probs)[0] # does this return for the better machine of 80% reward? 
-                    else: #DOUBLE CHECK HERE
-                        rewards[subj_idx, b, t]   = outcomes[subj_idx][b][t] #feeding in the reward sequence from data (0-no reward, 1-reward)
+                # do it just choice option 
+                # consider block here cuz outcomes changes based on block
+
+                if choices[subj_idx, b, t] == 'L': #doubel check the L option here, first index is rewarded more frequently
+                    rewards[subj_idx, b, t] = np.random.choice([1, 0], #this order matters = ['win', 'lost'] [-1,0], [-1,1]
+                    size=1,
+                    p=L_block_probs)[0]
                 else:
-                    c = 0
-                    choices_L[subj_idx, b, t] = 0
-                    # get outcome
-                    if outcomes is None:
-                        rewards[subj_idx, b, t]   = np.random.choice([1, 0], 
-                                                        size=1, 
-                                                        p=this_block_probs[::-1])[0] #double check what probability is here for??? 
-                    else:
-                        rewards[subj_idx, b, t]   = outcomes[subj_idx][b][t] #feeding in the reward sequence from data (0-no reward, 1-reward)
+                    rewards[subj_idx, b, t] = np.random.choice([1, 0],
+                    size=1,
+                    p=R_block_probs)[0]
+
+
+                # if choices[subj_idx, b, t] == 1: #pick the left machine 
+                #     c = 1
+                #     choices_L[subj_idx, b, t] = 1
+                #     # get outcome
+                #     if outcomes is None:
+                #         rewards[subj_idx, b, t]   = np.random.choice([1, 0], 
+                #                                         size=1, 
+                #                                         p=this_block_probs)[0] # does this return for the better machine of 80% reward? 
+                #     else: #DOUBLE CHECK HERE
+                #         rewards[subj_idx, b, t]   = outcomes[subj_idx][b][t] #feeding in the reward sequence from data (0-no reward, 1-reward)
+                # else:
+                #     c = 0
+                #     choices_L[subj_idx, b, t] = 0
+                #     # get outcome
+                #     if outcomes is None:
+                #         rewards[subj_idx, b, t]   = np.random.choice([1, 0], 
+                #                                         size=1, 
+                #                                         p=this_block_probs[::-1])[0] #double check what probability is here for??? 
+                #     else:
+                #         rewards[subj_idx, b, t]   = outcomes[subj_idx][b][t] #feeding in the reward sequence from data (0-no reward, 1-reward)
 
                 # calculate PE
                 pe[subj_idx, b, t] = rewards[subj_idx, b, t] - ev[subj_idx, b, t, c]
