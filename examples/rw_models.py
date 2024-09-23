@@ -104,15 +104,16 @@ def simulate(params, nblocks=3, ntrials=35, opt_act=None, blocks=None, policy='b
                     R_block_probs = [.8, .2]
 
                 if t == 0:
-                    ev[subj_idx, b, t,:]    = [.5,.5] # initialize expected value
+                    ev[subj_idx, b, t,:]    = [0.0, 0.0] # initialize expected value
 
                 # calculate choice probability
                 ch_prob[subj_idx, b, t,:] = softmax(ev[subj_idx, b, t, :], beta)
+                # print(ch_prob[subj_idx, b, t,:])
 
                 choices[subj_idx, b, t]   = np.random.choice([0, 1], # choice: 0-right, 1-left
                                                 size=1, 
                                                 p=ch_prob[subj_idx, b, t,:])[0]
-
+                print(ch_prob[subj_idx, b, t,:], ev[subj_idx, b, t, :], choices[subj_idx, b, t])
                 # sanity check to always pick Left
                 # choices[subj_idx, b, t] = 1
 
@@ -188,6 +189,8 @@ def simulate(params, nblocks=3, ntrials=35, opt_act=None, blocks=None, policy='b
 
                 # update EV (this is model dependent EV update) need to modify for all models. 
                 # update rule copied over from model fitting update rules
+                # this part is messing up things. (this part debug)
+                # double check outcome matching. probably the indexing (for location and update)
                 if policy == 'basic':
                     ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
                     ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr * pe[subj_idx, b, t])
