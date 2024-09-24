@@ -110,53 +110,52 @@ def simulate(params, nblocks=3, ntrials=35, opt_act=None, blocks=None, policy='b
                 ch_prob[subj_idx, b, t,:] = softmax(ev[subj_idx, b, t, :], beta)
                 # print(ch_prob[subj_idx, b, t,:])
 
-                choices[subj_idx, b, t]   = np.random.choice([0, 1], # choice: 0-right, 1-left
+                choices[subj_idx, b, t]   = np.random.choice([0, 1], #0=left, 1=right
                                                 size=1, 
                                                 p=ch_prob[subj_idx, b, t,:])[0]
-                print(ch_prob[subj_idx, b, t,:], ev[subj_idx, b, t, :], choices[subj_idx, b, t])
+                # print(ch_prob[subj_idx, b, t,:], ev[subj_idx, b, t, :], choices[subj_idx, b, t])
                 # sanity check to always pick Left
                 # choices[subj_idx, b, t] = 1
 
-                # choice  0=right, 1=left
                 # opt_act 0=left,  1=right
                 # logic flow on the left machine
                 if blocks[subj_idx, b, t] == 'numberbar_neg':                          #in punishment block
-                    if choices[subj_idx, b, t] == 1: #if agent pick left machine. first index is rewarded more frequently
-                        c = 1
-                        choices_L[subj_idx, b, t] = 1   
+                    if choices[subj_idx, b, t] == 0: #if agent pick left machine. first index is rewarded more frequently
+                        c = 0                        #[0, 1] = [left, right], index matters! 
+                        choices_L[subj_idx, b, t] = 1 #binary coding for choose left machine 
                         outcomes[subj_idx, b, t] = np.random.choice([0, -1], #this order matters = ['win', 'lost'] block dependent
                         size=1,
                         p=L_block_probs)[0]
                     else:
-                        c = 0
+                        c = 1 #chosen right machine
                         choices_L[subj_idx, b, t] = 0  
                         outcomes[subj_idx, b, t] = np.random.choice([0, -1],
                         size=1,
                         p=R_block_probs)[0]
                 
-                if blocks[subj_idx, b, t] == 'numberbar_mixed':                          #in mic block
-                    if choices[subj_idx, b, t] == 1:
-                        c = 1
+                elif blocks[subj_idx, b, t] == 'numberbar_mixed':                          #in mic block
+                    if choices[subj_idx, b, t] == 0:
+                        c = 0
                         choices_L[subj_idx, b, t] = 1  
                         outcomes[subj_idx, b, t] = np.random.choice([1, -1],
                         size=1,
                         p=L_block_probs)[0]
                     else:
-                        c = 0
+                        c = 1
                         choices_L[subj_idx, b, t] = 0
                         outcomes[subj_idx, b, t] = np.random.choice([1, -1],
                         size=1,
                         p=R_block_probs)[0]
                 
-                if blocks[subj_idx, b, t] == 'numberbar_pos':                          #in reward block
-                    if choices[subj_idx, b, t] == 1:
-                        c = 1
+                elif blocks[subj_idx, b, t] == 'numberbar_pos':                          #in reward block
+                    if choices[subj_idx, b, t] == 0:
+                        c = 0 
                         choices_L[subj_idx, b, t] = 1  
                         outcomes[subj_idx, b, t] = np.random.choice([1, 0],
                         size=1,
                         p=L_block_probs)[0]
                     else:
-                        c = 0
+                        c = 1
                         choices_L[subj_idx, b, t] = 0
                         outcomes[subj_idx, b, t] = np.random.choice([1, 0],
                         size=1,
