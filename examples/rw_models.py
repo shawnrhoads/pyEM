@@ -104,7 +104,7 @@ def simulate(params, nblocks=3, ntrials=35, opt_act=None, blocks=None, policy='b
                     R_block_probs = [.8, .2]
 
                 if t == 0:
-                    ev[subj_idx, b, t,:]    = [0.0, 0.0] # initialize expected value
+                    ev[subj_idx, b, t,:]    = [0.0, 0.0] # initialize expected value [left, right]
 
                 # calculate choice probability
                 ch_prob[subj_idx, b, t,:] = softmax(ev[subj_idx, b, t, :], beta)
@@ -379,12 +379,12 @@ def fit_slot_context(params, choices, outcomes, blocks, prior=None, output='npl'
                 ev[b, t,:] = [0, 0] # for this 3 block design task, initiate to 0
 
             # get choice index
-            if choices[b, t] == 1: 
-                c = 1
+            if choices[b, t] == 0: # choose the left slot machine
+                c = 0 #indexing for left machine
                 choices_L[b, t] = 1 # choose the left slot machine (participant choice)
                 # choice encoding is consistent with block and reversal. 
             else:
-                c = 0
+                c = 1
                 choices_L[b, t] = 0 # choose the right slot machine (participant choice)
 
             # calculate choice probability
@@ -592,12 +592,12 @@ def fit_slot_outcome(params, choices, outcomes, blocks, prior=None, output='npl'
                 ev[b, t,:] = [0, 0] # for this 3 block design task, initiate to 0
 
             # get choice index
-            if choices[b, t] == 1: 
-                c = 1
+            if choices[b, t] == 0: 
+                c = 0 #index for left machine 
                 choices_L[b, t] = 1 # choose the left slot machine (participant choice)
                 # choice encoding is consistent with block and reversal. 
             else:
-                c = 0
+                c = 1
                 choices_L[b, t] = 0 # choose the right slot machine (participant choice)
 
             # calculate choice probability
@@ -701,12 +701,11 @@ def fit_slot_valence(params, choices, outcomes, blocks, prior=None, output='npl'
                 ev[b, t,:] = [0, 0] # for this 3 block design task, initiate to 0
 
             # get choice index
-            if choices[b, t] == 1: 
-                c = 1
+            if choices[b, t] == 0: # if choose the left machine 
+                c = 0 #EV indexing 
                 choices_L[b, t] = 1 # choose the left slot machine (participant choice)
-                # choice encoding is consistent with block and reversal. 
             else:
-                c = 0
+                c = 1
                 choices_L[b, t] = 0 # choose the right slot machine (participant choice)
 
             # calculate choice probability
@@ -795,18 +794,14 @@ def fit_slot_basic(params, choices, outcomes, blocks, prior=None, output='npl'):
     for b in range(nblocks):
         for t in range(ntrials):
             if t == 0:
-                ev[b, t,:] = [0, 0] # for this 3 block design task, initiate to 0
+                ev[b, t,:] = [0, 0] # for this 3 block design task, initiate to 0 [left, right]
 
             # get choice index
-            if choices[b, t] == 1: 
-                c = 1
+            if choices[b, t] == 0:  #if choose the left slot machine
+                c = 0 # for indexing
                 choices_L[b, t] = 1 # choose the left slot machine (participant choice)
-                # actual slot machine choice double check  (use the action variable, the choice participant make)
-                # choice encoding is consistent with block and reversal. 
-                # confirm action column: if it always just encode the choice they make
-                
             else:
-                c = 0
+                c = 1
                 choices_L[b, t] = 0 # choose the right slot machine (participant choice)
 
             # calculate choice probability
