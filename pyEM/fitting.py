@@ -130,13 +130,14 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
     '''
     # Set the number of fitting iterations
     convCrit       = .001
+    precision      = 4
     nparams        = len(param_names)
     nsubjects      = len(all_data)
 
     # Initialize group-level parameter mean and variance
     posterior = {}
-    posterior['mu']    = np.abs(0.1 * np.random.randn(nparams, 1))
-    posterior['sigma'] = np.full((nparams, 1), 100)
+    posterior['mu']    = 0.1 * np.random.randn(nparams, 1) #np.concatenate([np.abs(0.5 * np.random.randn(4,)), np.zeros(4, ), np.abs(0.1 * np.random.randn(1, ))])
+    posterior['sigma'] = np.full((nparams, ), 100)
 
     # get kwargs if any
     for key, value in kwargs.items():
@@ -173,7 +174,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         # ------ EXPECTATION STEP -------------------------------------------------
         # Loop over subjects
         results = Parallel(n_jobs=-1)(delayed(expectation_step)(objfunc, all_data[subj_idx], prior, nparams, estep_maxit) for subj_idx in range(nsubjects))
-
+        
         # Store the results
         this_NPL = np.zeros((nsubjects,1))
         this_NLPrior = np.zeros((nsubjects,1))
@@ -181,8 +182,9 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         for subj_idx, (q_est, hess_mat, fval, nl_prior) in enumerate(results):
             m[:,subj_idx]     = deepcopy(q_est)
             inv_h[:, :,subj_idx]  = deepcopy(hess_mat)
-            this_NPL[subj_idx]      = deepcopy(fval)
+            this_NPL[subj_idx]      = deepcopy(np.round(fval,precision))
             this_NLPrior[subj_idx]  = deepcopy(nl_prior)
+            # print(fval)
 
         if iiter == 0:
             NPL = deepcopy(this_NPL)
