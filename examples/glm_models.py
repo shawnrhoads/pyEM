@@ -1,6 +1,9 @@
 import numpy as np
 from tqdm import tqdm
 from scipy.stats import norm
+import sys
+sys.path.append('../')
+from pyEM.math import norm2alpha
 
 def simulate(params, ntrials=100):
     '''
@@ -98,25 +101,27 @@ def fit_decay(params, X, Y, prior=None, output='npl'):
     `gamma` is included as the last index in `params`.
     '''
     
-    n_observations, ntrials, nparams_with_gamma = X.shape
+    ntrials, n_regressors = X.shape
+    nparams_with_gamma = len(params)
     nparams = nparams_with_gamma - 1  # The last parameter is gamma
 
-    predicted_y = np.zeros((n_observations, ntrials))
+    predicted_y = np.zeros((ntrials,))
     
-    # Loop over each observation and trial to apply the discounting
-    for subj in range(n_observations):
-        # Extract gamma and the parameter values for the current subject
-        gamma = params[subj, -1]
-        param_values = params[subj, :-1]  # Exclude gamma
-        
-        for t in range(ntrials):
-            discounted_sum = np.zeros(nparams)
-            for j in range(3):  # Discount over current and past two trials
-                if t - j >= 0:
-                    discounted_sum += (gamma ** j) * X[subj, t-j, :]
-            
-            # Compute predicted Y as the dot product of the discounted X terms
-            predicted_y[subj, t] = np.dot(discounted_sum, param_values)
+    # Extract gamma and the parameter values for the current subject
+    gamma = norm2alpha(params[-1]) # transform to be between 0 and 1
+    if gamma < 0 or gamma > 1:
+        return 10000000
+
+    param_values = params[:-1]  # Exclude gamma
+    
+    for t in range(ntrials):
+        discounted_sum = np.zeros(nparams)
+        for j in range(3):  # Discount over current and past two trials
+            if t - j >= 0:
+                discounted_sum += (gamma ** j) * X[t-j, :]
+
+        # Compute predicted Y as the dot product of the discounted X terms
+        predicted_y[t] = np.dot(discounted_sum, param_values)
     
     # Compute negative log likelihood using stats.norm.logpdf
     resid_sigma = np.std(np.subtract(Y, predicted_y))  # Standard deviation of residuals
