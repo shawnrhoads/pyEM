@@ -81,7 +81,6 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=None, **kwarg
             tmp += 1
 
             if tmp > maxit:
-                print(f'didn\'t converge {tmp} times...')
                 ex = True
 
     # Return fitted parameters and their hessians
