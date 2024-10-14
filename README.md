@@ -61,16 +61,11 @@ negll = -np.nansum(np.log(choice_likelihoods))
 
 # then compute the negative posterior likelihood
 # you can use the provided function `math.calc_fval` to compute the negative posterior likelihood
-# e.g.: `fval = calc_fval(choice_nll, prior, params, output)`
+# e.g.: `fval = calc_fval(choice_nll, params, prior, output)`
 # ...or you can copy and paste or modify the following code (assuming that your negative log likelihood is `negll`)
-if output == 'npl':
-    if prior is not None: # EM-fit: P(Choices | h) * P(h | O)
-        fval = -(-negll + prior['logpdf'](params))       
-        if np.isinf(fval):
-            fval = 10000000
-        return fval
-    else: # NLL fit 
-        return negll
+if (output == 'npl') or (output == 'nll'):
+    fval = calc_fval(choice_nll, params, prior=prior, output=output)
+    return fval
 ```
 
 ## Requirements
