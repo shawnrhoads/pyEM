@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 import sys
 sys.path.append('../')
-from pyEM.math import softmax, norm2beta, norm2alpha
+from pyEM.math import softmax, norm2beta, norm2alpha, calc_fval
 
 def simulate(params, nblocks=3, ntrials=24, outcomes=None):
     """
@@ -163,26 +163,12 @@ def fit(params, choices, rewards, prior=None, output='npl'):
         
     # get the total negative log likelihood
     negll = choice_nll
-    
-    if output == 'npl':
-        if prior is not None:  # EM-fit: P(Choices | h) * P(h | O) should be maximised, therefore same as minimizing it with negative sign
-            fval = -(-negll + prior['logpdf'](params))
-
-            if any(prior['sigma'] == 0):
-                this_mu = prior['mu']
-                this_sigma = prior['sigma']
-                this_logprior = prior['logpdf'](params)
-                print(f'mu: {this_mu}')
-                print(f'sigma: {this_sigma}')
-                print(f'logpdf: {this_logprior}')
-                print(f'fval: {fval}')
-            
-            if np.isinf(fval):
-                fval = 10000000
-            return fval
-        else: # NLL fit 
-            return negll
         
+    # CALCULATE NEGATIVE POSTERIOR LIKELIHOOD FROM NEGLL AND PRIOR (OR NEGLL)
+    if (output == 'npl') or (output == 'nll'):
+        fval = calc_fval(choice_nll, params, prior=prior, output=output)
+        return fval
+    
     elif output == 'all':
         subj_dict = {'params'     : [beta, lr],
                      'ev'         : ev, 

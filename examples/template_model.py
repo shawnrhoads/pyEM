@@ -38,6 +38,6 @@ def fit(params, data, prior=None, output='npl'):
         choice_nll += -np.log(choice_prob)
         
     # (5) CALCULATE NEGATIVE POSTERIOR LIKELIHOOD FROM NEGLL AND PRIOR
-    fval = calc_fval(choice_nll, prior, params, output)
+    fval = calc_fval(choice_nll, params, prior=prior, output=output)
 
     return fval

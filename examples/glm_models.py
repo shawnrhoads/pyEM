@@ -3,7 +3,7 @@ from tqdm import tqdm
 from scipy.stats import norm
 import sys
 sys.path.append('../')
-from pyEM.math import norm2alpha
+from pyEM.math import norm2alpha, calc_fval
 
 def simulate(params, ntrials=100):
     '''
@@ -38,19 +38,12 @@ def fit(params, X, Y, prior=None, output='npl'):
     resid_sigma = np.std(np.subtract(Y, predicted_y)) # std dev of residuals
     negll = -np.sum(norm.logpdf(Y, loc=predicted_y, scale=resid_sigma))
 
-    if output == 'npl':
-        if prior is not None:  # EM-fit: P(Choices | h) * P(h | O) should be maximised, therefore same as minimizing it with negative sign
-            fval = -(-negll + prior['logpdf'](params))
-
-            if np.isinf(fval):
-                fval = 10000000
-
-            if fval is None:
-                fval = 10000000
-
-            return fval
-        else: # NLL fit 
-            return negll
+    
+    if (output == 'npl') or (output == 'nll'):
+        # CALCULATE NEGATIVE POSTERIOR LIKELIHOOD FROM NEGLL AND PRIOR (OR NEGLL)
+        fval = calc_fval(negll, params, prior=prior, output=output)
+        return fval
+    
     elif output == 'all':
         subj_dict = {'params'     : params,
                      'predicted_y': predicted_y,
@@ -93,13 +86,19 @@ def simulate_decay(params, ntrials=100):
     
     return X_out, Y_out
 
-def fit_decay(params, X, Y, prior=None, output='npl'):
+def fit_decay(params, X, Y, prior=None, output='npl', decay='twostep'):
     '''
     Estimates coefficients of a GLM with discounted Xn terms using gamma.
     Y ~ b0 + gamma^0 * b1*X1_t + gamma^1 * b1*X1_{t-1} + gamma^2 * b1*X1_{t-2} + ...
     
     `gamma` is included as the last index in `params`.
     '''
+    if decay == 'twostep':
+        decay_j = 3
+    elif decay == 'onestep':
+        decay_j = 2
+    else:
+        raise ValueError('Invalid decay type. Choose either "twostep" or "onestep".')
     
     ntrials, n_regressors = X.shape
     nparams_with_gamma = len(params)
@@ -116,7 +115,7 @@ def fit_decay(params, X, Y, prior=None, output='npl'):
     
     for t in range(ntrials):
         discounted_sum = np.zeros(nparams)
-        for j in range(3):  # Discount over current and past two trials
+        for j in range(decay_j):  # Discount over current and past two trials
             if t - j >= 0:
                 discounted_sum += (gamma ** j) * X[t-j, :]
 
@@ -127,12 +126,11 @@ def fit_decay(params, X, Y, prior=None, output='npl'):
     resid_sigma = np.std(np.subtract(Y, predicted_y))  # Standard deviation of residuals
     negll = -np.sum(norm.logpdf(Y, loc=predicted_y, scale=resid_sigma))
 
-    if output == 'npl':
-        if prior is not None:  # Include prior if specified
-            fval = -(-negll + prior['logpdf'](params))
-            return fval if not np.isinf(fval) and fval is not None else 10000000
-        else:
-            return negll
+    if (output == 'npl') or (output == 'nll'):
+        # CALCULATE NEGATIVE POSTERIOR LIKELIHOOD FROM NEGLL AND PRIOR (OR NEGLL)
+        fval = calc_fval(negll, params, prior=prior, output=output)
+        return fval
+    
     elif output == 'all':
         return {
             'params': params,
