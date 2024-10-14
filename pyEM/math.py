@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np, pandas as pd
 from scipy.special import expit
 from scipy.stats import norm
 from joblib import Parallel, delayed
@@ -22,17 +22,18 @@ def norm2alpha(alpha_norm):
 def alpha2norm(alpha):
     return -np.log(1.0/alpha - 1.0)
 
-def calc_fval(negll, prior, params, output='npl'):
-    if output == 'npl':
-        if prior is not None:
-            # P(Choices | h) * P(h | O) should be maximized, therefore same as minimizing it with negative sign
-            fval = -(-negll + prior['logpdf'](params))            
-            if np.isinf(fval):
-                fval = 10000000
-            return fval
-        else: # NLL fit 
-            return negll
-        
+def calc_fval(negll, params, prior=None, output='npl'):
+    if (output == 'npl') and (prior is not None):
+        # P(Choices | h) * P(h | O) should be maximized, therefore same as minimizing it with negative sign
+        fval = -(-negll + prior['logpdf'](params))            
+        if np.isinf(fval):
+            fval = 10000000
+        return fval
+    elif output == 'nll':
+        return negll
+    else:
+        raise ValueError('Invalid output type. Please specify "npl" or "nll".')
+
 def compGauss_ms(m, h, vargin=None):
     '''
     Computes group-level gaussian from computed parameters and their covariances
@@ -122,8 +123,13 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000, func_
     
     """
     # Define settings
-    npar = len(param_names)        
-    total_trials = all_data[0][0].size
+    npar = len(param_names)
+    if isinstance(all_data[0][0], np.ndarray):  # check if it's a numpy array
+        total_trials = all_data[0][0].size
+    elif isinstance(all_data[0], pd.DataFrame):  # check if it's a pandas DataFrame
+        total_trials = len(all_data[0])
+    else:
+        raise ValueError('Data format not recognized. Please provide a list of numpy arrays or a pandas DataFrame.')
 
     # Convert to std dev
     sigmasqrt = np.sqrt(sigma)
