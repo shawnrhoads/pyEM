@@ -92,7 +92,7 @@ def simulate(params, nblocks=3, ntrials=24, outcomes=None):
                 ev[subj_idx, b, t+1, :] = ev[subj_idx, b, t, :].copy()
                 ev[subj_idx, b, t+1, c] = ev[subj_idx, b, t, c] + (lr * pe[subj_idx, b, t])
                 
-                choice_nll[subj_idx, b, t] = ch_prob[subj_idx, b, t, c].copy()
+                choice_nll[subj_idx, b, t] = -np.log(ch_prob[subj_idx, b, t, c])
 
     # store params
     subj_dict = {'params'    : params,
