@@ -141,6 +141,8 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000, func_
     for isub, beh in enumerate(all_data):        
         # Sample parameters from the Gaussian distribution
         Gsamples = norm.rvs(loc=np.tile(mu[:, np.newaxis], (1, nsamples)), scale=np.tile(sigmasqrt[:, np.newaxis], (1, nsamples)))
+        if Gsamples.ndim == 1:
+            Gsamples = Gsamples.reshape((1, -1))
 
         # Compute negative log likelihood for each sample
         subnll = Parallel(n_jobs=-1)(delayed(lambda k: fit_func(*([Gsamples[:, k]] + beh), output=func_output)[nll_output])(k) for k in range(nsamples))
