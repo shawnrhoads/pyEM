@@ -22,6 +22,12 @@ def norm2alpha(alpha_norm):
 def alpha2norm(alpha):
     return -np.log(1.0/alpha - 1.0)
 
+def get_prior(nparams):
+    prior = {'mu': 0.1 * np.random.randn(nparams, 1),
+            'sigma' : np.full((nparams, ), 100),
+            'logpdf': lambda x: np.sum(norm.logpdf(x, prior['mu'],  np.sqrt(prior['sigma'])))}
+    return prior
+
 def calc_fval(negll, params, prior=None, output='npl'):
     if (output == 'npl') and (prior is not None):
         # P(Choices | h) * P(h | O) should be maximized, therefore same as minimizing it with negative sign
