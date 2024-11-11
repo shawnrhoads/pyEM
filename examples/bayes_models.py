@@ -140,7 +140,7 @@ def fit(params, choices, observations, prior=None, output='npl'):
 
     elif output == 'all':
         return {
-            "params": params,
+            "params": np.array([lambda1]),
             "choices": choices,
             "observations": observations,
             "choice_probabilities": choice_probabilities,
