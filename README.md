@@ -15,6 +15,7 @@ This is a Python implementation of the Hierarchical Expectation Maximization alg
 * `pyEM.fitting`: contains the main function (`EMfit`) for fitting models
 * `pyEM.math`: contains functions used for fitting
 * `pyEM.plotting`: contains functions for simple plotting
+* `pyEM.classes`: contains classes for models (under development)
 
 ## Usage
 Users should create new functions based on their modeling needs:
@@ -104,11 +105,10 @@ python -m pip install --upgrade git+https://github.com/shawnrhoads/pyEM.git
 ## Examples
 See `examples/RW.ipynb` with an example notebook on implementing the algorithm using the Rescorla-Wagner model of reinforcement learning. This notebook simulates behavior and fits the model to the simulated data to demonstrate how hierarchical EM-MAP can be used for parameter recovery.
 
-## Future Implementations
-In future versions, I would love to add support using Python classes. For exampe, there could be a base model class with `simulate()` and `fit()` methods that can be inherited by other models. This would allow for a more flexible implementation of the algorithm, and would allow for the use of different models without having to change the code.
+See `examples/EMClass.ipynb` with an example notebook on implementing the algorithm using the `EMClass()`, which can be imported from `pyEM.classes`. This class is a more flexible implementation of the algorithm, and allows for the use of different models without having to change the code. This notebook simulates behavior and fits the model to the simulated data to demonstrate how to use the `EMClass()` for parameter recovery. This feature is still under development, so please report any issues you encounter.
 
 ## For Contributors
-This is meant to be a basic implementation of hierarchical EM with MAP. There is still so much left out. That being said, other researchers and educators are invited to help improve and expand the code here!
+This is meant to be a basic implementation of hierarchical EM with MAP estimation, but I invite other researchers and educators to help improve and expand the code here!
 
 Here are some ways you can help!
 - If you spot an error (e.g., typo, bug, inaccurate descriptions, etc.), please open a new issue on GitHub by clicking on the GitHub Icon in the top right corner on any page and selecting "open issue". Alternatively, you can <a target="_blank" rel="noopener noreferrer" href="https://github.com/shawnrhoads/pyEM/issues/new?labels=bug&template=issue-template.yml">open a new issue</a> directly through GitHub.
@@ -124,11 +124,11 @@ The negative log-likelihood is a measure of how well the model fits the observed
 
 *Prior Probability*
 
-The prior probability represents your knowledge or belief about the parameters before observing the data. It is typically based on some prior information or assumptions. In this case, you are using a normal distribution to represent your prior beliefs about the parameters, with mean $\mu$ and standard deviation $\sqrt{\sigma}$.
+The prior probability represents our knowledge or belief about the parameters before observing the data. It is typically based on some prior information or assumptions. In this case, we are using a normal distribution to represent our prior beliefs about the parameters, with mean $\mu$ and standard deviation $\sqrt{\sigma}$.
 
 *MAP Estimation*
 
-In MAP estimation, you are incorporating the prior probability into the estimation process. Instead of only maximizing the likelihood (as in MLE), you are maximizing the posterior probability, which combines the likelihood and the prior. Mathematically, MAP estimation can be expressed as: 
+In MAP estimation, we are incorporating the prior probability into the estimation process. Instead of only maximizing the likelihood (as in MLE), we are maximizing the posterior probability, which combines the likelihood and the prior. Mathematically, MAP estimation can be expressed as: 
 
 $argmax_{\theta} (likelihood(\theta | data) * prior(\theta))$
 
