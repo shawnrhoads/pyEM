@@ -6,14 +6,14 @@ from pyEM.math import calc_fval, norm2alpha
 
 def generate_fishp(lambda1, n_fish):
     """
-    Generates the transition probability matrix for fish types based on lambda1.
+    Generates the probability matrix for fish types based on lambda1.
     
     Args:
         lambda1 (float): The parameter defining likelihood distribution.
         n_fish (int): Number of fish types.
 
     Returns:
-        np.ndarray: Transition probability matrix of shape (n_fish, n_fish).
+        np.ndarray: Probability matrix of shape (n_fish, n_fish).
     """
     m = lambda1
     s = (1 - lambda1) / (n_fish - 1)
