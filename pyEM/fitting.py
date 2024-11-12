@@ -41,18 +41,12 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=None, **kwarg
     if maxit is None:
         maxit = 0
 
-    # check for kwargs
-    for key, value in kwargs.items():
-        # Check if the key is a valid variable name
-        if not key.isidentifier():
-            raise ValueError(f"'{key}' is not a valid variable name!")
-        
-        # Dynamically assign variable names (be cautious with this approach)
-        locals()[key] = value 
-
-    # Set optimization options
-    opts = {'gtol': 1e-3,# Equivalent to 'TolFun', 1e-3
-           'eps': 0.0001}# Equivalent to 'TolX', 0.0001
+    # Set optimization options, allowing kwargs to update them
+    opts = {
+        'gtol': 1e-3,   # Equivalent to 'TolFun', 1e-3
+        'eps': 0.0001   # Equivalent to 'TolX', 0.0001
+    }
+    opts.update(kwargs.get('optim_options', {}))  # Allows overriding options via `kwargs`
     
     # fit model, calculate P(Choices | h) * P(h | O) 
     ex = False
@@ -128,24 +122,15 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         - goodHessian (np.array): which hessians are positive definite [only for convergence_type='LME']
     '''
     # Set the number of fitting iterations
-    convCrit       = .001
-    precision      = 4
+    convCrit = kwargs.get('conv_crit', 0.001)  # Allows users to override the convergence criterion
+    precision = kwargs.get('precision', 4)
     nparams        = len(param_names)
     nsubjects      = len(all_data)
 
     # Initialize group-level parameter mean and variance
     posterior = {}
-    posterior['mu']    = 0.1 * np.random.randn(nparams, 1) #np.concatenate([np.abs(0.5 * np.random.randn(4,)), np.zeros(4, ), np.abs(0.1 * np.random.randn(1, ))])
-    posterior['sigma'] = np.full((nparams, ), 100)
-
-    # get kwargs if any
-    for key, value in kwargs.items():
-        # Check if the key is a valid variable name
-        if not key.isidentifier():
-            raise ValueError(f"'{key}' is not a valid variable name!")
-        
-        # Dynamically assign variable names (be cautious with this approach)
-        locals()[key] = value
+    posterior['mu'] = kwargs.get('mu', 0.1 * np.random.randn(nparams, 1))
+    posterior['sigma'] = kwargs.get('sigma', np.full((nparams, ), 100))
 
     # initialise transient variables:
     nextbreak  = 0
