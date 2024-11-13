@@ -130,7 +130,7 @@ The prior probability represents our knowledge or belief about the parameters be
 
 In MAP estimation, we are incorporating the prior probability into the estimation process. Instead of only maximizing the likelihood (as in MLE), we are maximizing the posterior probability, which combines the likelihood and the prior. Mathematically, MAP estimation can be expressed as: 
 
-$argmax_{\theta} (likelihood(\theta | data) * prior(\theta))$
+$argmax_{\theta} (likelihood(data | \theta) * prior(\theta))$
 
 where $\theta$ represents the model parameters
 
