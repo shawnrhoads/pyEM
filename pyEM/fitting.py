@@ -119,14 +119,15 @@ def EMfit(all_data, objfunc, param_names, verbose=1, mstep_maxit=800, estep_maxi
             * 'prior_sigma' (default : np.full((nparams, ), 100))
     
     Returns:
-        - m (np.array): estimated parameters
-        - inv_h (np.array): inverse hessian matrix
-        - posterior (dict): posterior mean and variance of parameters with logpdf function
-        - NPL (np.array): negative posterior likelihood
-        - NLPrior (np.array): negative log prior
-        - NLL (np.array): negative log likelihood
-        - LME (np.array): Log model evidence [only for convergence_type='LME']
-        - goodHessian (np.array): which hessians are positive definite [only for convergence_type='LME']
+        - dictionary with the following keys/values:
+            - m (np.array): estimated parameters
+            - inv_h (np.array): inverse hessian matrix
+            - posterior (dict): posterior mean and variance of parameters with logpdf function
+            - NPL (np.array): negative posterior likelihood
+            - NLPrior (np.array): negative log prior
+            - NLL (np.array): negative log likelihood
+            - LME (np.array): Log model evidence [only for convergence_type='LME']
+            - goodHessian (np.array): which hessians are positive definite [only for convergence_type='LME']
     '''
     # Settings
     convergence_method = kwargs.get('convergence_method', 'sum')
