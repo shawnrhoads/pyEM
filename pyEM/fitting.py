@@ -62,11 +62,11 @@ def expectation_step(objfunc, objfunc_input, prior, nparams, maxit=None, **kwarg
         if type(objfunc_input) == pd.core.frame.DataFrame:
             result = minimize(objfunc, x0=q,
                               args=tuple([objfunc_input]+[prior]),
-                              method='BFGS', options=opts)
+                              options=opts)
         else:
             result = minimize(objfunc, x0=q, 
                               args=tuple([x for x in objfunc_input]+[prior]),
-                              method='BFGS', options=opts)
+                              options=opts)
         q_est = result.x
         fval  = result.fun
         ex    = result.success
@@ -100,7 +100,7 @@ def hierachical_convergence(criterion_list, method='sum'):
     elif method == 'median':
         return np.median(criterion_list)
 
-def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_method='sum', verbose=1, mstep_maxit=800, estep_maxit=None, **kwargs):
+def EMfit(all_data, objfunc, param_names, verbose=1, mstep_maxit=800, estep_maxit=None, **kwargs):
     '''
     Expectation Maximization with MAP
     Adapted for Python from Marco Wittmann (2017), Patricia Lockwood & Miriam Klein-Flügge (2020), Jo Cutler (2021), & Shawn Rhoads (2024)
@@ -109,7 +109,14 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         - all_data (list of lists) or (lists of pandas DataFrames): data to be fit, each item in list is either (A) a list containing numpy arrays or (B) a pandas DataFrame, each containing data for model fitting
         - objfunc (dict): function to be minimized, should output negative log likelihood; this carries to expectation_step
         - param_names (list): parameters names as strings; e.g.: ['beta', 'lr']
-        - convergence_type (str): 'NPL' or 'LME'
+        - **kwargs: additional arguments for fitting 
+            * 'convergence_method' (default : 'sum') - choose from 'sum', 'mean', 'median'
+            * 'convergence_type' (default : 'NPL') - choose from 'NPL', 'LME'
+            * 'convergence_custom' (default : None; only works with convergence_type='NPL') - choose from None, 'relative_NPL', 'running_average'
+            * 'convergence_crit' (default :  0.001)
+            * 'convergence_precision' (default : 4)
+            * 'prior_mu' (default : 0.1 * np.random.randn(nparams, 1))
+            * 'prior_sigma' (default : np.full((nparams, ), 100))
     
     Returns:
         - m (np.array): estimated parameters
@@ -121,16 +128,19 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
         - LME (np.array): Log model evidence [only for convergence_type='LME']
         - goodHessian (np.array): which hessians are positive definite [only for convergence_type='LME']
     '''
-    # Set the number of fitting iterations
-    convCrit = kwargs.get('conv_crit', 0.001)  # Allows users to override the convergence criterion
-    precision = kwargs.get('precision', 4)
+    # Settings
+    convergence_method = kwargs.get('convergence_method', 'sum')
+    convergence_type = kwargs.get('convergence_type', 'NPL')
+    customConv = kwargs.get('convergence_custom', None)
+    convCrit = kwargs.get('convergence_crit', 0.001)  # Allows users to override the convergence criterion
+    precision = kwargs.get('convergence_precision', 4)
     nparams        = len(param_names)
     nsubjects      = len(all_data)
 
     # Initialize group-level parameter mean and variance
     posterior = {}
-    posterior['mu'] = kwargs.get('mu', 0.1 * np.random.randn(nparams, 1))
-    posterior['sigma'] = kwargs.get('sigma', np.full((nparams, ), 100))
+    posterior['mu'] = kwargs.get('prior_mu', 0.1 * np.random.randn(nparams, 1))
+    posterior['sigma'] = kwargs.get('prior_sigma', np.full((nparams, ), 100))
 
     # initialise transient variables:
     nextbreak  = 0
@@ -181,7 +191,7 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
             LME = np.hstack((LME, this_LME))
 
         # ------ MAXIMIZATION STEP -------------------------------------------------
-        # compute gaussians and sigmas per parameter
+        # compute gaussians and sigmas per parameter            
         curmu, cursigma, flagcov, _ = compGauss_ms(m,inv_h)
 
         if flagcov == 1:
@@ -199,12 +209,29 @@ def EMfit(all_data, objfunc, param_names, convergence_type='NPL', convergence_me
                 if hierachical_convergence(NPL[:,iiter], convergence_method) <= min(NPL_list):
                     print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
             elif verbose == 2:
-                print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
-            
-            if abs(hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old) < convCrit and flagcov == 1:
-                print(' -- CONVERGED!!!!!')
-                convergence = True
-                nextbreak = 1
+                if customConv == 'relative_npl' and iiter > 2:
+                    print(f'{abs((hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old)/NPL_old):.3f} ({iiter:03d})', end=', ')
+                else:
+                    print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
+
+            if customConv is not None:
+                if customConv == 'running_average' and flagcov == 1 and iiter > 5:
+                    # check if hierachical_convergence(NPL[:,iiter], convergence_method) is close to the running average of the last 5 iterations
+                    if abs(hierachical_convergence(NPL[:,iiter], convergence_method) - np.mean(NPL_list[-5:])) < convCrit:
+                        print(' -- CONVERGED!!!!!')
+                        convergence = True
+                        nextbreak = 1
+                elif customConv == 'relative_npl' and flagcov == 1 and iiter > 2:
+                    # check if hierachical_convergence(NPL[:,iiter], convergence_method) is close to the running average of the last 5 iterations
+                    if abs((hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old)/NPL_old) < convCrit and flagcov == 1:
+                        print(' -- CONVERGED!!!!!')
+                        convergence = True
+                        nextbreak = 1
+            else:
+                if abs(hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old) < convCrit and flagcov == 1:
+                    print(' -- CONVERGED!!!!!')
+                    convergence = True
+                    nextbreak = 1
             NPL_old = hierachical_convergence(NPL[:,iiter], convergence_method)
 
         elif convergence_type == 'LME':
