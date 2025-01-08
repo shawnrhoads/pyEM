@@ -112,7 +112,7 @@ def EMfit(all_data, objfunc, param_names, verbose=1, mstep_maxit=800, estep_maxi
         - **kwargs: additional arguments for fitting 
             * 'convergence_method' (default : 'sum') - choose from 'sum', 'mean', 'median'
             * 'convergence_type' (default : 'NPL') - choose from 'NPL', 'LME'
-            * 'convergence_custom' (default : None; only works with convergence_type='NPL') - choose from None, 'relative_NPL', 'running_average'
+            * 'convergence_custom' (default : None; only works with convergence_type='NPL') - choose from None, 'relative_npl', 'running_average'
             * 'convergence_crit' (default :  0.001)
             * 'convergence_precision' (default : 4)
             * 'prior_mu' (default : 0.1 * np.random.randn(nparams, 1))
