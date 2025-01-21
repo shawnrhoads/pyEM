@@ -161,6 +161,45 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000, func_
 
     return bicint
 
+def calc_choiceProbR2(choice_probs_per_subject, method='median'):
+    """
+    Computes a measure of 'choiceProbR2' (measure of how 'confident' the 
+    model is in its chosen actions) by taking either the mean or median
+    predicted probability of the chosen action for each subject, then squaring it,
+    and finally returning the group-level average. Adapted from the original code 
+    in MATLAB by Jo Cutler April 2020. 
+
+    Parameters
+    ----------
+    choice_probs_per_subject : list or array
+        A list of length nsubjects, where each element is an array of shape (nTrials,)
+        containing the model's predicted probability for the chosen option on each trial
+        for that subject.
+    method : str, optional
+        Either 'mean' or 'median'. Determines how we collapse each subject's
+        probabilities. Defaults to 'median'.
+
+    Returns
+    -------
+    float
+        The 'choiceProbR2' at the group level, i.e. the average across subjects of
+        (mean or median predicted probability)^2.
+    """
+    values = []
+    for probs in choice_probs_per_subject:
+        if method == 'median':
+            val_subj = np.nanmedian(probs)   # subject's median predicted prob
+        else:
+            val_subj = np.nanmean(probs)     # subject's mean predicted prob
+
+        # Now square it
+        val_subj_r2 = val_subj ** 2
+        values.append(val_subj_r2)
+
+    # Return the average across subjects
+    return np.nanmean(values)
+
+
 def calc_LME(inv_h, NPL):
     """
     Calculate the Laplace approximation and log model evidence (LME) for a given set of subjects.
@@ -206,6 +245,40 @@ def calc_LME(inv_h, NPL):
     print(f'Good Hessians: {np.sum(goodHessian == 1)} out of {nsubjects}')
 
     return Laplace_approx, lme, goodHessian
+
+def calc_pseudoR2(choice_nll, nblocks, ntrials, nopt=4):
+    """
+    Computes the pseudo-R^2 by comparing the model's average negative
+    log-likelihood (L) to a 'chance' (uniform) model (R) (Camerer & Ho, 
+    1999; Daw, 2011). Adapted from the original code in MATLAB by Jo 
+    Cutler April 2020.
+
+    Parameters
+    ----------
+    choice_nll : array-like
+        Negative log-likelihood per subject, shape (nsubjects,).
+    nblocks : int
+        Number of blocks per subject.
+    ntrials : int
+        Number of trials per block.
+    nopt : int, optional
+        Number of choice options (defaults to 4).
+
+    Returns
+    -------
+    float
+        A single pseudo-R^2 value at the group level.
+    """
+    # Model's average NLL
+    L = np.mean(choice_nll)
+
+    # Chance model's NLL for uniform choice among nopt options
+    total_trials = nblocks * ntrials
+    R = -np.log(1.0 / nopt) * total_trials
+
+    # pseudo-R^2
+    r2 = 1.0 - (L / R)
+    return r2
 
 def check_bounds(param_val, lower_bound, upper_bound, penalty=1e6):
     """
