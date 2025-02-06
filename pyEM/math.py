@@ -157,7 +157,11 @@ def calc_BICint(all_data, param_names, mu, sigma, fit_func, nsamples=2000, func_
         iLog[isub] = np.log(np.sum(np.exp(-np.array(subnll))) / nsamples)
 
     # Compute BICint
-    bicint = -2 * np.sum(iLog) + npar * np.log(total_trials)
+    finite_mask = np.isfinite(iLog)
+    if not np.all(finite_mask):
+        print('Warning: The integrated log likelihood values are infinite for some subjects. BICint will be calculated without these subjects.')
+        print(f'This occurs for subjects: {np.where(~finite_mask)[0]}')
+    bicint = -2 * np.sum(iLog[finite_mask]) + npar * np.log(total_trials)
 
     return bicint
 
