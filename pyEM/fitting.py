@@ -135,6 +135,7 @@ def EMfit(all_data, objfunc, param_names, verbose=1, mstep_maxit=800, estep_maxi
     customConv = kwargs.get('convergence_custom', None)
     convCrit = kwargs.get('convergence_crit', 0.001)  # Allows users to override the convergence criterion
     precision = kwargs.get('convergence_precision', 4)
+    njobs = kwargs.get('njobs', -1)
     nparams        = len(param_names)
     nsubjects      = len(all_data)
 
@@ -168,7 +169,7 @@ def EMfit(all_data, objfunc, param_names, verbose=1, mstep_maxit=800, estep_maxi
         
         # ------ EXPECTATION STEP -------------------------------------------------
         # Loop over subjects
-        results = Parallel(n_jobs=-1)(delayed(expectation_step)(objfunc, all_data[subj_idx], prior, nparams, estep_maxit) for subj_idx in range(nsubjects))
+        results = Parallel(n_jobs=njobs)(delayed(expectation_step)(objfunc, all_data[subj_idx], prior, nparams, estep_maxit) for subj_idx in range(nsubjects))
         
         # Store the results
         this_NPL = np.zeros((nsubjects,1))
@@ -208,7 +209,10 @@ def EMfit(all_data, objfunc, param_names, verbose=1, mstep_maxit=800, estep_maxi
             NPL_list += [hierachical_convergence(NPL[:,iiter], convergence_method)]
             if verbose == 1:
                 if hierachical_convergence(NPL[:,iiter], convergence_method) <= min(NPL_list):
-                    print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
+                    if customConv == 'relative_npl':
+                        print(f'{abs((hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old)/NPL_old):.3f} ({iiter:03d})', end=', ')
+                    else:
+                        print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
             elif verbose == 2:
                 if customConv == 'relative_npl':
                     print(f'{abs((hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old)/NPL_old):.3f} ({iiter:03d})', end=', ')
