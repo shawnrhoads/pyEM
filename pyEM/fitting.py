@@ -209,7 +209,7 @@ def EMfit(all_data, objfunc, param_names, verbose=1, mstep_maxit=800, estep_maxi
             NPL_list += [hierachical_convergence(NPL[:,iiter], convergence_method)]
             if verbose == 1:
                 if hierachical_convergence(NPL[:,iiter], convergence_method) <= min(NPL_list):
-                    if customConv == 'relative_npl':
+                    if customConv == 'relative_npl' and iiter > 2:
                         print(f'{abs((hierachical_convergence(NPL[:,iiter], convergence_method) - NPL_old)/NPL_old):.3f} ({iiter:03d})', end=', ')
                     else:
                         print(f'{hierachical_convergence(NPL[:,iiter], convergence_method):.3f} ({iiter:03d})', end=', ')
