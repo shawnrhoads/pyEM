@@ -36,7 +36,7 @@ def _hier_convergence(vals: np.ndarray, method: ConvergenceMethod) -> float:
     else:
         return float(np.median(vals))
 
-def _calc_group_gaussian(m: np.ndarray, inv_h: np.ndarray) -> tuple[np.ndarray,np.ndarray,int]:
+def _calc_group_gaussian(m: np.ndarray, inv_h: np.ndarray, covmat: bool = False) -> tuple[np.ndarray,np.ndarray,int]:
     # m: (nparams, nsubjects), inv_h: (nparams,nparams,nsubjects)
     nsub = m.shape[1]
     npar = m.shape[0]
@@ -48,7 +48,19 @@ def _calc_group_gaussian(m: np.ndarray, inv_h: np.ndarray) -> tuple[np.ndarray,n
     flag = 1
     if np.min(sigma) < 0:
         flag = 0
-    return mu, sigma, flag
+
+    if not covmat:
+        return mu, sigma, flag
+    else:
+        covmat = np.zeros((npar, npar))
+        for isub in range(nsub):
+            covmat += np.outer(m[:, isub], m[:, isub]) - np.outer(m[:, isub], mu) - np.outer(mu, m[:, isub]) + np.outer(mu, mu) + inv_h[:, :, isub]
+        covmat /= nsub
+
+        if np.linalg.det(covmat) <= 0:
+            print('Negative/zero determinant - prior covariance not updated')
+
+        return mu, sigma, flag, covmat
 
 def EMfit(
     all_data: Sequence[Sequence[Any]] | Sequence[pd.DataFrame],
