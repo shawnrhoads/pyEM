@@ -82,6 +82,13 @@ def rw_fit(params, choices, rewards, prior=None, output="npl"):
 
     if output == "nll":
         return CHOICE_NLL
+    elif output == "all":
+        subj_dict = {'params'     : [beta, lr],
+                     'choices'    : choices, 
+                     'rewards'    : rewards, 
+                     'EV'         : EV, 
+                     'CHOICE_NLL' : CHOICE_NLL,}
+        return subj_dict
 
     # negative posterior likelihood
     if prior is not None:
