@@ -72,4 +72,12 @@ def plot_scatter(x, xlabel, y, ylabel, filename=None, colorname='royalblue'):
     if filename:
         plt.savefig(filename, dpi=450, bbox_inches='tight')
 
+    # add line y=x
+    lims = [np.min([ax.get_xlim(), ax.get_ylim()]), np.max([ax.get_xlim(), ax.get_ylim()])]
+    ax.plot(lims, lims, 'k--', alpha=0.75, zorder=0)
+    ax.set_aspect('equal')
+    ax.set_xlim(lims)
+    ax.set_ylim(lims)
+
     plt.show()
+    return ax
