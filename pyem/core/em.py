@@ -13,8 +13,6 @@ ConvergenceType = Literal["NPL","LME"]
 
 @dataclass
 class EMConfig:
-    shared_mask: np.ndarray | None = None  # True -> parameter is group-level fixed
-    shared_prior: GaussianPrior | None = None  # prior on shared parameters
     mstep_maxit: int = 200
     estep_maxit: int | None = None            # kept for compatibility; we restart via optimizer
     convergence_method: ConvergenceMethod = "sum"
@@ -84,11 +82,6 @@ def EMfit(
     nparams = len(param_names)
     if config is None:
         config = EMConfig()
-    # shared mask via kwargs
-    if 'shared_mask' in kwargs:
-        config.shared_mask = np.asarray(kwargs['shared_mask'], dtype=bool)
-    if 'shared_prior' in kwargs:
-        config.shared_prior = kwargs['shared_prior']
     # Backward-compat kwargs mapping (e.g., mstep_maxit=..., njobs=..., etc.)
     if kwargs:
         if 'mstep_maxit' in kwargs: config.mstep_maxit = int(kwargs['mstep_maxit'])
@@ -122,10 +115,6 @@ def EMfit(
     post_sigma = prior.sigma.copy()
 
     for iiter in range(config.mstep_maxit):
-        # # shared-mask support injected
-        shared_mask = config.shared_mask if config.shared_mask is not None else np.zeros(nparams, dtype=bool)
-        free_mask = ~shared_mask
-        theta_shared = post_mu[shared_mask]  # current shared values
         # build per-iteration prior object (closure for current posterior)
         iter_prior = GaussianPrior(mu=post_mu.copy(), sigma=post_sigma.copy())
 
@@ -137,13 +126,8 @@ def EMfit(
                 obj_args = (args,)
             else:
                 obj_args = tuple(args)
-            def wrapped_obj(x_free, *args, prior=None):
-                full = np.zeros(nparams)
-                full[free_mask] = x_free
-                full[shared_mask] = theta_shared
-                return objfunc(full, *args, prior)
             return single_subject_minimize(
-                objfunc=wrapped_obj,
+                objfunc=objfunc,
                 obj_args=obj_args,
                 nparams=nparams,
                 prior=iter_prior,
@@ -165,43 +149,10 @@ def EMfit(
             NLP[i] = nl_prior
 
         # M-step: empirical Bayes update (group Gaussian)
-        mu, sigma, ok = _calc_group_gaussian(m[free_mask, :], inv_h[np.ix_(free_mask, free_mask, np.arange(nsubjects))])
+        mu, sigma, ok = _calc_group_gaussian(m, inv_h)
         if ok:
-            post_mu[free_mask] = mu
-            post_sigma[free_mask] = sigma
-        # Shared parameter update: minimize total NLL + prior(shared)
-        if np.any(shared_mask):
-            from scipy.optimize import minimize
-            def total_obj(theta):
-                total = 0.0
-                for i in range(nsubjects):
-                    full = np.zeros(nparams)
-                    full[free_mask] = m[free_mask, i]
-                    full[shared_mask] = theta
-                    args = all_data[i]
-                    if isinstance(args, pd.DataFrame):
-                        args = (args,)
-                    else:
-                        args = tuple(args)
-                    nll = objfunc(full, *args, None, output='nll')
-                    total += nll
-                if config.shared_prior is not None:
-                    total += -config.shared_prior.logpdf(np.asarray(theta))
-                return float(total)
-            x0 = post_mu[shared_mask]
-            res = minimize(total_obj, x0=x0, method='BFGS')
-            theta_hat = res.x
-            post_mu[shared_mask] = theta_hat
-            # crude variance estimate from inverse Hessian diag
-            try:
-                Hinv = np.asarray(res.hess_inv)
-                if Hinv.ndim == 0:
-                    Hinv = np.array([[Hinv]])
-                post_sigma[shared_mask] = np.diag(Hinv)
-            except Exception:
-                post_sigma[shared_mask] = np.maximum(post_sigma[shared_mask], 1e-3)
-            # overwrite m rows for shared with theta_hat for reporting consistency
-            m[shared_mask, :] = theta_hat[:, None]
+            post_mu = mu
+            post_sigma = sigma
 
         conv_val = _hier_convergence(NPL, config.convergence_method)
         if verbose:
