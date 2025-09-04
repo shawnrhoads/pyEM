@@ -91,7 +91,8 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
                      'choices'    : choices, 
                      'rewards'    : rewards, 
                      'EV'         : EV, 
-                     'choice_nll' : choice_nll,}
+                     'choice_nll' : choice_nll,
+                     'CHOICE_NLL' : choice_nll,}
         return subj_dict
 
     # negative posterior likelihood
@@ -205,7 +206,8 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
                      'rewards'    : rewards, 
                      'EV'         : EV, 
                      'PE'         : PE, 
-                     'choice_nll' : choice_nll,}
+                     'choice_nll' : choice_nll,
+                     'CHOICE_NLL' : choice_nll,}
         return subj_dict
 
     # negative posterior likelihood
