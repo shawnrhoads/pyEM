@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from .core.em import EMfit, EMConfig
 from .core.priors import GaussianPrior
 from .utils.stats import calc_BICint, calc_LME
-from .utils.math import norm2alpha, alpha2norm, norm2beta, beta2norm
 
 @dataclass
 class FitResult:
@@ -23,22 +22,21 @@ class FitResult:
 class EMModel:
     """
     A high-level, sklearn-like interface:
-      model = EMModel(all_data, fit_func, param_names, simulate_func=...)
+      model = EMModel(all_data, fit_func, param_names, param_xform=[norm2beta, norm2alpha], simulate_func=...)
       result = model.fit(...)
       sim = model.simulate(...)
+      
+      # Access parameter transformations:
+      beta_transform = model.get_param_transform("beta")  # or model.param_xform[0]
+      transformed_value = beta_transform(0.5)
     """
-    
-    # Parameter transformation functions as class attributes
-    norm2alpha = staticmethod(norm2alpha)
-    alpha2norm = staticmethod(alpha2norm)
-    norm2beta = staticmethod(norm2beta)
-    beta2norm = staticmethod(beta2norm)
     
     def __init__(
         self,
         all_data: Sequence[Sequence[Any]] | None,
         fit_func: Callable[..., float],
         param_names: Sequence[str],
+        param_xform: Sequence[Callable] | None = None,
         simulate_func: Callable[..., Any] | None = None,
     ) -> None:
         self.all_data = all_data
@@ -46,6 +44,42 @@ class EMModel:
         self.param_names = list(param_names)
         self.simulate_func = simulate_func
         self._out: dict[str, Any] | None = None
+        
+        # Store parameter transformation functions
+        if param_xform is not None:
+            if len(param_xform) != len(param_names):
+                raise ValueError(f"param_xform length ({len(param_xform)}) must match param_names length ({len(param_names)})")
+            self.param_xform = list(param_xform)
+        else:
+            self.param_xform = None
+    
+    def get_param_transform(self, param_name_or_index):
+        """
+        Get parameter transformation function by parameter name or index.
+        
+        Args:
+            param_name_or_index: Parameter name (str) or index (int)
+            
+        Returns:
+            Transformation function for the specified parameter
+            
+        Raises:
+            ValueError: If param_xform was not provided or parameter not found
+        """
+        if self.param_xform is None:
+            raise ValueError("param_xform was not provided to the model")
+        
+        if isinstance(param_name_or_index, str):
+            try:
+                index = self.param_names.index(param_name_or_index)
+            except ValueError:
+                raise ValueError(f"Parameter '{param_name_or_index}' not found in param_names")
+        else:
+            index = param_name_or_index
+            if not (0 <= index < len(self.param_xform)):
+                raise ValueError(f"Index {index} out of range for param_xform")
+        
+        return self.param_xform[index]
 
     # alias to preserve legacy name
     def EMfit(self, **kwargs) -> dict[str, Any]:
