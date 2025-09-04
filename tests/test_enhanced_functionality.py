@@ -6,6 +6,7 @@ import pytest
 from pyem.api import EMModel
 from pyem.models.rw import rw_simulate, rw_fit
 from pyem.core.compare import ModelComparison
+from pyem.utils.math import norm2alpha, alpha2norm, norm2beta, beta2norm
 
 
 def test_compute_integrated_bic():
@@ -94,27 +95,54 @@ def test_parameter_recovery():
 
 
 def test_parameter_transformations():
-    """Test parameter transformation functions as class attributes."""
-    model = EMModel(None, rw_fit, ["beta","lr"])
+    """Test parameter transformation functions via param_xform."""
+    # Create model with parameter transformations
+    model = EMModel(None, rw_fit, ["beta","lr"], param_xform=[norm2beta, norm2alpha])
     
-    # Test norm2alpha
-    alpha = model.norm2alpha(0.5)
+    # Test norm2beta for first parameter (beta)
+    beta = model.param_xform[0](0.5)
+    assert beta > 0
+    
+    # Test norm2alpha for second parameter (lr)  
+    alpha = model.param_xform[1](0.5)
     assert 0 < alpha < 1
     
-    # Test norm2beta  
-    beta = model.norm2beta(0.5)
-    assert beta > 0
+    # Test convenience method with parameter name
+    beta_func = model.get_param_transform("beta")
+    assert beta_func is norm2beta
+    
+    lr_func = model.get_param_transform("lr")
+    assert lr_func is norm2alpha
+    
+    # Test convenience method with index
+    assert model.get_param_transform(0) is norm2beta
+    assert model.get_param_transform(1) is norm2alpha
     
     # Test roundtrip transformations
     original_alpha = 0.3
-    norm_alpha = model.alpha2norm(original_alpha)
-    recovered_alpha = model.norm2alpha(norm_alpha)
+    norm_alpha = alpha2norm(original_alpha)
+    recovered_alpha = norm2alpha(norm_alpha)
     assert np.isclose(original_alpha, recovered_alpha)
     
     original_beta = 5.0
-    norm_beta = model.beta2norm(original_beta)
-    recovered_beta = model.norm2beta(norm_beta)
+    norm_beta = beta2norm(original_beta)
+    recovered_beta = norm2beta(norm_beta)
     assert np.isclose(original_beta, recovered_beta)
+    
+    # Test that param_xform length must match param_names length
+    with pytest.raises(ValueError, match="param_xform length.*must match param_names length"):
+        EMModel(None, rw_fit, ["beta","lr"], param_xform=[norm2beta])  # Too few transformations
+    
+    # Test error cases for get_param_transform
+    model_no_xform = EMModel(None, rw_fit, ["beta","lr"])  # No param_xform
+    with pytest.raises(ValueError, match="param_xform was not provided"):
+        model_no_xform.get_param_transform("beta")
+    
+    with pytest.raises(ValueError, match="Parameter 'unknown' not found"):
+        model.get_param_transform("unknown")
+        
+    with pytest.raises(ValueError, match="Index 5 out of range"):
+        model.get_param_transform(5)
 
 
 def test_model_comparison_class():
