@@ -3,8 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Sequence
 import numpy as np
+import matplotlib.pyplot as plt
 from .core.em import EMfit, EMConfig
 from .core.priors import GaussianPrior
+from .utils.stats import calc_BICint, calc_LME
+from .utils.math import norm2alpha, alpha2norm, norm2beta, beta2norm
 
 @dataclass
 class FitResult:
@@ -24,6 +27,13 @@ class EMModel:
       result = model.fit(...)
       sim = model.simulate(...)
     """
+    
+    # Parameter transformation functions as class attributes
+    norm2alpha = staticmethod(norm2alpha)
+    alpha2norm = staticmethod(alpha2norm)
+    norm2beta = staticmethod(norm2beta)
+    beta2norm = staticmethod(beta2norm)
+    
     def __init__(
         self,
         all_data: Sequence[Sequence[Any]] | None,
@@ -120,3 +130,234 @@ class EMModel:
         if self._out is None:
             raise RuntimeError("Call fit() first.")
         return self._out["posterior"]
+
+    def compute_integrated_bic(self, nsamples: int = 500, func_output: str = "all", nll_key: str = "CHOICE_NLL") -> float:
+        """
+        Compute integrated Bayesian Information Criterion (BICint).
+        
+        Args:
+            nsamples: Number of samples for Monte Carlo integration
+            func_output: Output type to request from fit function
+            nll_key: Key to extract negative log-likelihood from fit function output
+            
+        Returns:
+            Integrated BIC value
+        """
+        if self._out is None:
+            raise RuntimeError("Call fit() first.")
+        
+        posterior = self._out["posterior"]
+        return calc_BICint(
+            self.all_data, 
+            self.param_names, 
+            posterior["mu"], 
+            posterior["sigma"], 
+            self.fit_func,
+            nsamples=nsamples,
+            func_output=func_output,
+            nll_key=nll_key
+        )
+
+    def compute_lme(self) -> tuple[np.ndarray, float, np.ndarray]:
+        """
+        Compute Laplace approximation for log model evidence (LME).
+        
+        Returns:
+            Tuple of (Laplace approximation per subject, total LME, good Hessian flags)
+        """
+        if self._out is None:
+            raise RuntimeError("Call fit() first.")
+        
+        return calc_LME(self._out["inv_h"], self._out["NPL"])
+
+    def calculate_final_arrays(self) -> dict[str, np.ndarray]:
+        """
+        Calculate final arrays based on estimated parameters.
+        
+        Returns:
+            Dictionary containing calculated arrays for each subject
+        """
+        if self._out is None:
+            raise RuntimeError("Call fit() first.")
+        
+        nsubjects = self._out["m"].shape[1]
+        nblocks = len(self.all_data[0][0]) if hasattr(self.all_data[0][0], '__len__') else 1
+        ntrials = len(self.all_data[0][0][0]) if hasattr(self.all_data[0][0], '__len__') and hasattr(self.all_data[0][0][0], '__len__') else len(self.all_data[0][0])
+        
+        # Initialize arrays
+        arrays_dict = {}
+        arrays_dict['choices'] = np.empty((nsubjects, nblocks, ntrials,), dtype='object')
+        arrays_dict['rewards'] = np.zeros((nsubjects, nblocks, ntrials,))
+        arrays_dict['choice_nll'] = np.zeros((nsubjects,))
+        
+        # Get subject-specific fits
+        for subj_idx in range(nsubjects):
+            subj_params = self._out["m"][:, subj_idx]
+            args = self.all_data[subj_idx]
+            if not isinstance(args, (list, tuple)):
+                args = (args,)
+            
+            # Get subject fit with all outputs
+            subj_fit = self.fit_func(subj_params, *args, prior=None, output='all')
+            
+            arrays_dict['choices'][subj_idx] = subj_fit.get('choices', None)
+            arrays_dict['rewards'][subj_idx] = subj_fit.get('rewards', None)
+            arrays_dict['choice_nll'][subj_idx] = subj_fit.get('choice_nll', 0.0)
+            
+            # Add other arrays if available
+            for key in ['EV', 'PE', 'ch_prob', 'choices_A']:
+                if key in subj_fit:
+                    if key not in arrays_dict:
+                        if key == 'EV':
+                            arrays_dict[key] = np.zeros((nsubjects, nblocks, ntrials+1, 2))
+                        elif key in ['ch_prob']:
+                            arrays_dict[key] = np.zeros((nsubjects, nblocks, ntrials, 2))
+                        else:
+                            arrays_dict[key] = np.zeros((nsubjects, nblocks, ntrials))
+                    arrays_dict[key][subj_idx] = subj_fit[key]
+        
+        return arrays_dict
+
+    def fit_individual_nll(self, use_emfit: bool = True) -> dict[str, Any]:
+        """
+        Fit using either EMfit() or individual negative log likelihood per subject.
+        
+        Args:
+            use_emfit: If True, use EMfit(); if False, fit each subject individually
+            
+        Returns:
+            Dictionary with fit results
+        """
+        if use_emfit:
+            # Use standard EMfit
+            return self.fit().__dict__
+        else:
+            # Fit each subject individually
+            if self.all_data is None:
+                raise ValueError("all_data must be provided to fit the model.")
+            
+            nsubjects = len(self.all_data)
+            nparams = len(self.param_names)
+            
+            m = np.zeros((nparams, nsubjects))
+            NPL = np.zeros(nsubjects)
+            
+            for subj_idx, args in enumerate(self.all_data):
+                if not isinstance(args, (list, tuple)):
+                    args = (args,)
+                
+                # Simple optimization for individual subjects
+                from scipy.optimize import minimize
+                
+                def obj_func(params):
+                    return self.fit_func(params, *args, prior=None, output='nll')
+                
+                # Random starting point
+                x0 = np.random.randn(nparams)
+                res = minimize(obj_func, x0=x0, method='BFGS')
+                
+                m[:, subj_idx] = res.x
+                NPL[subj_idx] = res.fun
+            
+            return {
+                'm': m,
+                'NPL': NPL,
+                'convergence': True,
+                'individual_fit': True
+            }
+
+    def recover(self, true_params: np.ndarray, simulate_func: Callable = None, **sim_kwargs) -> dict[str, Any]:
+        """
+        Parameter recovery analysis given true parameters and simulation function.
+        
+        Args:
+            true_params: True parameter values (nsubjects x nparams)
+            simulate_func: Simulation function (uses self.simulate_func if None)
+            **sim_kwargs: Additional arguments for simulation
+            
+        Returns:
+            Dictionary containing true params, estimated params, and recovery metrics
+        """
+        if simulate_func is None:
+            simulate_func = self.simulate_func
+        if simulate_func is None:
+            raise AttributeError("No simulate_func provided.")
+        
+        # Simulate data with true parameters
+        sim = simulate_func(true_params, **sim_kwargs)
+        
+        # Prepare data for fitting
+        if 'choices' in sim and 'rewards' in sim:
+            all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
+        else:
+            raise ValueError("Simulation must return 'choices' and 'rewards' keys")
+        
+        # Create new model instance with simulated data
+        recovery_model = EMModel(
+            all_data=all_data,
+            fit_func=self.fit_func,
+            param_names=self.param_names,
+            simulate_func=simulate_func
+        )
+        
+        # Fit the model
+        fit_result = recovery_model.fit(verbose=0)
+        estimated_params = fit_result.m.T  # transpose to get (nsubjects x nparams)
+        
+        # Calculate recovery metrics
+        recovery_dict = {
+            'true_params': true_params,
+            'estimated_params': estimated_params,
+            'sim': sim,
+            'fit_result': fit_result,
+            'correlation': np.corrcoef(true_params.flatten(), estimated_params.flatten())[0, 1],
+            'rmse': np.sqrt(np.mean((true_params - estimated_params)**2)),
+            'mae': np.mean(np.abs(true_params - estimated_params))
+        }
+        
+        return recovery_dict
+
+    def plot_recovery(self, recovery_dict: dict, show_line: bool = True, figsize: tuple = (10, 4)) -> plt.Figure:
+        """
+        Plot parameter recovery as scatter plot of simulated vs estimated parameters.
+        
+        Args:
+            recovery_dict: Output from recover() method
+            show_line: Whether to draw x=y line
+            figsize: Figure size
+            
+        Returns:
+            matplotlib Figure object
+        """
+        true_params = recovery_dict['true_params']
+        estimated_params = recovery_dict['estimated_params']
+        nparams = true_params.shape[1]
+        
+        fig, axes = plt.subplots(1, nparams, figsize=figsize)
+        if nparams == 1:
+            axes = [axes]
+        
+        for i, param_name in enumerate(self.param_names):
+            ax = axes[i]
+            
+            # Scatter plot
+            ax.scatter(true_params[:, i], estimated_params[:, i], alpha=0.6)
+            
+            # x=y line
+            if show_line:
+                min_val = min(true_params[:, i].min(), estimated_params[:, i].min())
+                max_val = max(true_params[:, i].max(), estimated_params[:, i].max())
+                ax.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, label='x=y')
+                ax.legend()
+            
+            # Labels and title
+            ax.set_xlabel(f'True {param_name}')
+            ax.set_ylabel(f'Estimated {param_name}')
+            ax.set_title(f'{param_name} Recovery')
+            
+            # Add correlation in title
+            corr = np.corrcoef(true_params[:, i], estimated_params[:, i])[0, 1]
+            ax.set_title(f'{param_name} Recovery (r={corr:.3f})')
+        
+        plt.tight_layout()
+        return fig
