@@ -17,7 +17,7 @@ def test_model_compare_basic():
     rows = compare_models(
         [( "rw1", r1.__dict__, all_data, rw_fit ),
          ( "rw2", r2.__dict__, all_data, rw_fit )],
-        bicint_kwargs={"nsamples": 10, "func_output":"all", "nll_key":"CHOICE_NLL"},
+        bicint_kwargs={"nsamples": 10, "func_output":"all", "nll_key":"nll"},
         r2_kwargs={"ntrials": nblocks*ntrials, "nopts": 2}
     )
     assert len(rows) == 2
