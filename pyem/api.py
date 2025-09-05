@@ -207,6 +207,7 @@ class EMModel:
     def calculate_final_arrays(self) -> dict[str, np.ndarray]:
         """
         Calculate final arrays based on estimated parameters.
+        Generic implementation that works with any fit_func output.
         
         Returns:
             Dictionary containing calculated arrays for each subject
@@ -215,16 +216,38 @@ class EMModel:
             raise RuntimeError("Call fit() first.")
         
         nsubjects = self._out["m"].shape[1]
-        nblocks = len(self.all_data[0][0]) if hasattr(self.all_data[0][0], '__len__') else 1
-        ntrials = len(self.all_data[0][0][0]) if hasattr(self.all_data[0][0], '__len__') and hasattr(self.all_data[0][0][0], '__len__') else len(self.all_data[0][0])
         
-        # Initialize arrays
+        # Get first subject's fit to determine available keys and shapes
+        first_subj_params = self._out["m"][:, 0]
+        first_args = self.all_data[0]
+        if not isinstance(first_args, (list, tuple)):
+            first_args = (first_args,)
+        
+        # Get first subject fit with all outputs to determine structure
+        first_subj_fit = self.fit_func(first_subj_params, *first_args, prior=None, output='all')
+        
+        # Initialize arrays_dict based on what the fit_func actually returns
         arrays_dict = {}
-        arrays_dict['choices'] = np.empty((nsubjects, nblocks, ntrials,), dtype='object')
-        arrays_dict['rewards'] = np.zeros((nsubjects, nblocks, ntrials,))
-        arrays_dict['choice_nll'] = np.zeros((nsubjects,))
         
-        # Get subject-specific fits
+        for key, value in first_subj_fit.items():
+            if isinstance(value, (int, float, np.number)):
+                # Scalar values - create 1D array for subjects
+                arrays_dict[key] = np.zeros(nsubjects)
+            elif isinstance(value, (list, np.ndarray)):
+                # Array values - create arrays with subject dimension
+                value_array = np.asarray(value)
+                if value_array.ndim == 0:
+                    # 0-d array (scalar)
+                    arrays_dict[key] = np.zeros(nsubjects)
+                else:
+                    # Multi-dimensional array - add subject dimension
+                    subject_shape = (nsubjects,) + value_array.shape
+                    arrays_dict[key] = np.zeros(subject_shape, dtype=value_array.dtype)
+            else:
+                # For other types (strings, objects), create object array
+                arrays_dict[key] = np.empty(nsubjects, dtype=object)
+        
+        # Fill arrays for all subjects
         for subj_idx in range(nsubjects):
             subj_params = self._out["m"][:, subj_idx]
             args = self.all_data[subj_idx]
@@ -234,20 +257,9 @@ class EMModel:
             # Get subject fit with all outputs
             subj_fit = self.fit_func(subj_params, *args, prior=None, output='all')
             
-            arrays_dict['choices'][subj_idx] = subj_fit.get('choices', None)
-            arrays_dict['rewards'][subj_idx] = subj_fit.get('rewards', None)
-            arrays_dict['choice_nll'][subj_idx] = subj_fit.get('choice_nll', 0.0)
-            
-            # Add other arrays if available
-            for key in ['EV', 'PE', 'ch_prob', 'choices_A']:
+            # Populate arrays based on what's available in subj_fit
+            for key in arrays_dict.keys():
                 if key in subj_fit:
-                    if key not in arrays_dict:
-                        if key == 'EV':
-                            arrays_dict[key] = np.zeros((nsubjects, nblocks, ntrials+1, 2))
-                        elif key in ['ch_prob']:
-                            arrays_dict[key] = np.zeros((nsubjects, nblocks, ntrials, 2))
-                        else:
-                            arrays_dict[key] = np.zeros((nsubjects, nblocks, ntrials))
                     arrays_dict[key][subj_idx] = subj_fit[key]
         
         return arrays_dict
