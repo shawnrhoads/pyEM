@@ -9,146 +9,315 @@
 <b>If you use these materials for teaching or research, please use the following citation:</b>
 > Rhoads, S. A. (2023). pyEM: Expectation Maximization with MAP estimation in Python. Zenodo. <a href="https://doi.org/10.5281/zenodo.10415396">https://doi.org/10.5281/zenodo.10415396</a>
 
-This is a Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation for fitting models to behavioral data. [See below](#key-concepts) for more information on the algorithm.
+This is a Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation for fitting computational models to behavioral data. The package provides both low-level fitting functions and a high-level, sklearn-like interface for ease of use.
 
-## Relevant Modules
-* `pyEM.fitting`: contains the main function (`EMfit`) for fitting models
-* `pyEM.math`: contains functions used for fitting
-* `pyEM.plotting`: contains functions for simple plotting
-* `pyEM.classes`: contains classes for models (under development)
+## Features
 
-## Usage
-Users should create new functions based on their modeling needs:
-1. Simulation function to simulate behavior (see `examples.rw_models.simulate`)
-2. Fit function to fit the model to the behavior (see `examples.rw_models.fit`)
+* **High-level API**: The `EMModel` class provides a sklearn-like interface for model fitting and analysis
+* **Parameter recovery**: Built-in methods for parameter recovery analysis and visualization
+* **Model comparison**: Tools for comparing different models using LME, BIC, and integrated BIC
+* **Parameter transformations**: Support for parameter transformation functions to handle bounded parameters
+* **Modular design**: Easy to extend with custom models and analysis methods
+* **Comprehensive testing**: Extensive test coverage for reliability
 
-You will use `EMfit()` to fit the model to the data. This function takes the following inputs:
-- all behavioral data: a list of lists (level 1: subject, level 2: relevant `np.array` containing behavior for each subject) or a list of pd.DataFrames (level 1: subject, level 2: relevant `pd.DataFrame` containing behavior for each subject)
-- objective function (e.g., `examples.rw_models.fit`): a function that takes level 2 inputs from above: (e.g., single `np.array` or `pd.DataFrame` for a single subject) and outputs the negative posterior likelihood based on likelihood and prior probabilities (see explanation of implementation below)
-- parameter names: a list of parameter names in the correct order (e.g., `['alpha', 'beta']`)
+## Quick Start
 
-### Setting Up Your Objective Function
-An example `fit()` function is provided in [`examples.template_model.fit`](examples/template_model.py). You can copy this file and modify it to fit your model.
+### Basic Usage
 
-Your objective function `fit()` function is that main implementation of your custom model. It should take the following inputs:
-- `params` (list): list of parameter estimates
-- `behavioral_data`: this can be a `np.array` or `pd.DataFrame` (choose whichever is more convenient for your model)
-- `prior=None`: this is for the EM algorithm, and should have a default value as `None` (see below for more information)
-- `output='npl'` (str): this is also for the EM algorithm, and should have a default value as `'npl'` (see below for more information)
-
-You can also add additional inputs as needed.
-
-At the top of your function, please include code to convert relevant parameters from Gaussian space to parameter space (see Daw et al., 2011 below). For example, if you have a parameter `lr` that is bounded between 0 and 1, you can convert it from Gaussian space to parameter space using the following code (you can add custom functions if needed):
 ```python
-lr = norm2alpha(params[0])
+import numpy as np
+from pyem.api import EMModel
+from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
+from pyem.utils.math import norm2beta, norm2alpha
+
+# Generate sample data
+true_params = np.array([[0.5, 0.3], [0.7, 0.4], [0.2, 0.6]])  # beta, alpha for 3 subjects
+sim = rw1a1b_simulate(true_params, nblocks=3, ntrials=24)
+all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
+
+# Create and fit model
+model = EMModel(
+    all_data=all_data,
+    fit_func=rw1a1b_fit,
+    param_names=["beta", "alpha"],
+    param_xform=[norm2beta, norm2alpha],  # Parameter transformation functions
+    simulate_func=rw1a1b_simulate
+)
+
+# Fit the model
+result = model.fit(verbose=1, mstep_maxit=100)
+
+# Access results
+estimated_params = result.m.T  # Shape: (n_subjects, n_params)
+posterior_mu = result.posterior_mu
+posterior_sigma = result.posterior_sigma
+
+print(f"Estimated parameters shape: {estimated_params.shape}")
+print(f"Convergence: {result.convergence}")
 ```
 
-After your transformation, please also ensure that your parameters are in the correct range. For example, if you have parameters `lr` (bounded between 0 and 1) and `inv_tmp` (bounded between 0.00001 and 10), you can add the following code to ensure that the parameter is in the correct range. Here, we are returning a very large number if the parameter is out of range, which will effectively prevent the algorithm from using that parameter value:
-```python
-this_alpha_bounds = [0, 1]
-if lr < min(this_alpha_bounds) or lr > max(this_alpha_bounds):
-    return 10000000
+### Parameter Recovery Analysis
 
-this_beta_bounds = [0.00001, 10]
-if inv_tmp < min(this_beta_bounds) or inv_tmp > max(this_beta_bounds):
-    return 10000000
+```python
+# Perform parameter recovery
+recovery_dict = model.recover(
+    true_params=true_params,
+    nblocks=3,
+    ntrials=24
+)
+
+# Plot recovery results
+fig = model.plot_recovery(recovery_dict, figsize=(10, 4))
+
+# Print recovery metrics
+print(f"Overall correlation: {recovery_dict['correlation']:.3f}")
+print(f"RMSE: {recovery_dict['rmse']:.3f}")
+print(f"MAE: {recovery_dict['mae']:.3f}")
 ```
 
-At the bottom of your function, please return the negative posterior likelihood. This is the negative log-likelihood (e.g., from your choice likelihoods) multiplied by the prior probability. You can use the following code to return the negative posterior likelihood:
-```python
-# you can compute your negative log likelihood first (this might change depending on your model)
-# here, we are assuming you have a list or np.array of choice likelihoods
-negll = -np.nansum(np.log(choice_likelihoods))
+### Model Comparison
 
-# then compute the negative posterior likelihood
-# you can use the provided function `math.calc_fval` to compute the negative posterior likelihood
-# e.g.: `fval = calc_fval(choice_nll, params, prior, output)`
-# ...or you can copy and paste or modify the following code (assuming that your negative log likelihood is `negll`)
-if (output == 'npl') or (output == 'nll'):
-    fval = calc_fval(choice_nll, params, prior=prior, output=output)
-    return fval
+```python
+from pyem.core.compare import ModelComparison
+
+# Create multiple models for comparison
+model1 = EMModel(all_data, rw1a1b_fit, ["beta", "alpha"])
+model2 = EMModel(all_data, rw2a1b_fit, ["beta", "alpha_pos", "alpha_neg"])
+
+# Fit both models
+model1.fit(verbose=0)
+model2.fit(verbose=0)
+
+# Compare models
+comparison = ModelComparison([model1, model2], ["RW1", "RW2"])
+results = comparison.compare()
+
+# Print comparison results
+for result in results:
+    print(f"{result.name}: LME = {result.LME:.2f}")
+```
+
+### Advanced Analysis
+
+```python
+# Compute integrated BIC
+bicint = model.compute_integrated_bic(nsamples=1000)
+
+# Compute Laplace approximation for LME
+lap, lme, good = model.compute_lme()
+
+# Calculate final arrays (model predictions, etc.)
+arrays = model.calculate_final_arrays()
+print(f"Available arrays: {list(arrays.keys())}")
+
+# Access parameter transformations
+beta_transform = model.get_param_transform("beta")
+alpha_transform = model.get_param_transform("alpha")
+
+# Transform parameters
+transformed_beta = beta_transform(0.5)  # Convert from normalized to natural space
+transformed_alpha = alpha_transform(0.3)
+```
+
+## Available Models
+
+The package includes several pre-implemented models:
+
+### Reinforcement Learning Models (`pyem.models.rl`)
+
+* **`rw1a1b_simulate/fit`**: Rescorla-Wagner model with single learning rate
+* **`rw2a1b_simulate/fit`**: Rescorla-Wagner model with separate learning rates for positive/negative prediction errors
+
+### Bayesian Models (`pyem.models.bayes`)
+
+* **`simulate/fit`**: Bayesian learning model for categorization tasks
+
+### Creating Custom Models
+
+To create a custom model, implement two functions:
+
+```python
+def my_model_fit(params, choices, rewards, prior=None, output="npl"):
+    """
+    Fit function for your custom model.
+    
+    Args:
+        params: Parameter values in normalized space
+        choices: Choice data for one subject
+        rewards: Reward data for one subject  
+        prior: Prior distribution (used by EM algorithm)
+        output: "npl" for negative posterior likelihood, "nll" for negative log-likelihood, "all" for full output
+        
+    Returns:
+        Negative posterior likelihood (float) or full dictionary if output="all"
+    """
+    # Transform parameters from normalized to natural space
+    alpha = norm2alpha(params[0])
+    beta = norm2beta(params[1])
+    
+    # Bounds checking
+    if not (0 <= alpha <= 1): return 1e7
+    if not (0.001 <= beta <= 20): return 1e7
+    
+    # Your model implementation here
+    nll = compute_negative_log_likelihood(alpha, beta, choices, rewards)
+    
+    if output == "nll":
+        return nll
+    elif output == "all":
+        return {"params": [alpha, beta], "nll": nll, "predictions": predictions}
+    
+    # Compute negative posterior likelihood
+    if prior is not None:
+        nlp = -prior.logpdf(np.asarray(params))
+        return nll + nlp
+    return nll
+
+def my_model_simulate(params, **kwargs):
+    """
+    Simulation function for your custom model.
+    
+    Args:
+        params: Parameter values in natural space (n_subjects x n_params)
+        **kwargs: Additional simulation parameters
+        
+    Returns:
+        Dictionary with keys: "params", "choices", "rewards", "nll", etc.
+    """
+    # Your simulation implementation here
+    return {"params": params, "choices": choices, "rewards": rewards, "nll": nll}
+```
+
+## Key Classes and Functions
+
+### EMModel Class
+
+The main interface for model fitting and analysis:
+
+```python
+class EMModel:
+    def __init__(self, all_data, fit_func, param_names, param_xform=None, simulate_func=None)
+    def fit(self, **kwargs) -> FitResult
+    def simulate(self, *args, **kwargs)
+    def recover(self, true_params, **kwargs) -> dict
+    def plot_recovery(self, recovery_dict, **kwargs) -> plt.Figure
+    def compute_integrated_bic(self, **kwargs) -> float
+    def compute_lme(self) -> tuple
+    def calculate_final_arrays(self) -> dict
+```
+
+### ModelComparison Class
+
+For comparing multiple models:
+
+```python
+class ModelComparison:
+    def __init__(self, models, names)
+    def compare(self) -> list
+    def identifiability_analysis(self, **kwargs)
+    def plot_identifiability(self, **kwargs) -> plt.Figure
+```
+
+### Utility Functions
+
+* **Parameter transformations** (`pyem.utils.math`): `norm2alpha()`, `norm2beta()`, `alpha2norm()`, `beta2norm()`
+* **Statistics** (`pyem.utils.stats`): `calc_BICint()`, `calc_LME()`, `pseudo_r2_from_nll()`
+* **Plotting** (`pyem.utils.plotting`): Various visualization functions
+
+## Installation
+
+### From GitHub (recommended)
+
+```bash
+pip install git+https://github.com/shawnrhoads/pyEM.git
+```
+
+### For Development
+
+```bash
+git clone https://github.com/shawnrhoads/pyEM.git
+cd pyEM
+pip install -e .
 ```
 
 ## Requirements
-This algorithm requires Python 3.7.10 with the following packages:
-```
-numpy: 1.21.6
-scipy: 1.6.2
-joblib: 1.1.0
-matplotlib: 3.5.3
-seaborn: 0.12.2
-pandas: 1.1.5
-tqdm: 4.65.0
-```
 
-We also use:
-```
-copy
-datetime
-pickle
-sys
-``` 
-
-## Installation
-To install the package, you can use `pip install` in a new Anaconda environment (recommended), but you can also just `pip install` it into your current environment:
-```
-conda create --name emfit pip python=3.7.10
-conda activate emfit
-python -m pip install git+https://github.com/shawnrhoads/pyEM.git
-```
-
-To update the package, you can use pip:
-```
-python -m pip install --upgrade git+https://github.com/shawnrhoads/pyEM.git
-```
+* Python >= 3.8
+* numpy >= 1.22
+* scipy >= 1.10
+* pandas >= 1.5
+* matplotlib >= 3.5
+* joblib >= 1.3
 
 ## Examples
-See `examples/RW.ipynb` with an example notebook on implementing the algorithm using the Rescorla-Wagner model of reinforcement learning. This notebook simulates behavior and fits the model to the simulated data to demonstrate how hierarchical EM-MAP can be used for parameter recovery.
 
-See `examples/EMClass.ipynb` with an example notebook on implementing the algorithm using the `EMClass()`, which can be imported from `pyEM.classes`. This class is a more flexible implementation of the algorithm, and allows for the use of different models without having to change the code. This notebook simulates behavior and fits the model to the simulated data to demonstrate how to use the `EMClass()` for parameter recovery. This feature is still under development, so please report any issues you encounter.
+See the `examples/` directory for detailed tutorials:
 
-## For Contributors
-This is meant to be a basic implementation of hierarchical EM with MAP estimation, but I invite other researchers and educators to help improve and expand the code here!
+* `examples/RW.ipynb`: Rescorla-Wagner model parameter recovery
+* `examples/EMClass.ipynb`: Using the EMModel class interface
 
-Here are some ways you can help!
-- If you spot an error (e.g., typo, bug, inaccurate descriptions, etc.), please open a new issue on GitHub by clicking on the GitHub Icon in the top right corner on any page and selecting "open issue". Alternatively, you can <a target="_blank" rel="noopener noreferrer" href="https://github.com/shawnrhoads/pyEM/issues/new?labels=bug&template=issue-template.yml">open a new issue</a> directly through GitHub.
-- If there is inadvertently omitted credit for any content that was generated by others, please also <a target="_blank" rel="noopener noreferrer" href="https://github.com/shawnrhoads/pyEM/issues/new?labels=enhancement&template=enhancement-template.yml">open a new issue</a> directly through GitHub.
-- If you have an idea for a new example tutorial or a new module to include, please either <a target="_blank" rel="noopener noreferrer" href="https://github.com/shawnrhoads/pyEM/issues/new?labels=enhancement&template=enhancement-template.yml">open a new issue</a> and/or submit a pull request directly to the repository on GitHub.
+## Testing
 
-<hr>
+Run the test suite:
+
+```bash
+pytest tests/
+```
 
 ## Key Concepts
-*Negative Log-Likelihood* 
 
-The negative log-likelihood is a measure of how well the model fits the observed data. It is obtained by taking the negative natural logarithm of the likelihood function. The goal of MLE is to find the parameter values that minimize the negative log-likelihood, effectively maximizing the likelihood of the observed data given the model.
+### Hierarchical EM with MAP Estimation
 
-*Prior Probability*
+The algorithm fits models using a hierarchical approach where:
 
-The prior probability represents our knowledge or belief about the parameters before observing the data. It is typically based on some prior information or assumptions. In this case, we are using a normal distribution to represent our prior beliefs about the parameters, with mean $\mu$ and standard deviation $\sqrt{\sigma}$.
+1. **E-step**: Estimates subject-specific parameters given population-level priors
+2. **M-step**: Updates population-level priors given subject-specific parameters
+3. **MAP estimation**: Incorporates prior beliefs to regularize parameter estimates
 
-*MAP Estimation*
+### Parameter Transformations
 
-In MAP estimation, we are incorporating the prior probability into the estimation process. Instead of only maximizing the likelihood (as in MLE), we are maximizing the posterior probability, which combines the likelihood and the prior. Mathematically, MAP estimation can be expressed as: 
+Many computational models have bounded parameters (e.g., learning rates between 0-1). The package uses transformation functions to map between:
 
-$argmax_{\theta} (likelihood(data | \theta) * prior(\theta))$
+* **Normalized space**: Unbounded parameters used during optimization
+* **Natural space**: Bounded parameters used in model computations
 
-where $\theta$ represents the model parameters
+Example:
+```python
+# Learning rate: 0 ≤ α ≤ 1
+alpha_normalized = 0.5  # Unbounded
+alpha_natural = norm2alpha(alpha_normalized)  # Bounded to [0,1]
+```
 
-We are effectively combining the likelihood and the prior in a way that biases the parameter estimation towards the prior beliefs. Since we are maximizing this combined term, we are seeking parameter values that not only fit the data well (as indicated by the likelihood) but also align with the prior probability distribution.
+### Model Comparison
+
+The package provides several metrics for model comparison:
+
+* **LME** (Log Model Evidence): Laplace approximation to marginal likelihood
+* **BIC** (Bayesian Information Criterion): Penalizes model complexity
+* **Integrated BIC**: Monte Carlo approximation accounting for parameter uncertainty
+
+## Contributing
+
+Contributions are welcome! Please see the contributing guidelines for details on:
+
+* Reporting bugs
+* Suggesting enhancements
+* Adding new models
+* Improving documentation
+
+## References
 
 **Code originally adapted for Python from:**
-<blockquote>Wittmann, M. K., Fouragnan, E., Folloni, D., Klein-Flügge, M. C., Chau, B. K., Khamassi, M., & Rushworth, M. F. (2020). Global reward state affects learning and activity in raphe nucleus and anterior insula in monkeys. Nature Communications, 11(1), 3771. https://doi.org/10.1038/s41467-020-17343-w</blockquote>
+> Wittmann, M. K., et al. (2020). Global reward state affects learning and activity in raphe nucleus and anterior insula in monkeys. Nature Communications, 11(1), 3771.
 
-<blockquote>Cutler, J., Wittmann, M. K., Abdurahman, A., Hargitai, L. D., Drew, D., Husain, M., & Lockwood, P. L. (2021). Ageing is associated with disrupted reinforcement learning whilst learning to help others is preserved. Nature Communications, 12(1), 4440. https://doi.org/10.1038/s41467-021-24576-w</blockquote>
+> Cutler, J., et al. (2021). Ageing is associated with disrupted reinforcement learning whilst learning to help others is preserved. Nature Communications, 12(1), 4440.
 
-<blockquote>Rhoads, S. A., Gan, L., Berluti, K., OConnell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2023). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. PsyArXiv. https://doi.org/10.31234/osf.io/rf4x9</blockquote>
+**See also:**
+> Daw, N. D. (2011). Trial-by-trial data analysis using computational models. Decision making, affect, and learning: Attention and performance XXIII.
 
-See also:
-<blockquote>Daw, N. D. (2011). Trial-by-trial data analysis using computational models. Decision making, affect, and learning: Attention and performance XXIII, 23(1). https://doi.org/10.1093/acprof:oso/9780199600434.003.0001 [<a href="https://www.princeton.edu/~ndaw/d10.pdf">pdf</a>]</blockquote>
+> Huys, Q. J., et al. (2011). Disentangling the roles of approach, activation and valence in instrumental and pavlovian responding. PLoS computational biology, 7(4), e1002028.
 
-<blockquote>Huys, Q. J., Cools, R., Gölzer, M., Friedel, E., Heinz, A., Dolan, R. J., & Dayan, P. (2011). Disentangling the roles of approach, activation and valence in instrumental and pavlovian responding. PLoS computational biology, 7(4), e1002028. https://doi.org/10.1371/journal.pcbi.1002028 </blockquote>
-
-**For MATLAB flavors of this algorithm:**
-- https://github.com/sjgershm/mfit
-- https://github.com/mpc-ucl/emfit
-- https://osf.io/s7z6j
+**For MATLAB implementations:**
+* https://github.com/sjgershm/mfit
+* https://github.com/mpc-ucl/emfit
+* https://osf.io/s7z6j

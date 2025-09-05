@@ -182,8 +182,8 @@ def test_model_comparison_methods_exist():
     assert callable(comparison.plot_identifiability)
 
 
-def test_emmodel_without_shared_mask():
-    """Test that EMModel works without shared_mask functionality."""
+def test_emmodel_basic_functionality():
+    """Test that EMModel works with basic functionality."""
     nsubjects, nblocks, ntrials = 4, 2, 8
     params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
@@ -191,11 +191,11 @@ def test_emmodel_without_shared_mask():
     
     model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])
     
-    # Should work without shared_mask parameter
+    # Should work with basic EMModel functionality
     res = model.fit(mstep_maxit=5, verbose=0, njobs=1)
     assert res.m.shape == (2, nsubjects)
     assert res.NPL.shape == (nsubjects,)
     
-    # Parameters should be different across subjects (no shared constraints)
+    # Parameters should be different across subjects (individual estimation)
     params_vary = np.var(res.m, axis=1) > 1e-6
     assert np.any(params_vary)  # At least some parameters should vary across subjects
