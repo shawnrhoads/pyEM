@@ -17,7 +17,7 @@ def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, out
     ch_prob = np.zeros((nsubjects, nblocks, ntrials, 2), dtype=float)
     choices_A = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
     PE = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    NLL = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    nll = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
 
     rng = np.random.default_rng()
     this_block_probs = np.array([0.8, 0.2])
@@ -45,7 +45,7 @@ def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, out
                 PE[s, b, t] = rew - EV[s, b, t, c]
                 EV[s, b, t + 1, :] = EV[s, b, t, :]
                 EV[s, b, t + 1, c] = EV[s, b, t, c] + alpha * PE[s, b, t]
-                NLL[s, b, t] = -np.log(p[c] + 1e-12)
+                nll[s, b, t] = -np.log(p[c] + 1e-12)
 
     return {
         "params": np.array([all_beta, all_alpha]).T,
@@ -55,7 +55,7 @@ def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, out
         "ch_prob": ch_prob,
         "choices_A": choices_A,
         "PE": PE,
-        "NLL": NLL,
+        "nll": nll,
     }
 
 def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
@@ -72,7 +72,7 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
 
     nblocks, ntrials = rewards.shape
     EV = np.zeros((nblocks, ntrials + 1, 2))
-    NLL = 0.0
+    nll = 0.0
     for b in range(nblocks):
         EV[b, 0, :] = 0.5
         for t in range(ntrials):
@@ -82,25 +82,25 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
             pe = r - EV[b, t, c]
             EV[b, t + 1, :] = EV[b, t, :]
             EV[b, t + 1, c] = EV[b, t, c] + alpha * pe
-            NLL += -np.log(p[c] + 1e-12)
+            nll += -np.log(p[c] + 1e-12)
 
     if output == "nll":
-        return NLL
+        return nll
     elif output == "all":
         subj_dict = {'params'     : [beta, alpha],
                      'choices'    : choices, 
                      'rewards'    : rewards, 
                      'EV'         : EV, 
-                     'NLL'        : NLL,}
+                     'nll'        : nll,}
         return subj_dict
 
     # negative posterior likelihood
     if prior is not None:
         nlp = -prior.logpdf(np.asarray(params))
-        return NLL + nlp
+        return nll + nlp
     else:
         # if no prior, interpret as nll (legacy safety)
-        return NLL
+        return nll
 
 
 def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, outcomes: np.ndarray | None = None):
@@ -118,7 +118,7 @@ def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, out
     ch_prob = np.zeros((nsubjects, nblocks, ntrials, 2), dtype=float)
     choices_A = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
     PE = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    NLL = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    nll = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
 
     rng = np.random.default_rng()
     this_block_probs = np.array([0.8, 0.2])
@@ -151,7 +151,7 @@ def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, out
                     EV[s, b, t + 1, c] = EV[s, b, t, c] + alpha_pos * PE[s, b, t]
                 else:
                     EV[s, b, t + 1, c] = EV[s, b, t, c] + alpha_neg * PE[s, b, t]
-                NLL[s, b, t] = -np.log(p[c] + 1e-12)
+                nll[s, b, t] = -np.log(p[c] + 1e-12)
 
     return {
         "params": np.array([all_beta, all_alpha_pos, all_alpha_neg]).T,
@@ -161,7 +161,7 @@ def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, out
         "ch_prob": ch_prob,
         "choices_A": choices_A,
         "PE": PE,
-        "NLL": NLL,
+        "nll": nll,
     }
 
 def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
@@ -181,7 +181,7 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
     nblocks, ntrials = rewards.shape
     EV = np.zeros((nblocks, ntrials + 1, 2))
     PE = np.zeros((nblocks, ntrials))
-    NLL = 0.0
+    nll = 0.0
     for b in range(nblocks):
         EV[b, 0, :] = 0.5
         for t in range(ntrials):
@@ -195,23 +195,23 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
             else:
                 EV[b, t + 1, c] = EV[b, t, c] + alpha_neg * PE[b, t]
 
-            NLL += -np.log(p[c] + 1e-12)
+            nll += -np.log(p[c] + 1e-12)
 
     if output == "nll":
-        return NLL
+        return nll
     elif output == "all":
         subj_dict = {'params'     : [beta, alpha_pos, alpha_neg],
                      'choices'    : choices, 
                      'rewards'    : rewards, 
                      'EV'         : EV, 
                      'PE'         : PE, 
-                     'NLL'        : NLL,}
+                     'nll'        : nll,}
         return subj_dict
 
     # negative posterior likelihood
     if prior is not None:
         nlp = -prior.logpdf(np.asarray(params))
-        return NLL + nlp
+        return nll + nlp
     else:
         # if no prior, interpret as nll (legacy safety)
-        return NLL
+        return nll

@@ -50,8 +50,8 @@ def test_calculate_final_arrays():
     arrays = model.calculate_final_arrays()
     assert 'choices' in arrays
     assert 'rewards' in arrays
-    assert 'choice_nll' in arrays
-    assert arrays['choice_nll'].shape == (nsubjects,)
+    assert 'nll' in arrays
+    assert arrays['nll'].shape == (nsubjects,)
 
 
 def test_fit_individual_nll():

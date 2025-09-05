@@ -11,5 +11,5 @@ def test_bicint_smoke():
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
     model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])
     res = model.fit(mstep_maxit=5, verbose=0, njobs=1)
-    bicint = calc_BICint(all_data, ["beta","lr"], res.posterior_mu, res.posterior_sigma, rw_fit, nsamples=5, func_output="all", nll_key="NLL")
+    bicint = calc_BICint(all_data, ["beta","lr"], res.posterior_mu, res.posterior_sigma, rw_fit, nsamples=5, func_output="all", nll_key="nll")
     assert np.isfinite(bicint)
