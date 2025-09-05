@@ -32,7 +32,7 @@ def simulate(params, nblocks=3, ntrials=24, outcomes=None):
             - `CH_PROB` is a np.array of shape (nsubjects, nblocks, ntrials, 2)
             - `CHOICES_A` is a np.array of shape (nsubjects, nblocks, ntrials)
             - `PE` is a np.array of shape (nsubjects, nblocks, ntrials)
-            - `CHOICE_NLL` is a np.array of shape (nsubjects, nblocks, ntrials)
+            - `NLL` is a np.array of shape (nsubjects, nblocks, ntrials)
             - `params` is a np.array of the parameters used to simulate the data
                 - `beta` is the softmax inverse temperature
                 - `lr` is the learning rate
@@ -46,7 +46,7 @@ def simulate(params, nblocks=3, ntrials=24, outcomes=None):
     CH_PROB     = np.zeros((nsubjects, nblocks, ntrials,   2))
     CHOICES_A   = np.zeros((nsubjects, nblocks, ntrials,))
     PE          = np.zeros((nsubjects, nblocks, ntrials,))
-    CHOICE_NLL  = np.zeros((nsubjects, nblocks, ntrials,))
+    NLL  = np.zeros((nsubjects, nblocks, ntrials,))
 
     subj_dict = {}
     this_block_probs = [.8,.2]
@@ -103,7 +103,7 @@ def simulate(params, nblocks=3, ntrials=24, outcomes=None):
                 EV[subj_idx, b, t+1, :] = EV[subj_idx, b, t, :].copy()
                 EV[subj_idx, b, t+1, c] = EV[subj_idx, b, t, c] + (lr * PE[subj_idx, b, t])
                 
-                CHOICE_NLL[subj_idx, b, t] = -np.log(CH_PROB[subj_idx, b, t, c])
+                NLL[subj_idx, b, t] = -np.log(CH_PROB[subj_idx, b, t, c])
 
     # store params
     subj_dict = {'params'    : params,
@@ -113,7 +113,7 @@ def simulate(params, nblocks=3, ntrials=24, outcomes=None):
                  'CH_PROB'   : CH_PROB, 
                  'CHOICES_A' : CHOICES_A, 
                  'PE'        : PE, 
-                 'CHOICE_NLL': CHOICE_NLL}
+                 'NLL': NLL}
 
     return subj_dict
 
@@ -142,7 +142,7 @@ def fit(params, choices, rewards, prior=None, output='npl'):
     CH_PROB     = np.zeros((nblocks, ntrials,   2))
     CHOICES_A   = np.zeros((nblocks, ntrials,))
     PE          = np.zeros((nblocks, ntrials,))
-    CHOICE_NLL  = 0
+    NLL  = 0
 
     for b in range(nblocks):
         for t in range(ntrials):
@@ -168,11 +168,11 @@ def fit(params, choices, rewards, prior=None, output='npl'):
             EV[b, t+1, c] = EV[b, t, c] + (lr * PE[b, t])
             
             # add to sum of choice nll for the block
-            CHOICE_NLL += -np.log(CH_PROB[b, t, c])
+            NLL += -np.log(CH_PROB[b, t, c])
             
     # CALCULATE NEGATIVE POSTERIOR LIKELIHOOD FROM NEGLL AND PRIOR (OR NEGLL)
     if (output == 'npl') or (output == 'nll'):
-        fval = calc_fval(CHOICE_NLL, params, prior=prior, output=output)
+        fval = calc_fval(NLL, params, prior=prior, output=output)
         return fval
     
     elif output == 'all':
@@ -183,6 +183,6 @@ def fit(params, choices, rewards, prior=None, output='npl'):
                      'CH_PROB'    : CH_PROB, 
                      'CHOICES_A'  : CHOICES_A, 
                      'PE'         : PE, 
-                     'CHOICE_NLL' : CHOICE_NLL,
-                     'BIC'        : nparams * np.log(ntrials*nblocks) + 2*CHOICE_NLL}
+                     'NLL' : NLL,
+                     'BIC'        : nparams * np.log(ntrials*nblocks) + 2*NLL}
         return subj_dict

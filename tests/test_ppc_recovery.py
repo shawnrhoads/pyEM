@@ -1,7 +1,7 @@
 
 import numpy as np
 from pyem.api import EMModel
-from pyem.models.rw import rw_simulate, rw_fit
+from pyem.models.rl import rw1a1b_simulate as rw_simulate, rw1a1b_fit as rw_fit
 from pyem.core.posterior import posterior_predictive_check, parameter_recovery
 
 def stat_mean_reward(all_data):

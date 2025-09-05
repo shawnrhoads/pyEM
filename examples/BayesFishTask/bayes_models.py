@@ -110,7 +110,7 @@ def fit(params, choices, observations, prior=None, output='npl'):
     n_blocks, n_trials = choices.shape
     n_fish = 3  # Assuming a default of 3 fish types; adjust as needed
     fishp = generate_fishp(lambda1, n_fish)
-    choice_nll = 0
+    NLL = 0
 
     # Initialize choice probabilities array for all blocks and trials
     choice_probabilities = np.zeros((n_blocks, n_trials + 1, n_fish))
@@ -131,11 +131,11 @@ def fit(params, choices, observations, prior=None, output='npl'):
             choice_probabilities[block, trial + 1, :] = pondp[trial + 1, :]
 
             # Accumulate negative log-likelihood for real choices
-            choice_nll += -np.log(pondp[trial + 1, real_choice])
+            NLL += -np.log(pondp[trial + 1, real_choice])
 
     # Calculate the negative posterior likelihood (NPL) if specified
     if output in ('npl', 'nll'):
-        fval = calc_fval(choice_nll, params, prior=prior, output=output)
+        fval = calc_fval(NLL, params, prior=prior, output=output)
         return fval
 
     elif output == 'all':
@@ -144,5 +144,5 @@ def fit(params, choices, observations, prior=None, output='npl'):
             "choices": choices,
             "observations": observations,
             "choice_probabilities": choice_probabilities,
-            "choice_nll": choice_nll
+            "NLL": NLL
         }
