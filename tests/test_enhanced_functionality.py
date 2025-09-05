@@ -4,7 +4,7 @@ Tests for enhanced EMModel methods and ModelComparison class.
 import numpy as np
 import pytest
 from pyem.api import EMModel
-from pyem.models.rw import rw_simulate, rw_fit
+from pyem.models.rl import rw1a1b_simulate as rw_simulate, rw1a1b_fit as rw_fit
 from pyem.core.compare import ModelComparison
 from pyem.utils.math import norm2alpha, alpha2norm, norm2beta, beta2norm
 

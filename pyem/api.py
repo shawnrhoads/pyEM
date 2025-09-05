@@ -165,7 +165,7 @@ class EMModel:
             raise RuntimeError("Call fit() first.")
         return self._out["posterior"]
 
-    def compute_integrated_bic(self, nsamples: int = 500, func_output: str = "all", nll_key: str = "CHOICE_NLL") -> float:
+    def compute_integrated_bic(self, nsamples: int = 500, func_output: str = "all", nll_key: str = "NLL") -> float:
         """
         Compute integrated Bayesian Information Criterion (BICint).
         

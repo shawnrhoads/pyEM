@@ -29,15 +29,15 @@ def fit(params, data, prior=None, output='npl'):
     
     # (3) INITIALIZE VARIABLES
     ntrials = data.shape[-1]
-    choice_nll  = 0
+    NLL  = 0
 
     # (4) LOOP THOUGH TRIALS + CALCULATE NEGATIVE LOG-LIKELIHOOD VIA CHOICE PROBABILITY ACCORDING TO YOUR MODEL
     for t in range(ntrials):
         # Here, we will just randomly generate a choice probability to demonstrate the fitting process
         choice_prob = softmax(np.random.rand(), inverse_temp)
-        choice_nll += -np.log(choice_prob)
+        NLL += -np.log(choice_prob)
         
     # (5) CALCULATE NEGATIVE POSTERIOR LIKELIHOOD FROM NEGLL AND PRIOR
-    fval = calc_fval(choice_nll, params, prior=prior, output=output)
+    fval = calc_fval(NLL, params, prior=prior, output=output)
 
     return fval
