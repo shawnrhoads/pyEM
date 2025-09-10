@@ -44,7 +44,7 @@ def fit(params, choices, observations, prior=None, output='npl'):
     n_blocks, n_trials = choices.shape
     n_fish = 3
     fishp = _generate_fishp(lambda1, n_fish)
-    choice_nll = 0.0
+    nll = 0.0
     for b in range(n_blocks):
         pondp = np.ones((n_trials+1, n_fish)) / n_fish
         for t in range(n_trials):
@@ -53,10 +53,10 @@ def fit(params, choices, observations, prior=None, output='npl'):
             den = np.sum(pondp[t, :] * fishp[fish_disp, :])
             pondp[t+1, :] = (fishp[fish_disp, :] * pondp[t, :]) / den
             pondp[t+1, :] /= np.sum(pondp[t+1, :])
-            choice_nll += -np.log(pondp[t+1, real_choice] + 1e-12)
+            nll += -np.log(pondp[t+1, real_choice] + 1e-12)
     if output == 'all':
-        return {"params": np.array([lambda1]), "choice_nll": choice_nll}
+        return {"params": np.array([lambda1]), "nll": nll}
     # map vs mle return
     if prior is not None and output == 'npl' and hasattr(prior, 'logpdf'):
-        return choice_nll + (-prior.logpdf(np.asarray(params)))
-    return choice_nll
+        return nll + (-prior.logpdf(np.asarray(params)))
+    return nll

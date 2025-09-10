@@ -1,7 +1,7 @@
 
 import numpy as np
 from pyem.api import EMModel
-from pyem.models.rw import rw_simulate, rw_fit
+from pyem.models.rl import rw1a1b_simulate as rw_simulate, rw1a1b_fit as rw_fit
 from pyem.core.compare import compare_models
 from pyem.utils.stats import calc_BICint
 
@@ -17,7 +17,7 @@ def test_model_compare_basic():
     rows = compare_models(
         [( "rw1", r1.__dict__, all_data, rw_fit ),
          ( "rw2", r2.__dict__, all_data, rw_fit )],
-        bicint_kwargs={"nsamples": 10, "func_output":"all", "nll_key":"CHOICE_NLL"},
+        bicint_kwargs={"nsamples": 10, "func_output":"all", "nll_key":"nll"},
         r2_kwargs={"ntrials": nblocks*ntrials, "nopts": 2}
     )
     assert len(rows) == 2
