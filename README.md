@@ -317,6 +317,8 @@ Class for comparing the performance of different models:
 class ModelComparison:
     def __init__(self, models, names)
     def compare(self) -> list
+    def indentify(self) -> pd.DataFrame
+    def plot_identifiability(self) -> matplotlib.figure
 ```
 
 ### Utility Functions
