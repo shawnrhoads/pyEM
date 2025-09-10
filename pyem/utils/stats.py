@@ -61,6 +61,6 @@ def calc_BICint(
     return float(bicint)
 
 def pseudo_r2_from_nll(nll: np.ndarray, ntrials: int, nopts: int) -> float:
-    L = float(np.mean(nll))
-    R = -np.log(1.0 / nopts) * ntrials
-    return 1.0 - (L / R)
+    mean_nll = float(np.mean(nll))
+    random_baseline = -np.log(1.0 / nopts) * ntrials
+    return 1.0 - (mean_nll / random_baseline)
