@@ -28,7 +28,7 @@ def calc_LME(inv_h: np.ndarray, NPL: np.ndarray) -> tuple[np.ndarray, float, np.
     return Lap, lme, good
 
 def calc_BICint(
-    all_data, param_names, mu, sigma, fit_func, nsamples: int = 500, func_output: str = "all", nll_key: str = "nll"
+    all_data, param_names, mu, sigma, fit_func, nsamples: int = 2000, func_output: str = "all", nll_key: str = "nll"
 ) -> float:
     npar = len(param_names)
     # count trials of the first subject
