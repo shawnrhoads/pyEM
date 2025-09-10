@@ -36,8 +36,6 @@ from pyem.utils import plotting
 nsubjects, nblocks, ntrials = 100, 6, 24
 true_params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)]) # Untransformed parameters in Gaussian space
 sim = rw1a1b_simulate(true_params, nblocks=3, ntrials=24)
-all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])] # beta, alpha for 100 subjects
-sim = rw1a1b_simulate(true_params, nblocks=3, ntrials=24)
 all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
 # Create and fit model
@@ -102,7 +100,10 @@ When we have two different models, we can use the `ModelComparison` class to com
 * **Integrated BIC**: Monte Carlo approximation accounting for parameter uncertainty
 
 ```python
+from pyem.api import EMModel
 from pyem.core.compare import ModelComparison
+from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
+from pyem.utils.math import norm2alpha, norm2beta
 
 # Create multiple models for comparison
 model1 = EMModel(all_data, rw1a1b_fit, 
@@ -120,10 +121,10 @@ model1.fit(verbose=0)
 model2.fit(verbose=0)
 
 # Compare models
-comparison = ModelComparison([model1, model2], ["RW1", "RW2"])
+mc = ModelComparison([model1, model2], ["RW1", "RW2"])
 bicint_kwargs = {"nsamples":2000, "func_output":"all", "nll_key":"nll"}
 r2_kwargs = {"ntrials": nblocks*ntrials, "nopts": 2} # two-armed bandit has 2 options
-compare_results = comparison.compare(bicint_kwargs=bicint_kwargs, r2_kwargs=r2_kwargs)
+compare_results = mc.compare(bicint_kwargs=bicint_kwargs, r2_kwargs=r2_kwargs)
 
 # Print comparison results
 for result in compare_results:
@@ -162,8 +163,9 @@ You can visualize these results with `plot_identifiability()`, which plots an **
 
 ```python
 from pyem.api import EMModel
-from pyem.compare import ModelComparison
-from my_models import rw_fit, rw_simulate, bayes_fit, bayes_simulate
+from pyem.core.compare import ModelComparison
+from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
+from pyem.utils.math import norm2alpha, norm2beta
 
 # Construct two candidate models
 model1 = EMModel(all_data, rw1a1b_fit, 
@@ -180,23 +182,22 @@ model2 = EMModel(all_data, rw2a1b_fit,
 mc = ModelComparison([model1, model2], ["RW1", "RW2"])
 df = mc.identify(
     rounds=10,
-    sim_kwargs={"ntrials": 200},           # args for simulate_func
-    fit_kwargs={"mstep_maxit": 50, "njobs": 1},
-    r2_kwargs={"ntrials": 200, "nopts": 2},
+    sim_kwargs={"nblocks":3, "ntrials": 24}, # args for simulate_func
+    fit_kwargs={"mstep_maxit": 50},
+    r2_kwargs={"ntrials": 3*24, "nopts": 2},
     verbose=1,
 )
 
 print(df.head())
-#   Simulated         Estimated   LME    BICint   pseudoR2  bestlme  bestbic  bestR2
-# 0 Rescorla-Wagner 1  Rescorla-Wagner 1 ...
-# 1 Rescorla-Wagner 1  Rescorla-Wagner 2 ...
-# 2 Rescorla-Wagner 2  Rescorla-Wagner 1 ...
-# 3 Rescorla-Wagner 2  Rescorla-Wagner 2 ...
+#   Simulated   Estimated   LME    BICint   pseudoR2  bestlme  bestbic  bestR2
+# 0 RW1         RW1 ...
+# 1 RW1         RW2 ...
+# 2 RW2         RW1 ...
+# 3 RW2         RW2 ...
 
 # Plot results as proportion of rounds won
 mc.plot_identifiability(df, metric="LME")
 mc.plot_identifiability(df, metric="BICint")
-mc.plot_identifiability(df, metric="pseudoR2")
 ```
 
 ### Miscellanous functions
