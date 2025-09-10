@@ -19,8 +19,8 @@ class ComparisonRow:
 def compare_models(
     models,  # list of EMModel (already fit) or tuples (name, FitResult, extras)
     metric_order: Sequence[str] = ("LME", "BICint", "R2"),
-    r2_kwargs: dict | None = None,
-    bicint_kwargs: dict | None = None,
+    bicint_kwargs: dict | None = {"nsamples":2000, "func_output":"all", "nll_key":"nll"},
+    r2_kwargs: dict | None = {"ntrials": int, "nopts": int},
 ) -> List[ComparisonRow]:
     rows: List[ComparisonRow] = []
     for item in models:
