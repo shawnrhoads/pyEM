@@ -105,8 +105,15 @@ When we have two different models, we can use the `ModelComparison` class to com
 from pyem.core.compare import ModelComparison
 
 # Create multiple models for comparison
-model1 = EMModel(all_data, rw1a1b_fit, ["beta", "alpha"])
-model2 = EMModel(all_data, rw2a1b_fit, ["beta", "alpha_pos", "alpha_neg"])
+model1 = EMModel(all_data, rw1a1b_fit, 
+                 param_names=["beta", "alpha"],
+                 param_xform=[norm2beta, norm2alpha],
+                 simulate_func=rw1a1b_simulate)
+
+model2 = EMModel(all_data, rw2a1b_fit,
+                 param_names=["beta", "alpha_pos", "alpha_neg"],
+                 param_xform=[norm2beta, norm2alpha, norm2alpha],
+                 simulate_func=rw2a1b_simulate)
 
 # Fit both models
 model1.fit(verbose=0)
@@ -131,6 +138,71 @@ bicint = model.compute_integrated_bic(nsamples=2000)
 
 # Compute Laplace approximation for LME
 lap, lme, good = model.compute_lme()
+```
+
+### Model Identifiability Analysis
+
+Here’s a polished **README** subsection you can drop in under your documentation:
+
+---
+
+### Model Identifiability Analysis
+
+When fitting multiple candidate models to behavioral data, it is crucial to assess **identifiability**, whether simulated data from one model are best recovered by the same model when refitted. `pyEM` provides a convenient interface via the `ModelComparison` class.
+
+The `identify()` method repeatedly:
+
+1. **Simulates** behavior from each model’s `simulate_func`
+2. **Fits** all models to that simulated dataset
+3. **Scores** each fit using log model evidence (LME), integrated BIC (BICint), and pseudo R²
+4. **Counts winners** for each metric across repeated rounds
+
+The result is a `pandas.DataFrame` with per–Simulated/Estimated model entries and summary columns:
+
+* `LME`, `BICint`, `pseudoR2` — mean values across rounds
+* `bestlme`, `bestbic`, `bestR2` — number of rounds (0–N) the Estimated model “won” for that metric
+
+You can visualize these results with `plot_identifiability()`, which plots an **asymmetric matrix** (rows = Simulated models, cols = Estimated models) where cell values show the proportion of rounds each Estimated model best fit data from the Simulated model.
+
+#### Example
+
+```python
+from pyem.api import EMModel
+from pyem.compare import ModelComparison
+from my_models import rw_fit, rw_simulate, bayes_fit, bayes_simulate
+
+# Construct two candidate models
+model1 = EMModel(all_data, rw1a1b_fit, 
+                 param_names=["beta", "alpha"],
+                 param_xform=[norm2beta, norm2alpha],
+                 simulate_func=rw1a1b_simulate)
+
+model2 = EMModel(all_data, rw2a1b_fit,
+                 param_names=["beta", "alpha_pos", "alpha_neg"],
+                 param_xform=[norm2beta, norm2alpha, norm2alpha],
+                 simulate_func=rw2a1b_simulate)
+
+# Run identifiability analysis
+mc = ModelComparison([model1, model2], ["RW1", "RW2"])
+df = mc.identify(
+    rounds=10,
+    sim_kwargs={"ntrials": 200},           # args for simulate_func
+    fit_kwargs={"mstep_maxit": 50, "njobs": 1},
+    r2_kwargs={"ntrials": 200, "nopts": 2},
+    verbose=1,
+)
+
+print(df.head())
+#   Simulated         Estimated   LME    BICint   pseudoR2  bestlme  bestbic  bestR2
+# 0 Rescorla-Wagner 1  Rescorla-Wagner 1 ...
+# 1 Rescorla-Wagner 1  Rescorla-Wagner 2 ...
+# 2 Rescorla-Wagner 2  Rescorla-Wagner 1 ...
+# 3 Rescorla-Wagner 2  Rescorla-Wagner 2 ...
+
+# Plot results as proportion of rounds won
+mc.plot_identifiability(df, metric="LME")
+mc.plot_identifiability(df, metric="BICint")
+mc.plot_identifiability(df, metric="pseudoR2")
 ```
 
 ### Miscellanous functions
