@@ -129,7 +129,7 @@ class ModelComparison:
         best_bic = {(s, e): 0 for s in names for e in names}
         best_r2  = {(s, e): 0 for s in names for e in names}
 
-        from ..api import EMModel  # uses your high-level EM wrapper  :contentReference[oaicite:2]{index=2}
+        from ..api import EMModel  # uses your high-level EM wrapper
 
         # ---------- OUTER LOOP OVER ROUNDS ----------
         for r in range(rounds):
