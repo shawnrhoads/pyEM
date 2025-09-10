@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from .core.em import EMfit, EMConfig
 from .core.priors import GaussianPrior
 from .utils.stats import calc_BICint, calc_LME
+from .utils import plotting
 
 @dataclass
 class FitResult:
@@ -348,62 +349,69 @@ class EMModel:
         
         # Fit the model
         fit_result = recovery_model.fit(verbose=0)
-        estimated_params = fit_result.m.T  # transpose to get (nsubjects x nparams)
+        
+        # grab estimated params 
+        out_fit = recovery_model.calculate_final_arrays()
+        estimated_params = out_fit['params']
         
         # Calculate recovery metrics
         recovery_dict = {
-            'true_params': true_params,
+            'true_params': sim['params'],
             'estimated_params': estimated_params,
             'sim': sim,
             'fit_result': fit_result,
-            'correlation': np.corrcoef(true_params.flatten(), estimated_params.flatten())[0, 1],
-            'rmse': np.sqrt(np.mean((true_params - estimated_params)**2)),
-            'mae': np.mean(np.abs(true_params - estimated_params))
+            'correlation': np.corrcoef(true_params.flatten(), estimated_params.flatten())[0, 1]
         }
         
         return recovery_dict
 
     def plot_recovery(self, recovery_dict: dict, show_line: bool = True, figsize: tuple = (10, 4)) -> plt.Figure:
         """
-        Plot parameter recovery as scatter plot of simulated vs estimated parameters.
-        
+        Plot parameter recovery as scatter plots of simulated vs estimated parameters.
+
         Args:
-            recovery_dict: Output from recover() method
+            recovery_dict: Output from recover() method, containing:
+                - 'true_params' (array-like, shape [n_sims, n_params])
+                - 'estimated_params' (array-like, shape [n_sims, n_params])
             show_line: Whether to draw x=y line
             figsize: Figure size
-            
+
         Returns:
             matplotlib Figure object
         """
         true_params = recovery_dict['true_params']
         estimated_params = recovery_dict['estimated_params']
         nparams = true_params.shape[1]
-        
-        fig, axes = plt.subplots(1, nparams, figsize=figsize)
-        if nparams == 1:
-            axes = [axes]
-        
-        for i, param_name in enumerate(self.param_names):
+
+        # Create 1 x nparams layout (keep squeeze=False to always get 2D array, then ravel)
+        fig, axes = plt.subplots(1, nparams, figsize=figsize, squeeze=False)
+        axes = axes.ravel()
+
+        # In case self.param_names is longer than nparams
+        names = list(self.param_names)[:nparams]
+
+        for i, param_name in enumerate(names):
             ax = axes[i]
-            
-            # Scatter plot
-            ax.scatter(true_params[:, i], estimated_params[:, i], alpha=0.6)
-            
-            # x=y line
-            if show_line:
-                min_val = min(true_params[:, i].min(), estimated_params[:, i].min())
-                max_val = max(true_params[:, i].max(), estimated_params[:, i].max())
-                ax.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, label='x=y')
-                ax.legend()
-            
-            # Labels and title
-            ax.set_xlabel(f'True {param_name}')
-            ax.set_ylabel(f'Estimated {param_name}')
-            ax.set_title(f'{param_name} Recovery')
-            
-            # Add correlation in title
-            corr = np.corrcoef(true_params[:, i], estimated_params[:, i])[0, 1]
-            ax.set_title(f'{param_name} Recovery (r={corr:.3f})')
-        
+
+            # Use the shared plotting helper
+            plotting.plot_scatter(
+                true_params[:, i], f'True {param_name}',
+                estimated_params[:, i], f'Estimated {param_name}',
+                ax=ax,
+                show_line=show_line,
+                equal_limits=True,
+                s=75,
+                alpha=0.6,
+                colorname='royalblue',
+                annotate=True,
+            )
+
+            # Title
+            ax.set_title(f'{param_name}')
+
+        # Hide any unused axes (just in case)
+        for j in range(nparams, len(axes)):
+            axes[j].set_visible(False)
+
         plt.tight_layout()
         return fig
