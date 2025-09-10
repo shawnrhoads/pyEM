@@ -69,4 +69,4 @@ def fit_decay(params, X, Y, prior=None, output='npl', decay='twostep'):
             return negll + (-prior.logpdf(np.asarray(params)))
         return negll
     elif output == 'all':
-        return {'params': params, 'predicted_y': predicted_y, 'negll': negll, 'BIC': len(params)*np.log(len(Y)) + 2*negll}
+        return {'params': params, 'predicted_y': predicted_y, 'nll': negll, 'BIC': len(params)*np.log(len(Y)) + 2*negll}
