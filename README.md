@@ -142,12 +142,6 @@ lap, lme, good = model.compute_lme()
 
 ### Model Identifiability Analysis
 
-Here’s a polished **README** subsection you can drop in under your documentation:
-
----
-
-### Model Identifiability Analysis
-
 When fitting multiple candidate models to behavioral data, it is crucial to assess **identifiability**, whether simulated data from one model are best recovered by the same model when refitted. `pyEM` provides a convenient interface via the `ModelComparison` class.
 
 The `identify()` method repeatedly:
