@@ -32,52 +32,80 @@ def plot_choices(choices_A, filename=None):
 
     plt.show()
 
-def plot_scatter(x, xlabel, y, ylabel, filename=None, colorname='royalblue'):
+def plot_scatter(
+    x,
+    xlabel,
+    y,
+    ylabel,
+    *,
+    ax=None,
+    show_line=True,
+    equal_limits=True,
+    s=75,
+    alpha=0.6,
+    colorname='royalblue',
+    annotate=True,
+):
     """
-    Plots a scatterplot of x vs y with a Pearson correlation coefficient in the top left corner
+    Scatter plot of x vs y with optional Pearson r annotation and x=y reference line.
 
-    Inputs:
-        - `x` (np.array): x-axis data
-        - `xlabel` (str): x-axis label
-        - `y` (np.array): y-axis data
-        - `ylabel` (str): y-axis label
+    Args:
+        x (array-like): x-axis data
+        xlabel (str): x-axis label
+        y (array-like): y-axis data
+        ylabel (str): y-axis label
+        ax (matplotlib.axes.Axes | None): Axes to draw on. If None, creates a new figure/axes.
+        show_line (bool): Whether to draw dashed x=y line.
+        equal_limits (bool): If True, sets identical limits and equal aspect.
+        s (float): Marker size.
+        alpha (float): Marker opacity.
+        colorname (str): Marker color.
+        annotate (bool): If True, adds Pearson r annotation.
+
+    Returns:
+        matplotlib.axes.Axes: The axes the plot was drawn on.
     """
-    df = pd.DataFrame({xlabel:x, ylabel:y})
+    x = np.asarray(x)
+    y = np.asarray(y)
 
-    # Plot a scatterplot
-    ax = sns.scatterplot(x=xlabel, 
-                        y=ylabel,
-                        s=75,            # set size of points to 50
-                        alpha=0.25,      # set opacity to 0.15
-                        color=colorname,  # set color
-                        data=df)
+    # Create axes if needed
+    created_fig = None
+    if ax is None:
+        created_fig, ax = plt.subplots(1, 1, figsize=(5, 4))
 
-    # Compute the correlation between Loneliness and Depression
-    corr = df[xlabel].corr(df[ylabel], method='pearson')
+    # Scatter
+    ax.scatter(x, y, s=s, alpha=alpha, color=colorname)
 
-    # Annotation with the correlation in the top left corner with small font size
-    ax.annotate(f'Pearson r = {corr:.2f}', xy=(0.05, 0.95), xycoords='axes fraction', fontsize=12)
+    # Labels
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
 
-    # Set the axis ranges
-    # if 'beta' in xlabel:
-    #     ax.set_xlim([0, 10.05])
-    #     ax.set_ylim([0, 10.05])
-    # elif 'lr' in xlabel:
-    #     ax.set_xlim([-.02, 1.02])
-    #     ax.set_ylim([-.02, 1.02])
+    # Pearson r annotation
+    if annotate:
+        # Be robust to NaNs
+        mask = np.isfinite(x) & np.isfinite(y)
+        if mask.any() and mask.sum() > 1:
+            corr = np.corrcoef(x[mask], y[mask])[0, 1]
+            ax.annotate(f'Pearson r = {corr:.2f}', xy=(0.05, 0.95),
+                        xycoords='axes fraction', va='top', fontsize=11)
 
-    # we can also tidy up some more by removing the top and right spines
+    # Optional x=y line
+    if show_line:
+        # Determine common bounds from data & current limits
+        data_min = np.nanmin([np.nanmin(x, initial=np.nan), np.nanmin(y, initial=np.nan)])
+        data_max = np.nanmax([np.nanmax(x, initial=np.nan), np.nanmax(y, initial=np.nan)])
+        # Fall back to current axis limits if needed
+        cur_xmin, cur_xmax = ax.get_xlim()
+        cur_ymin, cur_ymax = ax.get_ylim()
+        lo = np.nanmin([data_min, cur_xmin, cur_ymin])
+        hi = np.nanmax([data_max, cur_xmax, cur_ymax])
+        ax.plot([lo, hi], [lo, hi], linestyle='--', color='k', alpha=0.75, zorder=0)
+
+        if equal_limits:
+            ax.set_xlim(lo, hi)
+            ax.set_ylim(lo, hi)
+            ax.set_aspect('equal', adjustable='box')
+    
     sns.despine()
-
-    if filename:
-        plt.savefig(filename, dpi=450, bbox_inches='tight')
-
-    # add line y=x
-    lims = [np.min([ax.get_xlim(), ax.get_ylim()]), np.max([ax.get_xlim(), ax.get_ylim()])]
-    ax.plot(lims, lims, 'k--', alpha=0.75, zorder=0)
-    ax.set_aspect('equal')
-    ax.set_xlim(lims)
-    ax.set_ylim(lims)
-
-    plt.show()
+    # Important: don't call plt.show() in library/helper code
     return ax
