@@ -7,9 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from ..utils.stats import calc_LME, calc_BICint, pseudo_r2_from_nll
-
-if TYPE_CHECKING:
-    from ..api import EMModel
+from ..api import EMModel
 
 @dataclass
 class ComparisonRow:
