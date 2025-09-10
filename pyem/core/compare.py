@@ -183,7 +183,7 @@ class ModelComparison:
                     # LME (higher better)
                     lme = None
                     if fit_res.inv_h is not None and fit_res.NPL is not None:
-                        _, lme_total, _ = calc_LME(fit_res.inv_h, fit_res.NPL)  # from utils.stats  :contentReference[oaicite:3]{index=3}
+                        _, lme_total, _ = calc_LME(fit_res.inv_h, fit_res.NPL)  # from utils.stats
                         lme = float(lme_total)
 
                     # BICint (lower better)
