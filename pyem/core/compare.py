@@ -95,100 +95,98 @@ class ModelComparison:
         bicint_kwargs: dict | None = None,
         r2_kwargs: dict | None = None,
         seed: int | None = None,
+        verbose: int = 0,      # NEW: verbosity (0=silent, 1=round/model, 2=per-fit)
     ) -> pd.DataFrame:
         """
-        For each provided EMModel, simulate behavior (rounds times) using its
-        simulate_func, then fit each model to those simulated data using the
-        corresponding fit_func. Returns a DataFrame with:
+        For each round (outer loop), for each EMModel in self.models:
+          - simulate using that model's simulate_func
+          - fit every model to the simulated data using its fit_func
 
-        ['Simulated','Estimated','LME','BICint','pseudoR2','bestlme','bestbic','bestR2']
+        Returns a DataFrame with columns:
+            ['Simulated','Estimated','LME','BICint','pseudoR2','bestlme','bestbic','bestR2']
 
-        Notes:
-        - 'bestlme' counts (0..rounds) how many rounds the Estimated model
-          had the highest LME on data simulated by Simulated model.
-        - 'bestbic' counts (0..rounds) how many rounds the Estimated model
-          had the lowest BICint.
-        - 'bestR2'  counts (0..rounds) how many rounds the Estimated model
-          had the highest pseudoR2.
+        Raises:
+            AttributeError if any simulated model has no simulate_func.
         """
         rng = np.random.default_rng(seed)
         sim_kwargs = sim_kwargs or {}
         fit_kwargs = fit_kwargs or {}
-        # sensible defaults that mirror compare_models() behavior
+
         if bicint_kwargs is None:
             bicint_kwargs = {"nsamples": 2000, "func_output": "all", "nll_key": "nll"}
-        # r2_kwargs should contain what's needed by pseudo_r2_from_nll (e.g., ntrials, nopts)
-        # provide an empty dict if caller prefers that pseudo_r2_from_nll infers from context
         if r2_kwargs is None:
             r2_kwargs = {}
 
-        n_models = len(self.models)
         names = self.model_names
 
-        # Accumulators keyed by (sim_name, est_name)
+        # accumulators
         metrics = {
             "LME": {(s, e): [] for s in names for e in names},
             "BICint": {(s, e): [] for s in names for e in names},
             "R2": {(s, e): [] for s in names for e in names},
         }
-        # winner counters
         best_lme = {(s, e): 0 for s in names for e in names}
         best_bic = {(s, e): 0 for s in names for e in names}
         best_r2  = {(s, e): 0 for s in names for e in names}
 
-        from ..api import EMModel  # use your high-level wrapper  :contentReference[oaicite:2]{index=2}
+        from ..api import EMModel  # uses your high-level EM wrapper  :contentReference[oaicite:2]{index=2}
 
-        for sm_i, sim_model in enumerate(self.models):
-            sim_name = names[sm_i]
-            if getattr(sim_model, "simulate_func", None) is None:
-                # skip models without simulate_func
-                continue
+        # ---------- OUTER LOOP OVER ROUNDS ----------
+        for r in range(rounds):
+            if verbose >= 1:
+                print(f"[identify] round {r+1}/{rounds}")
 
-            for r in range(rounds):
-                # ----- simulate parameters -----
-                # If the sim_model already has a fit, reuse its per-subject params shape.
+            # loop over SIMULATED models
+            for sm_i, sim_model in enumerate(self.models):
+                sim_name = names[sm_i]
+
+                if getattr(sim_model, "simulate_func", None) is None:
+                    raise AttributeError(
+                        f"Model '{sim_name}' has no simulate_func; cannot run identifiability."
+                    )
+
+                # choose parameters to simulate with
                 if getattr(sim_model, "_out", None) is not None:
                     true_params = sim_model._out["m"].T
                 else:
-                    # otherwise, draw a reasonable shape
-                    # try to infer from a previous model, else default (nsubjects=10, nparams = len(param_names))
                     nsubjects = 10
                     nparams = len(getattr(sim_model, "param_names", [])) or 2
                     true_params = rng.normal(size=(nsubjects, nparams))
 
-                # ----- simulate data -----
+                # simulate data
                 sim = sim_model.simulate_func(true_params, **sim_kwargs)
                 if not (isinstance(sim, dict) and "choices" in sim and "rewards" in sim):
-                    # If your simulator returns a different structure, adapt here.
-                    continue
-                all_data = [[c, rwd] for c, rwd in zip(sim["choices"], sim["rewards"])]
+                    raise ValueError(
+                        f"Simulation from '{sim_name}' did not return expected keys 'choices' and 'rewards'."
+                    )
+                all_data = [[c, rw] for c, rw in zip(sim["choices"], sim["rewards"])]
 
-                # ----- fit all models to this simulated dataset -----
+                # fit EVERY model to this simulated dataset
                 per_round_LME = []
                 per_round_BIC = []
                 per_round_R2  = []
+
                 for em_j, est_model in enumerate(self.models):
                     est_name = names[em_j]
+                    if verbose >= 2:
+                        print(f"  - fitting Estimated='{est_name}' to Simulated='{sim_name}'")
 
-                    # Build a temporary EMModel for the estimated model with this simulated data
+                    # build a fresh EMModel for the estimator
                     tmp = EMModel(
                         all_data=all_data,
                         fit_func=est_model.fit_func,
                         param_names=est_model.param_names,
                         simulate_func=getattr(est_model, "simulate_func", None),
                     )
-                    # short, quiet fit unless caller overrides
                     fit_res = tmp.fit(verbose=0, **fit_kwargs)
 
-                    # ---- metrics ----
-                    # LME via Laplace (higher is better)
+                    # LME (higher better)
                     lme = None
                     if fit_res.inv_h is not None and fit_res.NPL is not None:
-                        _, lme_total, _ = calc_LME(fit_res.inv_h, fit_res.NPL)
+                        _, lme_total, _ = calc_LME(fit_res.inv_h, fit_res.NPL)  # from utils.stats  :contentReference[oaicite:3]{index=3}
                         lme = float(lme_total)
 
-                    # BICint (lower is better)
-                    bic = None
+                    # BICint (lower better)
                     try:
                         bic = calc_BICint(
                             all_data,
@@ -201,8 +199,7 @@ class ModelComparison:
                     except Exception:
                         bic = np.nan
 
-                    # pseudo R^2 (higher is better) — requires caller-provided kwargs
-                    r2 = None
+                    # pseudo-R² (higher better)
                     try:
                         r2 = pseudo_r2_from_nll(fit_res.NLL, **r2_kwargs)
                     except Exception:
@@ -216,17 +213,12 @@ class ModelComparison:
                     per_round_BIC.append((est_name, bic))
                     per_round_R2.append((est_name, r2))
 
-                # ----- decide winners for this round -----
-                # LME: max; BICint: min; R2: max
+                # determine winners for THIS (sim_name, round)
                 def _winner(pairs, prefer="max"):
-                    # pairs: list of (name, value)
                     vals = [(n, v) for (n, v) in pairs if v is not None and not np.isnan(v)]
                     if not vals:
                         return None
-                    if prefer == "max":
-                        return max(vals, key=lambda t: t[1])[0]
-                    else:
-                        return min(vals, key=lambda t: t[1])[0]
+                    return (max if prefer == "max" else min)(vals, key=lambda t: t[1])[0]
 
                 w_lme = _winner(per_round_LME, "max")
                 w_bic = _winner(per_round_BIC, "min")
@@ -239,19 +231,16 @@ class ModelComparison:
                 if w_r2 is not None:
                     best_r2[(sim_name, w_r2)] += 1
 
-        # ----- build output DataFrame -----
+        # assemble tidy dataframe
         rows = []
         for sim_name in names:
             for est_name in names:
-                LME_vals = metrics["LME"][(sim_name, est_name)]
-                BIC_vals = metrics["BICint"][(sim_name, est_name)]
-                R2_vals  = metrics["R2"][(sim_name, est_name)]
-
-                # aggregate across rounds (mean is a stable summary)
-                LME_mean = np.nanmean(LME_vals) if len(LME_vals) else np.nan
-                BIC_mean = np.nanmean(BIC_vals) if len(BIC_vals) else np.nan
-                R2_mean  = np.nanmean(R2_vals)  if len(R2_vals)  else np.nan
-
+                LME_mean = (np.nanmean(metrics["LME"][(sim_name, est_name)])
+                            if metrics["LME"][(sim_name, est_name)] else np.nan)
+                BIC_mean = (np.nanmean(metrics["BICint"][(sim_name, est_name)])
+                            if metrics["BICint"][(sim_name, est_name)] else np.nan)
+                R2_mean  = (np.nanmean(metrics["R2"][(sim_name, est_name)])
+                            if metrics["R2"][(sim_name, est_name)] else np.nan)
                 rows.append({
                     "Simulated": sim_name,
                     "Estimated": est_name,
@@ -264,17 +253,38 @@ class ModelComparison:
                 })
 
         df = pd.DataFrame(rows)
-        self.identifiability_matrix = df  # keep for plotting compatibility
+
+        self.identifiability_matrix = df
+        self._identify_rounds = rounds
+        if verbose >= 1:
+            print("[identify] done")
         return df
-    
+
     def plot_identifiability(
         self,
         df: pd.DataFrame | None = None,
-        metrics: list[str] = ("LME", "BICint", "pseudoR2"),
-    ):
+        metric: str = "LME",
+        *,
+        rounds: int | None = None,
+        cmap: str = "viridis",
+        annotate: bool = True,
+        figsize: tuple = (8, 6),
+    ) -> plt.Figure:
         """
-        Plot heatmaps for the given identifiability dataframe.
-        Rows = Simulated (actual), Cols = Estimated (fitted).
+        Plot a heatmap of identifiability as the PROPORTION of rounds that the Estimated
+        model won for each (Simulated, Estimated) pair, using the winner-count fields
+        produced by identify().
+
+        Args:
+            df: DataFrame returned by identify(); if None, uses self.identifiability_matrix
+            metric: which metric's winners to visualize: {"LME","BICint","pseudoR2"}
+            rounds: total rounds per Simulated model (if None, inferred per row by sum of winners)
+            cmap: colormap
+            annotate: whether to add cell annotations
+            figsize: figure size
+
+        Returns:
+            matplotlib Figure
         """
         if df is None:
             if isinstance(self.identifiability_matrix, pd.DataFrame):
@@ -282,24 +292,75 @@ class ModelComparison:
             else:
                 raise RuntimeError("Run identify() first or pass a dataframe.")
 
-        matrices = {}
-        for metric in metrics:
-            # pivot to Simulated x Estimated
-            mat = df.pivot(index="Simulated", columns="Estimated", values=metric)
-            matrices[metric] = mat
+        # Map metric -> winner-count column produced by identify()
+        metric = metric.strip()
+        metric_key = metric.upper()
+        best_map = {
+            "LME": "bestlme",
+            "BICINT": "bestbic",
+            "PSEUDOR2": "bestR2",
+        }
+        if metric_key not in best_map:
+            raise ValueError("metric must be one of {'LME','BICint','pseudoR2'}")
+        best_col = best_map[metric_key]
 
-        for metric in metrics:
-            with sns.plotting_context(context='paper', font_scale=2, rc={'axes.linewidth': 2}):
-                m = matrices[metric].astype(float)
-                ax = sns.heatmap(m, annot=False, cmap='viridis')
-                plt.xticks(rotation=45, ha='right')
-                title = {
-                    "BICint": "Integrated BIC",
-                    "pseudoR2": "Pseudo R²",
-                    "LME": "Log Model Evidence",
-                }.get(metric, metric)
-                plt.title(title)
-                ax.set_xlabel('Estimated', fontsize=10)
-                ax.set_ylabel('Simulated', fontsize=10)
-                plt.tight_layout()
-                plt.show()
+        # Pivot winner counts to matrix (rows=Simulated, cols=Estimated)
+        counts = df.pivot(index="Simulated", columns="Estimated", values=best_col).astype(float)
+
+        # Determine denominators (rounds). Prefer explicit arg, else internal, else infer per-row.
+        if rounds is None:
+            rounds = getattr(self, "_identify_rounds", None)
+
+        if rounds is not None:
+            # Single scalar denominator for all rows
+            denom = pd.Series(rounds, index=counts.index, dtype=float)
+        else:
+            # Infer per Simulated model: sum of winner counts across columns
+            # (handles cases with occasional no-winner rounds by yielding < 1.0 max)
+            denom = counts.sum(axis=1)
+            # avoid divide-by-zero
+            denom[denom == 0] = np.nan
+
+        # Compute proportions row-wise
+        prop = counts.div(denom, axis=0)
+
+        # Plot
+        fig, ax = plt.subplots(figsize=figsize)
+        im = ax.imshow(prop.values, cmap=cmap, aspect="auto", vmin=0.0, vmax=1.0)
+
+        # Colorbar labeled as a proportion
+        cbar = plt.colorbar(im, ax=ax)
+        cbar.set_label("Proportion of rounds won")
+
+        # Axis ticks/labels
+        ax.set_xticks(range(prop.shape[1]))
+        ax.set_yticks(range(prop.shape[0]))
+        ax.set_xticklabels(prop.columns, rotation=45, ha="right")
+        ax.set_yticklabels(prop.index)
+
+        # Title and axis labels
+        title = {
+            "LME": "Log Model Evidence (proportion wins)",
+            "BICINT": "Integrated BIC (proportion wins, lower is better)",
+            "PSEUDOR2": "Pseudo R² (proportion wins)",
+        }[metric_key]
+        ax.set_title(title)
+        ax.set_xlabel("Estimated")
+        ax.set_ylabel("Simulated")
+
+        # Optional per-cell annotations
+        if annotate:
+            for i in range(prop.shape[0]):
+                for j in range(prop.shape[1]):
+                    val = prop.iat[i, j]
+                    if np.isnan(val):
+                        txt = "–"
+                    else:
+                        txt = f"{val:.2f}"
+                    # legible text color
+                    ax.text(j, i, txt,
+                            ha="center", va="center",
+                            color="white" if (not np.isnan(val) and val >= 0.5) else "black")
+
+        plt.tight_layout()
+        return fig
