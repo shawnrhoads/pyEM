@@ -298,7 +298,7 @@ def my_model_simulate(params, **kwargs):
     nll = ...  # compute negative log-likelihood if desired
     fval = calc_fval(nll, params, output="nll")
 
-    return {"params": params, "choices": choices, "rewards": rewards, "nll": nll, "fval": fval}
+    return {"params": params, "choices": choices, "rewards": rewards}
 ```
 
 ## Key Classes
