@@ -65,9 +65,7 @@ def calc_fval(negll: float, params: ArrayLike, prior=None, output: str = 'npl') 
         fval = -(-negll + prior.logpdf(np.asarray(params)))
         if np.isinf(fval):
             # Return a very large value so gradient-based optimisers keep going
-            fval = 10_000_000
+            fval = 1e7
         return fval
-    elif output == 'nll':
-        return negll
     else:
-        raise ValueError('Invalid output type. Please specify "npl" or "nll".')
+        return negll

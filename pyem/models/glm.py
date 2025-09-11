@@ -86,4 +86,3 @@ def fit_decay(params, X, Y, prior=None, output: str = 'npl', decay: str = 'twost
             'nll': negll,
             'BIC': len(params) * np.log(len(Y)) + 2 * negll,
         }
-

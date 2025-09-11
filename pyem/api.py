@@ -352,18 +352,14 @@ class EMModel:
         
         # grab estimated params 
         out_fit = recovery_model.calculate_final_arrays()
-        estimated_params = out_fit['params']
         
         # Calculate recovery metrics
-        dif = estimated_params - true_params
         recovery_dict = {
             'true_params': sim['params'],
             'estimated_params': estimated_params,
             'sim': sim,
             'fit_result': fit_result,
-            'correlation': np.corrcoef(true_params.flatten(), estimated_params.flatten())[0, 1],
-            'rmse': np.sqrt(np.mean(dif**2, axis=0)),
-            'mae': np.mean(np.abs(dif), axis=0),
+            'correlation': np.corrcoef(sim['params'].flatten(), out_fit['params'].flatten())[0, 1],
         }
 
         return recovery_dict
