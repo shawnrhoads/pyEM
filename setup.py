@@ -10,14 +10,17 @@ authors = ["Shawn A. Rhoads"]
 with open("README.md", "r") as fh:
     __long_description__ = fh.read()
 
-# Get requirements
+# Get requirements from requirements.txt, ignoring editable/local refs
 with open('requirements.txt') as f:
-    required = f.read().splitlines()
+    required = [line.strip() for line in f if line.strip() and not line.startswith('-e')]
 
 setup(
     name='pyEM',
-    version='v0.0.1',
-    description='Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation for fitting models to behavioral data',
+    version='v0.2.0',
+    description=(
+        'Python implementation of the Hierarchical Expectation Maximization '
+        'algorithm with MAP estimation for fitting models to behavioral data'
+    ),
     url=github_url,
     author=', '.join(authors), 
     packages=find_packages(),

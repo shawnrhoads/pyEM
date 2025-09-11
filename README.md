@@ -51,14 +51,11 @@ model = EMModel(
 result = model.fit(verbose=1)
 print(f"Convergence: {result.convergence}")
 
-# Access results
+# Access results --> defined from your fit function when `out="all"`
 output_dict = model.calculate_final_arrays() 
 estimated_params = output_dict['params']  # Shape: (n_subjects, n_params)
 print(f"Estimated parameters shape: {estimated_params.shape}")
-
-# Get output dict (model predictions, etc.) --> defined from your fit function when `out="all"`
-arrays = model.calculate_final_arrays()
-print(f"Available arrays: {list(arrays.keys())}")
+print(f"Available outputs: {list(output_dict.keys())}")
 
 # Plot recovery
 for param_idx, param_label in enumerate(['beta','alpha']):
@@ -246,41 +243,43 @@ The package includes several pre-implemented models:
 To create a custom model, implement two functions:
 
 ```python
+from pyem.utils.math import norm2alpha, norm2beta, calc_fval
+
+
 def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
+    """Fit function for your custom model.
+
+    Parameters
+    ----------
+    params : sequence
+        Parameter values in normalized space.
+    choices, rewards : sequence
+        Subject-specific data passed to the model.
+    prior : object, optional
+        Prior distribution with ``logpdf`` method.
+    output : {"npl", "nll", "all"}
+        Determines the function output.
+
+    Returns
+    -------
+    float or dict
+        Objective value or full output when ``output='all'``.
     """
-    Fit function for your custom model.
-    
-    Args:
-        params: Parameter values in normalized space
-        choices: Choice data for one subject (CAN BE ANYTHING)
-        rewards: Reward data for one subject (CAN BE ANYTHING)
-        prior: Prior distribution (used by EM algorithm)
-        output: "npl" for negative posterior likelihood, "nll" for negative log-likelihood, "all" for full output
-        
-    Returns:
-        Negative posterior likelihood (float) or full dictionary if output="all"
-    """
-    # Transform parameters from normalized to parameter space
     alpha = norm2alpha(params[0])
     beta = norm2beta(params[1])
-    
-    # Bounds checking
-    if not (0 <= alpha <= 1): return 1e7
-    if not (0.001 <= beta <= 20): return 1e7
-    
-    # Your model implementation here
+
+    if not (0 <= alpha <= 1):
+        return 1e7
+    if not (0.001 <= beta <= 20):
+        return 1e7
+
+    # Model-specific negative log-likelihood
     nll = ...
-    
-    if output == "nll":
-        return nll
-    elif output == "all":
+
+    if output == "all":
         return {"params": [alpha, beta], "choices": choices, "rewards": rewards, "nll": nll}
-    
-    # Compute negative posterior likelihood
-    if prior is not None:
-        nlp = -prior.logpdf(np.asarray(params))
-        return nll + nlp
-    return nll
+
+    return calc_fval(nll, params, prior=prior, output=output)
 
 def my_model_simulate(params, **kwargs):
     """
@@ -296,8 +295,10 @@ def my_model_simulate(params, **kwargs):
 
     # Your simulation implementation here
     ...
+    nll = ...  # compute negative log-likelihood if desired
+    fval = calc_fval(nll, params, output="nll")
 
-    return {"params": params, "choices": choices, "rewards": rewards, "nll": nll}
+    return {"params": params, "choices": choices, "rewards": rewards, "nll": nll, "fval": fval}
 ```
 
 ## Key Classes

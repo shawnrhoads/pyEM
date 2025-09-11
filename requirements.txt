@@ -1,7 +1,12 @@
-numpy==1.21.6
-scipy==1.6.2
-joblib==1.1.0
-matplotlib==3.5.3
-seaborn==0.12.2
-pandas==1.1.5
-tqdm==4.65.0
+numpy>=1.22
+scipy>=1.10
+pandas>=1.5
+joblib>=1.3
+typing-extensions>=4.6
+tqdm
+pytest
+matplotlib
+seaborn
+statsmodels
+scikit-learn
+-e .

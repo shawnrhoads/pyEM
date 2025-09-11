@@ -10,8 +10,8 @@ def test_model_compare_basic():
     params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
-    m1 = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])
-    m2 = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])  # dummy second
+    m1 = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])
+    m2 = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])  # dummy second
     r1 = m1.fit(mstep_maxit=5, verbose=0, njobs=1)
     r2 = m2.fit(mstep_maxit=5, verbose=0, njobs=1)
     rows = compare_models(
