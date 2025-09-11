@@ -83,6 +83,7 @@ def model_identifiability(models, param_sets, nblocks: int, ntrials: int, choose
         all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
         scores = []
         for m_idx, mdl in enumerate(models):
+            mdl.all_data = all_data  # ensure model fits the current dataset
             res = mdl.fit(mstep_maxit=10, verbose=0, njobs=1)  # small fit for ID check
             scores.append(chooser(res.__dict__))
         win = int(np.argmin(np.asarray(scores)))

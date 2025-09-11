@@ -1,26 +1,30 @@
 
 from __future__ import annotations
 import numpy as np
-from ..utils.math import softmax, norm2alpha, norm2beta
+from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
 
-def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, outcomes: np.ndarray | None = None):
-    """
-    Vectorized simulation of a two-armed bandit under a Rescorla-Wagner model.
-    params: (nsubjects, 2) in natural space: [beta_norm, alpha_norm]
-            beta = norm2beta(beta_norm, max_val=20)
-            alpha = norm2alpha(alpha_norm)
+def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
+                     outcomes: np.ndarray | None = None):
+    """Simulate a simple Rescorla–Wagner model with one learning rate.
+
+    Each subject repeatedly chooses between two options (A/B).  Rewards are
+    generated from Bernoulli distributions whose probabilities switch between
+    blocks.  Parameters are expected in **Gaussian** space and are transformed
+    to their natural ranges via :func:`norm2beta` (for inverse temperature) and
+    :func:`norm2alpha` (for learning rate).
     """
     nsubjects = params.shape[0]
+    # preallocate arrays for speed
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     rewards = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    EV = np.zeros((nsubjects, nblocks, ntrials + 1, 2), dtype=float)
-    ch_prob = np.zeros((nsubjects, nblocks, ntrials, 2), dtype=float)
+    EV = np.zeros((nsubjects, nblocks, ntrials + 1, 2), dtype=float)  # expected values
+    ch_prob = np.zeros((nsubjects, nblocks, ntrials, 2), dtype=float)  # choice probabilities
     choices_A = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    PE = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    PE = np.zeros((nsubjects, nblocks, ntrials), dtype=float)  # prediction errors
     nll = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
 
     rng = np.random.default_rng()
-    this_block_probs = np.array([0.8, 0.2])
+    this_block_probs = np.array([0.8, 0.2])  # reward probability for option A
 
     # transform all params
     all_beta = norm2beta(params[:, 0])
@@ -32,17 +36,20 @@ def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, out
         for b in range(nblocks):
             EV[s, b, 0, :] = 0.5
             for t in range(ntrials):
+                # softmax translates EVs into choice probabilities
                 p = softmax(EV[s, b, t, :], beta)
                 ch_prob[s, b, t, :] = p
-                c = rng.choice([0, 1], p=p)
+                c = rng.choice([0, 1], p=p)  # sample a choice
                 choices[s, b, t] = "A" if c == 0 else "B"
                 choices_A[s, b, t] = 1.0 if c == 0 else 0.0
                 if outcomes is None:
+                    # reward contingent on chosen option
                     rew = rng.choice([1.0, 0.0], p=this_block_probs if c == 0 else this_block_probs[::-1])
                 else:
                     rew = float(outcomes[b, t, c])
                 rewards[s, b, t] = rew
                 PE[s, b, t] = rew - EV[s, b, t, c]
+                # update only the chosen option
                 EV[s, b, t + 1, :] = EV[s, b, t, :]
                 EV[s, b, t + 1, c] = EV[s, b, t, c] + alpha * PE[s, b, t]
                 nll[s, b, t] = -np.log(p[c] + 1e-12)
@@ -66,9 +73,11 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
     beta = float(norm2beta(params[0]))
     alpha = float(norm2alpha(params[1]))
 
-    # bounds checks
-    if not (1e-5 <= beta <= 20.0): return 1e7
-    if not (0.0 <= alpha <= 1.0): return 1e7
+    # reject values outside natural bounds
+    if not (1e-5 <= beta <= 20.0):
+        return 1e7
+    if not (0.0 <= alpha <= 1.0):
+        return 1e7
 
     nblocks, ntrials = rewards.shape
     EV = np.zeros((nblocks, ntrials + 1, 2))
@@ -84,33 +93,23 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
             EV[b, t + 1, c] = EV[b, t, c] + alpha * pe
             nll += -np.log(p[c] + 1e-12)
 
-    if output == "nll":
-        return nll
-    elif output == "all":
-        subj_dict = {'params'     : [beta, alpha],
-                     'choices'    : choices, 
-                     'rewards'    : rewards, 
-                     'EV'         : EV, 
-                     'nll'        : nll,}
+    if output == "all":
+        subj_dict = {
+            'params'  : [beta, alpha],
+            'choices' : choices,
+            'rewards' : rewards,
+            'EV'      : EV,
+            'nll'     : nll,
+        }
         return subj_dict
 
-    # negative posterior likelihood
-    if prior is not None:
-        nlp = -prior.logpdf(np.asarray(params))
-        return nll + nlp
-    else:
-        # if no prior, interpret as nll (legacy safety)
-        return nll
+    # otherwise compute objective value
+    return calc_fval(nll, params, prior=prior, output=output)
 
 
-def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, outcomes: np.ndarray | None = None):
-    """
-    Vectorized simulation of a two-armed bandit under a Rescorla-Wagner model.
-    params: (nsubjects, 3) in natural space: [beta_norm, alpha_pos_norm, alpha_neg_norm]
-            beta = norm2beta(beta_norm, max_val=20)
-            alpha_pos   = norm2alpha(alpha_norm)
-            alpha_neg   = norm2alpha(alpha_norm)
-    """
+def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
+                     outcomes: np.ndarray | None = None):
+    """Simulate a Rescorla–Wagner model with separate learning rates for gains and losses."""
     nsubjects = params.shape[0]
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     rewards = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -147,6 +146,7 @@ def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, out
                 rewards[s, b, t] = rew
                 PE[s, b, t] = rew - EV[s, b, t, c]
                 EV[s, b, t + 1, :] = EV[s, b, t, :]
+                # apply positive or negative learning rate
                 if PE[s, b, t] >= 0:
                     EV[s, b, t + 1, c] = EV[s, b, t, c] + alpha_pos * PE[s, b, t]
                 else:
@@ -174,9 +174,12 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
     alpha_neg = float(norm2alpha(params[2]))
 
     # bounds checks
-    if not (1e-5 <= beta <= 20.0): return 1e7
-    if not (0.0 <= alpha_pos <= 1.0): return 1e7
-    if not (0.0 <= alpha_neg <= 1.0): return 1e7
+    if not (1e-5 <= beta <= 20.0):
+        return 1e7
+    if not (0.0 <= alpha_pos <= 1.0):
+        return 1e7
+    if not (0.0 <= alpha_neg <= 1.0):
+        return 1e7
 
     nblocks, ntrials = rewards.shape
     EV = np.zeros((nblocks, ntrials + 1, 2))
@@ -194,24 +197,17 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
                 EV[b, t + 1, c] = EV[b, t, c] + alpha_pos * PE[b, t]
             else:
                 EV[b, t + 1, c] = EV[b, t, c] + alpha_neg * PE[b, t]
-
             nll += -np.log(p[c] + 1e-12)
 
-    if output == "nll":
-        return nll
-    elif output == "all":
-        subj_dict = {'params'     : [beta, alpha_pos, alpha_neg],
-                     'choices'    : choices, 
-                     'rewards'    : rewards, 
-                     'EV'         : EV, 
-                     'PE'         : PE, 
-                     'nll'        : nll,}
+    if output == "all":
+        subj_dict = {
+            'params'  : [beta, alpha_pos, alpha_neg],
+            'choices' : choices,
+            'rewards' : rewards,
+            'EV'      : EV,
+            'PE'      : PE,
+            'nll'     : nll,
+        }
         return subj_dict
 
-    # negative posterior likelihood
-    if prior is not None:
-        nlp = -prior.logpdf(np.asarray(params))
-        return nll + nlp
-    else:
-        # if no prior, interpret as nll (legacy safety)
-        return nll
+    return calc_fval(nll, params, prior=prior, output=output)

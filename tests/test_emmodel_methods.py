@@ -15,7 +15,7 @@ def test_compute_integrated_bic():
     params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
-    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])
+    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])
     model.fit(mstep_maxit=3, verbose=0, njobs=1)
     
     bicint = model.compute_integrated_bic(nsamples=5)
@@ -29,7 +29,7 @@ def test_compute_lme():
     params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
-    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])
+    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])
     model.fit(mstep_maxit=3, verbose=0, njobs=1)
     
     lap, lme, good = model.compute_lme()
@@ -44,7 +44,7 @@ def test_calculate_final_arrays():
     params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
-    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])
+    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])
     model.fit(mstep_maxit=3, verbose=0, njobs=1)
     
     arrays = model.calculate_final_arrays()
@@ -60,7 +60,7 @@ def test_fit_individual_nll():
     params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
-    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])
+    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])
     
     # Test with EMfit
     result_em = model.fit_individual_nll(use_emfit=True)
@@ -79,7 +79,7 @@ def test_parameter_recovery():
     nsubjects, nblocks, ntrials = 3, 2, 8
     true_params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     
-    model = EMModel(all_data=None, fit_func=rw_fit, param_names=["beta","lr"], simulate_func=rw_simulate)
+    model = EMModel(all_data=None, fit_func=rw_fit, param_names=["beta", "alpha"], simulate_func=rw_simulate)
     recovery_dict = model.recover(true_params, nblocks=nblocks, ntrials=ntrials)
     
     assert 'true_params' in recovery_dict
@@ -97,23 +97,23 @@ def test_parameter_recovery():
 def test_parameter_transformations():
     """Test parameter transformation functions via param_xform."""
     # Create model with parameter transformations
-    model = EMModel(None, rw_fit, ["beta","lr"], param_xform=[norm2beta, norm2alpha])
+    model = EMModel(None, rw_fit, ["beta", "alpha"], param_xform=[norm2beta, norm2alpha])
     
     # Test norm2beta for first parameter (beta)
     beta = model.param_xform[0](0.5)
     assert beta > 0
     
-    # Test norm2alpha for second parameter (lr)  
+    # Test norm2alpha for second parameter (alpha)
     alpha = model.param_xform[1](0.5)
     assert 0 < alpha < 1
-    
+
     # Test convenience method with parameter name
     beta_func = model.get_param_transform("beta")
     assert beta_func is norm2beta
-    
-    lr_func = model.get_param_transform("lr")
-    assert lr_func is norm2alpha
-    
+
+    alpha_func = model.get_param_transform("alpha")
+    assert alpha_func is norm2alpha
+
     # Test convenience method with index
     assert model.get_param_transform(0) is norm2beta
     assert model.get_param_transform(1) is norm2alpha
@@ -131,10 +131,10 @@ def test_parameter_transformations():
     
     # Test that param_xform length must match param_names length
     with pytest.raises(ValueError, match="param_xform length.*must match param_names length"):
-        EMModel(None, rw_fit, ["beta","lr"], param_xform=[norm2beta])  # Too few transformations
+        EMModel(None, rw_fit, ["beta", "alpha"], param_xform=[norm2beta])  # Too few transformations
     
     # Test error cases for get_param_transform
-    model_no_xform = EMModel(None, rw_fit, ["beta","lr"])  # No param_xform
+    model_no_xform = EMModel(None, rw_fit, ["beta", "alpha"])  # No param_xform
     with pytest.raises(ValueError, match="param_xform was not provided"):
         model_no_xform.get_param_transform("beta")
     
@@ -153,8 +153,8 @@ def test_model_comparison_class():
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
     
     # Create two models
-    model1 = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"], simulate_func=rw_simulate)
-    model2 = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"], simulate_func=rw_simulate)
+    model1 = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"], simulate_func=rw_simulate)
+    model2 = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"], simulate_func=rw_simulate)
     
     # Fit models
     model1.fit(mstep_maxit=3, verbose=0, njobs=1)
@@ -189,7 +189,7 @@ def test_emmodel_basic_functionality():
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
     
-    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta","lr"])
+    model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])
     
     # Should work with basic EMModel functionality
     res = model.fit(mstep_maxit=5, verbose=0, njobs=1)
