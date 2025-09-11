@@ -355,17 +355,21 @@ class EMModel:
         estimated_params = out_fit['params']
         
         # Calculate recovery metrics
+        dif = estimated_params - true_params
         recovery_dict = {
             'true_params': sim['params'],
             'estimated_params': estimated_params,
             'sim': sim,
             'fit_result': fit_result,
-            'correlation': np.corrcoef(true_params.flatten(), estimated_params.flatten())[0, 1]
+            'correlation': np.corrcoef(true_params.flatten(), estimated_params.flatten())[0, 1],
+            'rmse': np.sqrt(np.mean(dif**2, axis=0)),
+            'mae': np.mean(np.abs(dif), axis=0),
         }
-        
+
         return recovery_dict
 
-    def plot_recovery(self, recovery_dict: dict, show_line: bool = True, figsize: tuple = (10, 4)) -> plt.Figure:
+    def plot_recovery(self, recovery_dict: dict, show_line: bool = True,
+                      figsize: tuple = (10, 4), show: bool = True) -> plt.Figure:
         """
         Plot parameter recovery as scatter plots of simulated vs estimated parameters.
 
@@ -375,6 +379,7 @@ class EMModel:
                 - 'estimated_params' (array-like, shape [n_sims, n_params])
             show_line: Whether to draw x=y line
             figsize: Figure size
+            show: Call :func:`matplotlib.pyplot.show` after drawing
 
         Returns:
             matplotlib Figure object
@@ -414,4 +419,6 @@ class EMModel:
             axes[j].set_visible(False)
 
         plt.tight_layout()
+        if show:
+            plt.show()
         return fig

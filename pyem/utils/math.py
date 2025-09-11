@@ -34,3 +34,40 @@ def check_bounds(val: float, lo: float, hi: float, penalty: float = 1e6) -> floa
     if val < lo or val > hi:
         return penalty
     return None
+
+
+def calc_fval(negll: float, params: ArrayLike, prior=None, output: str = 'npl') -> float:
+    """Return objective value given a negative log-likelihood.
+
+    Parameters
+    ----------
+    negll : float
+        Negative log-likelihood of the data under the model.
+    params : array-like
+        Parameter vector passed to the prior.  Only used when `prior` is
+        provided and ``output`` is ``"npl"``.
+    prior : object or None, optional
+        Object with a ``logpdf`` method returning the log prior density.
+        When ``None`` the function reduces to returning ``negll``.
+    output : {"npl", "nll"}
+        Indicates whether to return the negative posterior likelihood
+        (``"npl"``) or just the negative log-likelihood (``"nll"``).
+
+    Returns
+    -------
+    float
+        Objective value suitable for minimisation.  If the prior results in
+        ``inf`` the value is capped at a large constant to keep optimisers
+        stable.
+    """
+    if output == 'npl' and prior is not None and hasattr(prior, 'logpdf'):
+        # Want to minimise -log[ P(data|h) * P(h) ]
+        fval = -(-negll + prior.logpdf(np.asarray(params)))
+        if np.isinf(fval):
+            # Return a very large value so gradient-based optimisers keep going
+            fval = 10_000_000
+        return fval
+    elif output == 'nll':
+        return negll
+    else:
+        raise ValueError('Invalid output type. Please specify "npl" or "nll".')
