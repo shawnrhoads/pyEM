@@ -51,14 +51,11 @@ model = EMModel(
 result = model.fit(verbose=1)
 print(f"Convergence: {result.convergence}")
 
-# Access results
+# Access results --> defined from your fit function when `out="all"`
 output_dict = model.calculate_final_arrays() 
 estimated_params = output_dict['params']  # Shape: (n_subjects, n_params)
 print(f"Estimated parameters shape: {estimated_params.shape}")
-
-# Get output dict (model predictions, etc.) --> defined from your fit function when `out="all"`
-arrays = model.calculate_final_arrays()
-print(f"Available arrays: {list(arrays.keys())}")
+print(f"Available outputs: {list(output_dict.keys())}")
 
 # Plot recovery
 for param_idx, param_label in enumerate(['beta','alpha']):
