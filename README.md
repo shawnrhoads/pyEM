@@ -26,17 +26,16 @@ This is a Python implementation of the Hierarchical Expectation Maximization alg
 
 ```python
 import numpy as np
+import matplotlib.pyplot as plt
 from pyem.api import EMModel
 from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
 from pyem.utils.math import norm2beta, norm2alpha
-import matplotlib.pyplot as plt
 from pyem.utils import plotting
 
 # Generate sample data
 nsubjects, nblocks, ntrials = 100, 6, 24
-true_params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)]) # Untransformed parameters in Gaussian space
-sim = rw1a1b_simulate(true_params, nblocks=3, ntrials=24)
-all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])] # beta, alpha for 100 subjects
+true_params = np.column_stack([np.random.normal(-1.5,1,nsubjects), 
+                               np.random.normal(0,1,nsubjects)]) # Untransformed parameters in Gaussian space
 sim = rw1a1b_simulate(true_params, nblocks=3, ntrials=24)
 all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
@@ -102,7 +101,10 @@ When we have two different models, we can use the `ModelComparison` class to com
 * **Integrated BIC**: Monte Carlo approximation accounting for parameter uncertainty
 
 ```python
+from pyem.api import EMModel
 from pyem.core.compare import ModelComparison
+from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
+from pyem.utils.math import norm2alpha, norm2beta
 
 # Create multiple models for comparison
 model1 = EMModel(all_data, rw1a1b_fit, 
@@ -120,14 +122,19 @@ model1.fit(verbose=0)
 model2.fit(verbose=0)
 
 # Compare models
-comparison = ModelComparison([model1, model2], ["RW1", "RW2"])
+mc = ModelComparison([model1, model2], ["RW1", "RW2"])
 bicint_kwargs = {"nsamples":2000, "func_output":"all", "nll_key":"nll"}
 r2_kwargs = {"ntrials": nblocks*ntrials, "nopts": 2} # two-armed bandit has 2 options
-compare_results = comparison.compare(bicint_kwargs=bicint_kwargs, r2_kwargs=r2_kwargs)
+compare_results = mc.compare(bicint_kwargs=bicint_kwargs, r2_kwargs=r2_kwargs)
 
 # Print comparison results
 for result in compare_results:
-    print(f"{result.name}: LME = {result.LME:.2f}, BICint = {result.BICint:.2f}, R^2 = {result.R2:.2f}")
+    print(
+        f"{result.name}: "
+        f"LME = {result.LME:.2f}, "
+        f"BICint = {result.BICint:.2f}, "
+        f"R^2 = {result.R2:.2f}"
+    )
 ```
 
 We can also compute these metrics using the EMModel class directly.
@@ -136,7 +143,7 @@ We can also compute these metrics using the EMModel class directly.
 # Compute integrated BIC
 bicint = model.compute_integrated_bic(nsamples=2000)
 
-# Compute Laplace approximation for LME
+# Compute Laplace approximation for Log Model Evidence
 lap, lme, good = model.compute_lme()
 ```
 
@@ -144,12 +151,12 @@ lap, lme, good = model.compute_lme()
 
 When fitting multiple candidate models to behavioral data, it is crucial to assess **identifiability**, whether simulated data from one model are best recovered by the same model when refitted. `pyEM` provides a convenient interface via the `ModelComparison` class.
 
-The `identify()` method repeatedly:
+Use the `identify()` method to:
 
-1. **Simulates** behavior from each model’s `simulate_func`
-2. **Fits** all models to that simulated dataset
-3. **Scores** each fit using log model evidence (LME), integrated BIC (BICint), and pseudo R²
-4. **Counts winners** for each metric across repeated rounds
+1. **Simulate** behavior from each model’s `simulate_func`
+2. **Fit** all models to that simulated dataset
+3. **Score** each fit using log model evidence (LME), integrated BIC (BICint), and pseudo R²
+4. **Count winning models** for each metric across repeated rounds
 
 The result is a `pandas.DataFrame` with per–Simulated/Estimated model entries and summary columns:
 
@@ -162,8 +169,9 @@ You can visualize these results with `plot_identifiability()`, which plots an **
 
 ```python
 from pyem.api import EMModel
-from pyem.compare import ModelComparison
-from my_models import rw_fit, rw_simulate, bayes_fit, bayes_simulate
+from pyem.core.compare import ModelComparison
+from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
+from pyem.utils.math import norm2alpha, norm2beta
 
 # Construct two candidate models
 model1 = EMModel(all_data, rw1a1b_fit, 
@@ -180,23 +188,22 @@ model2 = EMModel(all_data, rw2a1b_fit,
 mc = ModelComparison([model1, model2], ["RW1", "RW2"])
 df = mc.identify(
     rounds=10,
-    sim_kwargs={"ntrials": 200},           # args for simulate_func
-    fit_kwargs={"mstep_maxit": 50, "njobs": 1},
-    r2_kwargs={"ntrials": 200, "nopts": 2},
+    sim_kwargs={"nblocks":3, "ntrials": 24}, # args for simulate_func
+    fit_kwargs={"mstep_maxit": 50},
+    r2_kwargs={"ntrials": 3*24, "nopts": 2},
     verbose=1,
 )
 
 print(df.head())
-#   Simulated         Estimated   LME    BICint   pseudoR2  bestlme  bestbic  bestR2
-# 0 Rescorla-Wagner 1  Rescorla-Wagner 1 ...
-# 1 Rescorla-Wagner 1  Rescorla-Wagner 2 ...
-# 2 Rescorla-Wagner 2  Rescorla-Wagner 1 ...
-# 3 Rescorla-Wagner 2  Rescorla-Wagner 2 ...
+#    Simulated  Estimated  LME  BICint  bestlme  bestbic
+# 0  RW1        RW1 ...
+# 1  RW1        RW2 ...
+# 2  RW2        RW1 ...
+# 3  RW2        RW2 ...
 
 # Plot results as proportion of rounds won
 mc.plot_identifiability(df, metric="LME")
 mc.plot_identifiability(df, metric="BICint")
-mc.plot_identifiability(df, metric="pseudoR2")
 ```
 
 ### Miscellanous functions
@@ -204,7 +211,7 @@ mc.plot_identifiability(df, metric="pseudoR2")
 Many computational models have bounded parameters (e.g., learning rates between 0-1). The package uses transformation functions to map between:
 
 * **Normalized space**: Unbounded parameters used during optimization
-* **Natural space**: Bounded parameters used in model computations
+* **Parameter space**: Bounded parameters used in model computations
 
 Example:
 ```python
@@ -215,14 +222,13 @@ alpha_natural = norm2alpha(alpha_normalized)  # Bounded to [0,1]
 
 If you provide function to transform parameters from Gaussian to parameter space (see Daw, 2011), then the following can be used to access them from the EMModel class.
 
-
 ```python
 # Access parameter transformations
 beta_transform = model.get_param_transform("beta")
 alpha_transform = model.get_param_transform("alpha")
 
 # Transform parameters
-transformed_beta = beta_transform(0.5)  # Convert from normalized to natural space
+transformed_beta = beta_transform(0.5)  # Convert from normalized to parameter space
 transformed_alpha = alpha_transform(0.3)
 ```
 
@@ -254,7 +260,7 @@ def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
     Returns:
         Negative posterior likelihood (float) or full dictionary if output="all"
     """
-    # Transform parameters from normalized to natural space
+    # Transform parameters from normalized to parameter space
     alpha = norm2alpha(params[0])
     beta = norm2beta(params[1])
     
@@ -263,7 +269,7 @@ def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
     if not (0.001 <= beta <= 20): return 1e7
     
     # Your model implementation here
-    nll = compute_negative_log_likelihood(alpha, beta, choices, rewards)
+    nll = ...
     
     if output == "nll":
         return nll
@@ -281,13 +287,16 @@ def my_model_simulate(params, **kwargs):
     Simulation function for your custom model.
     
     Args:
-        params: Parameter values in natural space (n_subjects x n_params)
+        params: Parameter values in parameter space (n_subjects x n_params)
         **kwargs: Additional simulation parameters
         
     Returns:
         Dictionary with keys (CAN BE ANYTHING + "nll"): "params", "choices", "rewards", "nll", etc.
     """
+
     # Your simulation implementation here
+    ...
+
     return {"params": params, "choices": choices, "rewards": rewards, "nll": nll}
 ```
 
@@ -318,7 +327,7 @@ class ModelComparison:
     def __init__(self, models, names)
     def compare(self) -> list
     def indentify(self) -> pd.DataFrame
-    def plot_identifiability(self) -> matplotlib.figure
+    def plot_identifiability(self) -> plt.Figure
 ```
 
 ### Utility Functions
