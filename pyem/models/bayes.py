@@ -1,17 +1,6 @@
-"""Bayesian inference model for the colour ``fish`` task.
-
-The single parameter ``lambda1`` governs how quickly beliefs about the pond
-update as new fish are observed: lower values make observations less
-predictive, so more confirming evidence is required to gain confidence and
-reduce uncertainty.
-"""
-
 from __future__ import annotations
-
 import numpy as np
-
 from ..utils.math import norm2alpha, calc_fval
-
 
 def _generate_fishp(lambda1: float, n_fish: int) -> np.ndarray:
     """Return transition matrix for observing fish colours.
@@ -25,7 +14,6 @@ def _generate_fishp(lambda1: float, n_fish: int) -> np.ndarray:
     s = (1 - lambda1) / (n_fish - 1)
     fishp = np.eye(n_fish) * m + (1 - np.eye(n_fish)) * s
     return fishp
-
 
 def simulate(params: np.ndarray, n_blocks: int = 10, n_trials: int = 15,
              n_fish: int = 3) -> dict:
@@ -109,4 +97,3 @@ def fit(params, choices, observations, prior=None, output: str = 'npl'):
 
     # return requested objective value
     return calc_fval(nll, params, prior=prior, output=output)
-
