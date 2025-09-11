@@ -211,7 +211,7 @@ mc.plot_identifiability(df, metric="BICint")
 Many computational models have bounded parameters (e.g., learning rates between 0-1). The package uses transformation functions to map between:
 
 * **Normalized space**: Unbounded parameters used during optimization
-* **Natural space**: Bounded parameters used in model computations
+* **Parameter space**: Bounded parameters used in model computations
 
 Example:
 ```python
@@ -228,7 +228,7 @@ beta_transform = model.get_param_transform("beta")
 alpha_transform = model.get_param_transform("alpha")
 
 # Transform parameters
-transformed_beta = beta_transform(0.5)  # Convert from normalized to natural space
+transformed_beta = beta_transform(0.5)  # Convert from normalized to parameter space
 transformed_alpha = alpha_transform(0.3)
 ```
 
@@ -260,7 +260,7 @@ def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
     Returns:
         Negative posterior likelihood (float) or full dictionary if output="all"
     """
-    # Transform parameters from normalized to natural space
+    # Transform parameters from normalized to parameter space
     alpha = norm2alpha(params[0])
     beta = norm2beta(params[1])
     
@@ -287,13 +287,13 @@ def my_model_simulate(params, **kwargs):
     Simulation function for your custom model.
     
     Args:
-        params: Parameter values in natural space (n_subjects x n_params)
+        params: Parameter values in parameter space (n_subjects x n_params)
         **kwargs: Additional simulation parameters
         
     Returns:
         Dictionary with keys (CAN BE ANYTHING + "nll"): "params", "choices", "rewards", "nll", etc.
     """
-    
+
     # Your simulation implementation here
     ...
 
