@@ -47,7 +47,10 @@ def plot_scatter(
     annotate=True,
 ):
     """
-    Scatter plot of x vs y with optional Pearson r annotation and x=y reference line.
+    Scatter plot of ``x`` vs ``y`` with optional Pearson r annotation and
+    x=y reference line.  The function deliberately does **not** call
+    ``plt.show()`` so that callers can aggregate multiple subplots before
+    displaying the figure.
 
     Args:
         x (array-like): x-axis data
@@ -109,3 +112,4 @@ def plot_scatter(
     sns.despine()
     # Important: don't call plt.show() in library/helper code
     return ax
+

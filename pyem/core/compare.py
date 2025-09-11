@@ -20,7 +20,7 @@ def compare_models(
     models,  # list of EMModel (already fit) or tuples (name, FitResult, extras)
     metric_order: Sequence[str] = ("LME", "BICint", "R2"),
     bicint_kwargs: dict | None = {"nsamples":2000, "func_output":"all", "nll_key":"nll"},
-    r2_kwargs: dict | None = {"ntrials": int, "nopts": int},
+    r2_kwargs: dict | None = None,
 ) -> List[ComparisonRow]:
     rows: List[ComparisonRow] = []
     for item in models:
@@ -255,6 +255,10 @@ class ModelComparison:
         if verbose >= 1:
             print("[identify] done")
         return df
+
+    def identifiability_analysis(self, *args, **kwargs):
+        """Backward-compatible alias for :meth:`identify`."""
+        return self.identify(*args, **kwargs)
 
     def plot_identifiability(
         self,
