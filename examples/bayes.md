@@ -2,9 +2,7 @@
 
 Participants observe a sequence of coloured fish and must infer which of three
 ponds the fish were drawn from. Each pond contains fish in a fixed 80–10–10
-colour ratio. The single parameter ``lambda`` controls how quickly beliefs
-update: lower values require more confirming evidence to increase confidence,
-making successive observations feel less predictive.
+colour ratio. The single parameter `lambda` governs how quickly beliefs about the pondupdate as new fish are observed: lower values make observations less predictive, so more confirming evidence is required to gain confidence and reduce uncertainty.
 
 ```python
 import numpy as np
