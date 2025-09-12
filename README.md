@@ -1,6 +1,6 @@
 <div align="center">
 
-<a target="_blank" rel="noopener noreferrer" href="https://doi.org/10.5281/zenodo.10415396">![DOI:10.5281/zenodo.10415396](https://zenodo.org/badge/DOI/10.5281/zenodo.10415396.svg)</a> <a target="_blank" rel="noopener noreferrer" href="https://github.com/shawnrhoads/pyEM">![GitHub last update](https://img.shields.io/github/last-commit/shawnrhoads/pyEM?color=blue&label=last%20update)</a> <a target="_blank" rel="noopener noreferrer" href="https://www.buymeacoffee.com/shawnrhoads">![BuyMeACoffee](https://img.shields.io/static/v1?message=contribute%20caffeine&label=%20&style=square&logo=Buy%20Me%20A%20Coffee&labelColor=5c5c5c&color=lightgrey)</a>
+<a target="_blank" rel="noopener noreferrer" href="https://doi.org/10.5281/zenodo.10415396">![DOI:10.5281/zenodo.10415396](https://zenodo.org/badge/DOI/10.5281/zenodo.10415396.svg)</a> <a target="_blank" rel="noopener noreferrer" href="https://github.com/shawnrhoads/pyEM">![GitHub last update](https://img.shields.io/github/last-commit/shawnrhoads/pyEM?color=blue&label=last%20update)</a> <a target="_blank" rel="noopener noreferrer" href="https://www.buymeacoffee.com/shawnrhoads">![BuyMeACoffee](https://img.shields.io/static/v1?message=support%20development&label=%20&style=square&logo=Buy%20Me%20A%20Coffee&labelColor=5c5c5c&color=lightgrey)</a>
 
 # pyEM: Expectation Maximization with MAP estimation in Python
 
@@ -9,16 +9,9 @@
 <b>If you use these materials for teaching or research, please use the following citation:</b>
 > Rhoads, S. A. (2023). pyEM: Expectation Maximization with MAP estimation in Python. Zenodo. <a href="https://doi.org/10.5281/zenodo.10415396">https://doi.org/10.5281/zenodo.10415396</a>
 
+> Rhoads, S. A., Gan, L., Berluti, K., OConnell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2025). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. In press at *Nature Communications*.
+
 This is a Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation for fitting models to behavioral data. [See below](#key-concepts) for more information on the algorithm.
-
-## Features
-
-* **High-level API**: The `EMModel` class provides a sklearn-like interface for model fitting and analysis
-* **Parameter recovery**: Built-in methods for parameter recovery analysis and visualization
-* **Model comparison**: Tools for comparing different models using LME, BIC, and integrated BIC
-* **Parameter transformations**: Support for parameter transformation functions to handle bounded parameters
-* **Modular design**: Easy to extend with custom models and analysis methods
-* **Comprehensive testing**: Extensive test coverage for reliability
 
 ## Quick Start
 
@@ -93,9 +86,8 @@ fig = model.plot_recovery(recovery_dict, figsize=(10, 4))
 
 When we have two different models, we can use the `ModelComparison` class to compare them using various metrics. The package provides several metrics for model comparison:
 
-* **LME** (Log Model Evidence): Laplace approximation to marginal likelihood
-* **BIC** (Bayesian Information Criterion): Penalizes model complexity
-* **Integrated BIC**: Monte Carlo approximation accounting for parameter uncertainty
+* **LME** (Log Model Evidence): Laplace approximation to marginal likelihood (formally: log probability of the observed data given a model)
+* **Integrated BIC** (Integrated Bayesian Information Criterion): Integrates over the distribution of parameters, which incorporates uncertainty about the parameter values into the model selection process while penalizing model complexity
 
 ```python
 from pyem.api import EMModel
@@ -207,17 +199,17 @@ mc.plot_identifiability(df, metric="BICint")
 
 Many computational models have bounded parameters (e.g., learning rates between 0-1). The package uses transformation functions to map between:
 
-* **Normalized space**: Unbounded parameters used during optimization
-* **Parameter space**: Bounded parameters used in model computations
+* **Normalized space**: Unbounded parameters used during optimization (typically in Gaussian space)
+* **Parameter space**: Bounded parameters used in model computations (varies by parameter)
 
 Example:
 ```python
 # Learning rate: 0 ≤ α ≤ 1
 alpha_normalized = 0.5  # Unbounded
-alpha_natural = norm2alpha(alpha_normalized)  # Bounded to [0,1]
+alpha_natural = norm2alpha(alpha_normalized) # Bounded to [0,1]
 ```
 
-If you provide function to transform parameters from Gaussian to parameter space (see Daw, 2011), then the following can be used to access them from the EMModel class.
+If you provide function to transform parameters from Gaussian to parameter space (see Daw, 2011), then the following can be used to access them from the `EMModel` class.
 
 ```python
 # Access parameter transformations
@@ -265,6 +257,7 @@ def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
     float or dict
         Objective value or full output when ``output='all'``.
     """
+    # ---- EDIT AS NEEDED  ---- 
     alpha = norm2alpha(params[0])
     beta = norm2beta(params[1])
 
@@ -272,12 +265,15 @@ def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
         return 1e7
     if not (0.001 <= beta <= 20):
         return 1e7
+    # ------------------------- 
 
+    # ---- YOUR CODE HERE  ---- 
     # Model-specific negative log-likelihood
     nll = ...
+    # ------------------------- 
 
     if output == "all":
-        return {"params": [alpha, beta], "choices": choices, "rewards": rewards, "nll": nll}
+        return {"params": [alpha, beta], "choices": choices, "rewards": rewards, "nll": nll} # should have "params" and "nll"
 
     return calc_fval(nll, params, prior=prior, output=output)
 
@@ -290,12 +286,13 @@ def my_model_simulate(params, **kwargs):
         **kwargs: Additional simulation parameters
         
     Returns:
-        Dictionary with keys (CAN BE ANYTHING + "nll"): "params", "choices", "rewards", "nll", etc.
+        Dictionary with keys (CAN BE ANYTHING): "params", "choices", "rewards", etc.
     """
 
-    # Your simulation implementation here
-    ...
-    nll = ...  # compute negative log-likelihood if desired
+    # ---- YOUR CODE HERE  ---- 
+    # 
+    # ------------------------- 
+
     fval = calc_fval(nll, params, output="nll")
 
     return {"params": params, "choices": choices, "rewards": rewards}
@@ -335,7 +332,7 @@ class ModelComparison:
 
 * **Parameter transformations** (`pyem.utils.math`): `norm2alpha()`, `norm2beta()`, `alpha2norm()`, `beta2norm()`
 * **Statistics** (`pyem.utils.stats`): `calc_BICint()`, `calc_LME()`, `pseudo_r2_from_nll()`
-* **Plotting** (`pyem.utils.plotting`): Various visualization functions
+* **Plotting** (`pyem.utils.plotting`): `plot_scatter()`
 
 ## Installation
 
@@ -362,7 +359,7 @@ pip install -e .
 
 ## Requirements
 
-* Python >= 3.8
+* Python >= 3.9
 * numpy >= 1.22
 * scipy >= 1.10
 * pandas >= 1.5
@@ -373,8 +370,9 @@ pip install -e .
 
 See the `examples/` directory for detailed tutorials:
 
-* `examples/RW.ipynb`: Rescorla-Wagner model parameter recovery
-* `examples/EMClass.ipynb`: Using the EMModel class interface
+* `examples/rl.md`: Reinforcement Learning
+* `examples/bayes.md`: Bayesian Inference
+* `examples/glm.md`: Simple linear modeling
 
 ## Testing
 
@@ -400,7 +398,7 @@ The algorithm fits models using a hierarchical approach where:
 
 1. **E-step**: Estimates subject-specific parameters given population-level priors
 2. **M-step**: Updates population-level priors given subject-specific parameters
-3. **MAP estimation**: Incorporates prior beliefs to regularize parameter estimates
+3. **MAP estimation**: Incorporates prior beliefs into likelihood to regularize parameter estimates
 
 *Negative Log-Likelihood* 
 
