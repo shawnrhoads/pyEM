@@ -21,7 +21,8 @@ model = EMModel(all_data=all_data, fit_func=fit,
 result = model.fit(verbose=0)
 estimated = result.m.T
 
-# simple recovery metric
-corr = np.corrcoef(true_params.flatten(), estimated.flatten())[0, 1]
-print("Recovery correlation:", corr)
+# simple recovery metrics per parameter
+corr = np.array([np.corrcoef(true_params[:, j], estimated[:, j])[0, 1]
+                 for j in range(nparams)])
+print("Recovery correlations:", corr)
 ```
