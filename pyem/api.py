@@ -2,12 +2,17 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Sequence
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.optimize import minimize
+
 from .core.em import EMfit, EMConfig
-from .core.priors import GaussianPrior
-from .utils.stats import calc_BICint, calc_LME
+from .core.optim import OptimConfig
+from .core.posterior import parameter_recovery
+from .core.priors import GaussianPrior, Prior
 from .utils import plotting
+from .utils.stats import calc_BICint, calc_LME
 
 @dataclass
 class FitResult:
@@ -104,6 +109,7 @@ class EMModel:
         seed: int | None = None,
         prior_mu: np.ndarray | None = None,
         prior_sigma: np.ndarray | None = None,
+        prior: Prior | None = None,
     ) -> FitResult:
         if self.all_data is None:
             raise ValueError("all_data must be provided to fit the model.")
@@ -119,26 +125,30 @@ class EMModel:
             seed=seed,
         )
         # configure optimizer
-        from .core.optim import OptimConfig
         config.optim = OptimConfig(method=optim_method, options=optim_options, max_restarts=max_restarts)
 
         # optional prior override
-        prior = None
+        if prior is not None and (prior_mu is not None or prior_sigma is not None):
+            raise ValueError("Specify either prior or prior_mu/prior_sigma, not both.")
         if prior_mu is not None or prior_sigma is not None:
-            from .core.priors import GaussianPrior
             if prior_mu is None or prior_sigma is None:
                 raise ValueError("Provide both prior_mu and prior_sigma to override the prior.")
             prior = GaussianPrior(mu=np.asarray(prior_mu).reshape(-1), sigma=np.asarray(prior_sigma).reshape(-1))
 
-        out = EMfit(
-            all_data=self.all_data,
-            objfunc=self.fit_func,
-            param_names=self.param_names,
-            verbose=verbose,
-            config=config,
-            prior=prior,
-        )
+        if prior is not None and not isinstance(prior, GaussianPrior):
+            out = self.scipy_minimize(prior=prior)
+        else:
+            out = EMfit(
+                all_data=self.all_data,
+                objfunc=self.fit_func,
+                param_names=self.param_names,
+                verbose=verbose,
+                config=config,
+                prior=prior,
+            )
         self._out = out
+        # compute final arrays and store for convenience
+        self.outfit = self.get_outfit()
         return FitResult(
             m=out["m"],
             inv_h=out["inv_h"],
@@ -159,7 +169,11 @@ class EMModel:
     def subject_params(self) -> np.ndarray:
         if self._out is None:
             raise RuntimeError("Call fit() first.")
-        return self._out["m"].T.copy()
+        params = self._out["m"].T.copy()
+        if self.param_xform is not None:
+            for i, func in enumerate(self.param_xform):
+                params[:, i] = func(params[:, i])
+        return params
 
     def posterior(self) -> dict[str, np.ndarray]:
         if self._out is None:
@@ -205,113 +219,96 @@ class EMModel:
         
         return calc_LME(self._out["inv_h"], self._out["NPL"])
 
-    def calculate_final_arrays(self) -> dict[str, np.ndarray]:
-        """
-        Calculate final arrays based on estimated parameters.
-        Generic implementation that works with any fit_func output.
-        
-        Returns:
-            Dictionary containing calculated arrays for each subject
-        """
+    def get_outfit(self) -> dict[str, np.ndarray]:
+        """Return a dictionary of outputs from the ``fit_func`` for each subject."""
         if self._out is None:
             raise RuntimeError("Call fit() first.")
-        
+
         nsubjects = self._out["m"].shape[1]
-        
-        # Get first subject's fit to determine available keys and shapes
-        first_subj_params = self._out["m"][:, 0]
+
+        # determine available keys and shapes from first subject
+        first_params = self._out["m"][:, 0]
         first_args = self.all_data[0]
         if not isinstance(first_args, (list, tuple)):
             first_args = (first_args,)
-        
-        # Get first subject fit with all outputs to determine structure
-        first_subj_fit = self.fit_func(first_subj_params, *first_args, prior=None, output='all')
-        
-        # Initialize arrays_dict based on what the fit_func actually returns
-        arrays_dict = {}
-        
-        for key, value in first_subj_fit.items():
+        first_fit = self.fit_func(first_params, *first_args, prior=None, output="all")
+
+        arrays_dict: dict[str, np.ndarray] = {}
+        for key, value in first_fit.items():
             if isinstance(value, (int, float, np.number)):
-                # Scalar values - create 1D array for subjects
                 arrays_dict[key] = np.zeros(nsubjects)
             elif isinstance(value, (list, np.ndarray)):
-                # Array values - create arrays with subject dimension
-                value_array = np.asarray(value)
-                if value_array.ndim == 0:
-                    # 0-d array (scalar)
+                arr = np.asarray(value)
+                if arr.ndim == 0:
                     arrays_dict[key] = np.zeros(nsubjects)
                 else:
-                    # Multi-dimensional array - add subject dimension
-                    subject_shape = (nsubjects,) + value_array.shape
-                    arrays_dict[key] = np.zeros(subject_shape, dtype=value_array.dtype)
+                    arrays_dict[key] = np.zeros((nsubjects, *arr.shape), dtype=arr.dtype)
             else:
-                # For other types (strings, objects), create object array
                 arrays_dict[key] = np.empty(nsubjects, dtype=object)
-        
-        # Fill arrays for all subjects
+
         for subj_idx in range(nsubjects):
-            subj_params = self._out["m"][:, subj_idx]
+            params = self._out["m"][:, subj_idx]
             args = self.all_data[subj_idx]
             if not isinstance(args, (list, tuple)):
                 args = (args,)
-            
-            # Get subject fit with all outputs
-            subj_fit = self.fit_func(subj_params, *args, prior=None, output='all')
-            
-            # Populate arrays based on what's available in subj_fit
+            subj_fit = self.fit_func(params, *args, prior=None, output="all")
             for key in arrays_dict.keys():
                 if key in subj_fit:
                     arrays_dict[key][subj_idx] = subj_fit[key]
-        
+
         return arrays_dict
 
-    def fit_individual_nll(self, use_emfit: bool = True) -> dict[str, Any]:
-        """
-        Fit using either EMfit() or individual negative log likelihood per subject.
-        
+    def scipy_minimize(self, prior: Prior | None = None) -> dict[str, Any]:
+        """Fit each subject independently using :func:`scipy.optimize.minimize`.
+
         Args:
-            use_emfit: If True, use EMfit(); if False, fit each subject individually
-            
-        Returns:
-            Dictionary with fit results
+            prior: Prior distribution applied to each subject independently.
         """
-        if use_emfit:
-            # Use standard EMfit
-            return self.fit().__dict__
-        else:
-            # Fit each subject individually
-            if self.all_data is None:
-                raise ValueError("all_data must be provided to fit the model.")
-            
-            nsubjects = len(self.all_data)
-            nparams = len(self.param_names)
-            
-            m = np.zeros((nparams, nsubjects))
-            NPL = np.zeros(nsubjects)
-            
-            for subj_idx, args in enumerate(self.all_data):
-                if not isinstance(args, (list, tuple)):
-                    args = (args,)
-                
-                # Simple optimization for individual subjects
-                from scipy.optimize import minimize
-                
-                def obj_func(params):
-                    return self.fit_func(params, *args, prior=None, output='nll')
-                
-                # Random starting point
-                x0 = np.random.randn(nparams)
-                res = minimize(obj_func, x0=x0, method='BFGS')
-                
-                m[:, subj_idx] = res.x
-                NPL[subj_idx] = res.fun
-            
-            return {
-                'm': m,
-                'NPL': NPL,
-                'convergence': True,
-                'individual_fit': True
-            }
+        if self.all_data is None:
+            raise ValueError("all_data must be provided to fit the model.")
+
+        nsubjects = len(self.all_data)
+        nparams = len(self.param_names)
+
+        m = np.zeros((nparams, nsubjects))
+        inv_h = np.zeros((nparams, nparams, nsubjects))
+        NPL = np.zeros(nsubjects)
+        NLPrior = np.zeros(nsubjects)
+
+        for subj_idx, args in enumerate(self.all_data):
+            if not isinstance(args, (list, tuple)):
+                args = (args,)
+
+            def obj_func(params: np.ndarray) -> float:
+                return self.fit_func(params, *args, prior=prior, output="npl")
+
+            x0 = np.random.randn(nparams)
+            res = minimize(obj_func, x0=x0, method="BFGS")
+            m[:, subj_idx] = res.x
+            NPL[subj_idx] = res.fun
+            if hasattr(res, "hess_inv"):
+                try:
+                    inv_h[:, :, subj_idx] = np.asarray(res.hess_inv)
+                except Exception:
+                    inv_h[:, :, subj_idx] = np.eye(nparams) * max(1.0, np.linalg.norm(res.x) + 1e-6)
+            else:
+                inv_h[:, :, subj_idx] = np.eye(nparams) * max(1.0, np.linalg.norm(res.x) + 1e-6)
+            if prior is not None:
+                NLPrior[subj_idx] = -prior.logpdf(res.x)
+
+        NLL = NPL - NLPrior
+        posterior_sigma = np.array([np.diag(inv_h[:, :, i]) for i in range(nsubjects)]).T
+
+        return {
+            "m": m,
+            "inv_h": inv_h,
+            "posterior": {"mu": m, "sigma": posterior_sigma},
+            "NPL": NPL,
+            "NLPrior": NLPrior,
+            "NLL": NLL,
+            "convergence": True,
+            "individual_fit": True,
+        }
 
     def recover(self, true_params: np.ndarray, simulate_func: Callable = None, **sim_kwargs) -> dict[str, Any]:
         """
@@ -323,7 +320,9 @@ class EMModel:
             **sim_kwargs: Additional arguments for simulation
             
         Returns:
-            Dictionary containing true params, estimated params, and recovery metrics
+            Dictionary containing true params, estimated params, and recovery metrics.
+            The ``correlation`` entry provides a Pearson correlation coefficient for
+            each parameter (array of length ``nparams``).
         """
         if simulate_func is None:
             simulate_func = self.simulate_func
@@ -349,17 +348,18 @@ class EMModel:
         
         # Fit the model
         fit_result = recovery_model.fit(verbose=0)
-        
-        # grab estimated params 
-        out_fit = recovery_model.calculate_final_arrays()
-        
-        # Calculate recovery metrics
+
+        # grab estimated params
+        estimated_params = recovery_model.subject_params()
+
+        true_params = sim['params']
+        corr = parameter_recovery(true_params, estimated_params).corr
         recovery_dict = {
-            'true_params': sim['params'],
+            'true_params': true_params,
             'estimated_params': estimated_params,
             'sim': sim,
             'fit_result': fit_result,
-            'correlation': np.corrcoef(sim['params'].flatten(), out_fit['params'].flatten())[0, 1],
+            'correlation': corr,
         }
 
         return recovery_dict

@@ -38,40 +38,34 @@ def test_compute_lme():
     assert good.shape == (nsubjects,)
 
 
-def test_calculate_final_arrays():
-    """Test calculate_final_arrays method."""
+def test_get_outfit():
+    """Test get_outfit method."""
     nsubjects, nblocks, ntrials = 3, 2, 8
     params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
     model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])
     model.fit(mstep_maxit=3, verbose=0, njobs=1)
-    
-    arrays = model.calculate_final_arrays()
+
+    assert isinstance(model.outfit, dict)
+    arrays = model.get_outfit()
+    assert isinstance(arrays, dict)
     assert 'choices' in arrays
     assert 'rewards' in arrays
     assert 'nll' in arrays
     assert arrays['nll'].shape == (nsubjects,)
-
-
-def test_fit_individual_nll():
-    """Test fit_individual_nll method."""
+def test_scipy_minimize():
+    """Test scipy_minimize method."""
     nsubjects, nblocks, ntrials = 3, 2, 8
     params = np.column_stack([np.random.randn(nsubjects), np.random.randn(nsubjects)])
     sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
     model = EMModel(all_data=all_data, fit_func=rw_fit, param_names=["beta", "alpha"])
     
-    # Test with EMfit
-    result_em = model.fit_individual_nll(use_emfit=True)
-    assert 'm' in result_em
-    assert result_em['m'].shape == (2, nsubjects)
-    
-    # Test without EMfit (individual fitting)
-    result_indiv = model.fit_individual_nll(use_emfit=False)
-    assert 'm' in result_indiv
-    assert result_indiv['m'].shape == (2, nsubjects)
-    assert result_indiv['individual_fit'] == True
+    result = model.scipy_minimize()
+    assert 'm' in result
+    assert result['m'].shape == (2, nsubjects)
+    assert result['individual_fit'] is True
 
 
 def test_parameter_recovery():
@@ -85,9 +79,8 @@ def test_parameter_recovery():
     assert 'true_params' in recovery_dict
     assert 'estimated_params' in recovery_dict
     assert 'correlation' in recovery_dict
-    assert 'rmse' in recovery_dict
-    assert 'mae' in recovery_dict
     assert recovery_dict['true_params'].shape == recovery_dict['estimated_params'].shape
+    assert recovery_dict['correlation'].shape == (true_params.shape[1],)
     
     # Test plot_recovery
     fig = model.plot_recovery(recovery_dict)
@@ -143,6 +136,21 @@ def test_parameter_transformations():
         
     with pytest.raises(ValueError, match="Index 5 out of range"):
         model.get_param_transform(5)
+
+
+def test_subject_params_applies_param_xform():
+    """subject_params should apply param_xform functions if provided."""
+    model = EMModel(None, rw_fit, ["beta", "alpha"], param_xform=[norm2beta, norm2alpha])
+    # emulate fit output in normalized space for two subjects
+    model._out = {"m": np.array([[0.0, 1.0], [0.0, 1.0]])}
+    params = model.subject_params()
+    expected = np.array(
+        [
+            [norm2beta(0.0), norm2alpha(0.0)],
+            [norm2beta(1.0), norm2alpha(1.0)],
+        ]
+    )
+    assert np.allclose(params, expected)
 
 
 def test_model_comparison_class():

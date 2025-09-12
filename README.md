@@ -45,7 +45,7 @@ result = model.fit(verbose=1)
 print(f"Convergence: {result.convergence}")
 
 # Access results --> defined from your fit function when `out="all"`
-output_dict = model.calculate_final_arrays() 
+output_dict = model.get_outfit()
 estimated_params = output_dict['params']  # Shape: (n_subjects, n_params)
 print(f"Estimated parameters shape: {estimated_params.shape}")
 print(f"Available outputs: {list(output_dict.keys())}")
@@ -81,6 +81,9 @@ recovery_dict = model.recover(
 # Plot recovery results
 fig = model.plot_recovery(recovery_dict, figsize=(10, 4))
 ```
+
+The returned dictionary includes `recovery_dict['correlation']`, an array of
+Pearson correlations for each parameter.
 
 ### Model Comparison
 
@@ -313,7 +316,7 @@ class EMModel:
     def plot_recovery(self, recovery_dict, **kwargs) -> plt.Figure
     def compute_integrated_bic(self, **kwargs) -> float
     def compute_lme(self) -> tuple
-    def calculate_final_arrays(self) -> dict
+    def get_outfit(self) -> dict
 ```
 
 ### ModelComparison Class
