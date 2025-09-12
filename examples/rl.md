@@ -29,4 +29,5 @@ fig = model.plot_recovery(recovery)
 ```
 
 The recovery dictionary also contains numerical summaries such as
-`recovery['correlation']`.
+`recovery['correlation']`, which provides a correlation coefficient for each
+parameter.
