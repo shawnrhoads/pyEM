@@ -20,7 +20,7 @@ This is a Python implementation of the Hierarchical Expectation Maximization alg
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
 from pyem.utils.math import norm2beta, norm2alpha
 from pyem.utils import plotting
@@ -93,7 +93,7 @@ When we have two different models, we can use the `ModelComparison` class to com
 * **Integrated BIC** (Integrated Bayesian Information Criterion): Integrates over the distribution of parameters, which incorporates uncertainty about the parameter values into the model selection process while penalizing model complexity
 
 ```python
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.core.compare import ModelComparison
 from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
 from pyem.utils.math import norm2alpha, norm2beta
@@ -160,7 +160,7 @@ You can visualize these results with `plot_identifiability()`, which plots an **
 #### Example
 
 ```python
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.core.compare import ModelComparison
 from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
 from pyem.utils.math import norm2alpha, norm2beta

@@ -8,7 +8,7 @@ learning rate (``alpha``).
 
 ```python
 import numpy as np
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
 
 # --- simulate subjects ----------------------------------------------------

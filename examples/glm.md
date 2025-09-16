@@ -6,7 +6,7 @@ all subjects simultaneously using ``EMModel``.
 
 ```python
 import numpy as np
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.models.glm import simulate, fit
 
 # --- simulate -------------------------------------------------------------
