@@ -5,7 +5,7 @@ This example demonstrates fitting a model with a user-defined prior. The
 
 ```python
 import numpy as np
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.core.priors import UniformPrior
 from pyem.models.rl import rw1a1b_fit as rw_fit, rw1a1b_simulate as rw_simulate
 
@@ -23,5 +23,5 @@ print(result.m)
 ```
 
 The prior can be customised by implementing the `Prior` protocol and passing the
-instance to :meth:`EMModel.fit`.
+instance to `EMModel.fit`.
 
