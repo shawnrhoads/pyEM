@@ -1,20 +1,8 @@
-"""Prior distributions for hierarchical models."""
-
 from __future__ import annotations
-
 from dataclasses import dataclass
 from math import lgamma
 from typing import Protocol
-
 import numpy as np
-
-
-class Prior(Protocol):
-    """Protocol for prior objects."""
-
-    def logpdf(self, x: np.ndarray) -> float:
-        """Return the log probability density of ``x``."""
-
 
 @dataclass
 class GaussianPrior:
@@ -33,7 +21,6 @@ class GaussianPrior:
         x = np.asarray(x).reshape(-1)
         var = self.sigma
         return float(-0.5 * np.sum(np.log(2 * np.pi * var) + (x - self.mu) ** 2 / var))
-
 
 def default_prior(nparams: int, seed: int | None = None) -> GaussianPrior:
     rng = np.random.default_rng(seed)
