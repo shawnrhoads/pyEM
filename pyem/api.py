@@ -235,8 +235,6 @@ class EMModel:
         if not isinstance(first_args, (list, tuple)):
             first_args = (first_args,)
         first_fit = dict(self.fit_func(first_params, *first_args, prior=None, output="all"))
-        if "choices_A" not in first_fit and "choices" in first_fit:
-            first_fit["choices_A"] = (np.asarray(first_fit["choices"]) == "A").astype(float)
 
         arrays_dict: dict[str, np.ndarray] = {}
         for key, value in first_fit.items():
@@ -257,8 +255,6 @@ class EMModel:
             if not isinstance(args, (list, tuple)):
                 args = (args,)
             subj_fit = dict(self.fit_func(params, *args, prior=None, output="all"))
-            if "choices_A" not in subj_fit and "choices" in subj_fit:
-                subj_fit["choices_A"] = (np.asarray(subj_fit["choices"]) == "A").astype(float)
             for key in arrays_dict.keys():
                 if key in subj_fit:
                     arrays_dict[key][subj_idx] = subj_fit[key]
@@ -321,8 +317,6 @@ class EMModel:
 
             posterior_samples[sim_idx] = samples
             sim_out = dict(self.simulate_func(samples, **sim_kwargs))
-            if output_key not in sim_out and output_key == "choices_A" and "choices" in sim_out:
-                sim_out["choices_A"] = (np.asarray(sim_out["choices"]) == "A").astype(float)
             if output_key not in sim_out:
                 raise KeyError(f"Simulation output does not contain '{output_key}'.")
 
