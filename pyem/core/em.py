@@ -4,7 +4,7 @@ from typing import Callable, Sequence, Any, Literal
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from .priors import GaussianPrior, default_prior
+from .priors import GaussianPrior
 from .optim import OptimConfig, single_subject_minimize
 
 ConvergenceMethod = Literal["sum","mean","median"]
@@ -102,7 +102,7 @@ def EMfit(
             )
     rng = np.random.default_rng(config.seed)
     if prior is None:
-        prior = default_prior(nparams, seed=config.seed)
+        prior = GaussianPrior.default(nparams, seed=config.seed)
 
     # initialize tracking
     NPL_hist = []

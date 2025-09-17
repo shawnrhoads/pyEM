@@ -5,12 +5,14 @@ from typing import Any, Callable, Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from scipy.optimize import minimize
 
 from .core.em import EMfit, EMConfig
 from .core.optim import OptimConfig
-from .core.posterior import parameter_recovery
-from .core.priors import GaussianPrior, Prior
+from .core.posterior import PCCResult, parameter_recovery
+from .core.priors import GaussianPrior
 from .utils import plotting
 from .utils.stats import calc_BICint, calc_LME
 
@@ -50,6 +52,7 @@ class EMModel:
         self.param_names = list(param_names)
         self.simulate_func = simulate_func
         self._out: dict[str, Any] | None = None
+        self._pcc_result: PCCResult | None = None
         
         # Store parameter transformation functions
         if param_xform is not None:
@@ -109,7 +112,7 @@ class EMModel:
         seed: int | None = None,
         prior_mu: np.ndarray | None = None,
         prior_sigma: np.ndarray | None = None,
-        prior: Prior | None = None,
+        prior: Any | None = None,
     ) -> FitResult:
         if self.all_data is None:
             raise ValueError("all_data must be provided to fit the model.")
@@ -231,7 +234,9 @@ class EMModel:
         first_args = self.all_data[0]
         if not isinstance(first_args, (list, tuple)):
             first_args = (first_args,)
-        first_fit = self.fit_func(first_params, *first_args, prior=None, output="all")
+        first_fit = dict(self.fit_func(first_params, *first_args, prior=None, output="all"))
+        if "choices_A" not in first_fit and "choices" in first_fit:
+            first_fit["choices_A"] = (np.asarray(first_fit["choices"]) == "A").astype(float)
 
         arrays_dict: dict[str, np.ndarray] = {}
         for key, value in first_fit.items():
@@ -251,14 +256,215 @@ class EMModel:
             args = self.all_data[subj_idx]
             if not isinstance(args, (list, tuple)):
                 args = (args,)
-            subj_fit = self.fit_func(params, *args, prior=None, output="all")
+            subj_fit = dict(self.fit_func(params, *args, prior=None, output="all"))
+            if "choices_A" not in subj_fit and "choices" in subj_fit:
+                subj_fit["choices_A"] = (np.asarray(subj_fit["choices"]) == "A").astype(float)
             for key in arrays_dict.keys():
                 if key in subj_fit:
                     arrays_dict[key][subj_idx] = subj_fit[key]
 
         return arrays_dict
 
-    def scipy_minimize(self, prior: Prior | None = None) -> dict[str, Any]:
+    def pcc(
+        self,
+        output_key: str,
+        *,
+        n_sims: int = 200,
+        sim_kwargs: dict[str, Any] | None = None,
+        rng: np.random.Generator | None = None,
+    ) -> PCCResult:
+        """Run a posterior predictive check for a selected model output."""
+
+        if self._out is None:
+            raise RuntimeError("Call fit() before running a posterior predictive check.")
+        if self.simulate_func is None:
+            raise AttributeError("No simulate_func provided; posterior predictive checks are unavailable.")
+
+        sim_kwargs = {} if sim_kwargs is None else dict(sim_kwargs)
+        rng = np.random.default_rng() if rng is None else rng
+
+        observed_outputs = self.get_outfit()
+        if output_key not in observed_outputs:
+            raise KeyError(f"Output '{output_key}' was not produced by the fit function.")
+
+        def _ensure_numeric(name: str, value: Any) -> np.ndarray:
+            arr = np.asarray(value)
+            try:
+                return arr.astype(float)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Output '{name}' must be numeric for posterior predictive checks.") from exc
+
+        observed = _ensure_numeric(output_key, observed_outputs[output_key])
+        nsubjects = observed.shape[0]
+
+        posterior_mean = np.asarray(self._out["m"], dtype=float)
+        posterior_cov = np.asarray(self._out["inv_h"], dtype=float)
+        if posterior_mean.shape[1] != nsubjects:
+            raise ValueError("Posterior mean dimension does not match number of subjects.")
+        nparams = posterior_mean.shape[0]
+
+        simulations: list[np.ndarray] = []
+        stats = np.zeros(n_sims, dtype=float)
+        posterior_samples = np.zeros((n_sims, nsubjects, nparams), dtype=float)
+
+        for sim_idx in range(n_sims):
+            samples = np.zeros((nsubjects, nparams), dtype=float)
+            for subj_idx in range(nsubjects):
+                cov = posterior_cov[:, :, subj_idx]
+                cov = 0.5 * (cov + cov.T)
+                cov += 1e-8 * np.eye(nparams)
+                try:
+                    samples[subj_idx] = rng.multivariate_normal(mean=posterior_mean[:, subj_idx], cov=cov)
+                except np.linalg.LinAlgError:
+                    jitter = 1e-6 * np.eye(nparams)
+                    samples[subj_idx] = rng.multivariate_normal(mean=posterior_mean[:, subj_idx], cov=cov + jitter)
+
+            posterior_samples[sim_idx] = samples
+            sim_out = dict(self.simulate_func(samples, **sim_kwargs))
+            if output_key not in sim_out and output_key == "choices_A" and "choices" in sim_out:
+                sim_out["choices_A"] = (np.asarray(sim_out["choices"]) == "A").astype(float)
+            if output_key not in sim_out:
+                raise KeyError(f"Simulation output does not contain '{output_key}'.")
+
+            sim_data = _ensure_numeric(output_key, sim_out[output_key])
+            if sim_data.shape[0] != nsubjects:
+                raise ValueError("Simulation output must match the number of fitted subjects.")
+
+            simulations.append(sim_data)
+            stats[sim_idx] = float(np.nanmean(sim_data))
+
+        simulated = np.asarray(simulations, dtype=float)
+        obs_stat = float(np.nanmean(observed))
+        p_value = float((np.sum(stats >= obs_stat) + 1) / (n_sims + 1))
+
+        result = PCCResult(
+            output_key=output_key,
+            observed=observed,
+            simulated=simulated,
+            stats=stats,
+            obs_stat=obs_stat,
+            p_value=p_value,
+            posterior_samples=posterior_samples,
+        )
+        self._pcc_result = result
+        return result
+
+    def plot_pcc(
+        self,
+        result: PCCResult | None = None,
+        *,
+        agent_index: int | None = None,
+        plot_all_agents: bool = False,
+        figsize: tuple[float, float] = (15, 4),
+        show: bool = True,
+    ) -> plt.Figure:
+        """Plot summary diagnostics for a posterior predictive check."""
+
+        if result is None:
+            if self._pcc_result is None:
+                raise RuntimeError("Run pcc() first or provide a PCCResult to plot.")
+            result = self._pcc_result
+
+        observed = np.asarray(result.observed, dtype=float)
+        simulated = np.asarray(result.simulated, dtype=float)
+
+        observed_flat = observed.reshape(observed.shape[0], -1)
+        simulated_flat = simulated.reshape(simulated.shape[0], simulated.shape[1], -1)
+
+        trial_index = np.arange(observed_flat.shape[1])
+        model_means = simulated_flat.mean(axis=1)
+
+        df_model = pd.DataFrame(
+            {
+                "Trial": np.tile(trial_index, model_means.shape[0]),
+                "Value": model_means.reshape(-1),
+                "Source": "Model",
+            }
+        )
+        df_data = pd.DataFrame(
+            {
+                "Trial": np.tile(trial_index, observed_flat.shape[0]),
+                "Value": observed_flat.reshape(-1),
+                "Source": "Data",
+            }
+        )
+        df_plot = pd.concat([df_model, df_data], ignore_index=True)
+
+        show_agent_column = plot_all_agents or agent_index is not None
+        ncols = 3 if show_agent_column else 2
+        fig, axes = plt.subplots(1, ncols, figsize=figsize, squeeze=False)
+        axes = axes.ravel()
+
+        sns.lineplot(
+            data=df_plot,
+            x="Trial",
+            y="Value",
+            hue="Source",
+            estimator="mean",
+            errorbar="sd",
+            ax=axes[0],
+        )
+        axes[0].set_title(f"Trial means: {result.output_key}")
+        axes[0].set_ylabel(result.output_key)
+        axes[0].set_xlabel("Trial")
+        axes[0].legend(loc="best")
+
+        grand_model = simulated_flat.mean(axis=(1, 2))
+        sns.histplot(grand_model, ax=axes[1], color="tab:purple", edgecolor="white")
+        axes[1].axvline(result.obs_stat, color="black", linestyle="--", label="Observed mean")
+        axes[1].set_title("Grand average distribution")
+        axes[1].set_xlabel(result.output_key)
+        axes[1].set_ylabel("Frequency")
+        axes[1].legend(loc="best")
+
+        if show_agent_column:
+            if plot_all_agents:
+                indices = np.arange(observed_flat.shape[0])
+            else:
+                if agent_index is None:
+                    raise ValueError("Provide agent_index when plot_all_agents is False.")
+                if not 0 <= agent_index < observed_flat.shape[0]:
+                    raise IndexError("agent_index is out of range.")
+                indices = np.asarray([agent_index])
+
+            subject_predictions = simulated_flat.mean(axis=0)
+            df_subject = pd.DataFrame(
+                {
+                    "Observed": observed_flat[indices].reshape(-1),
+                    "Model": subject_predictions[indices].reshape(-1),
+                    "Subject": np.repeat(indices, observed_flat.shape[1]),
+                }
+            )
+
+            scatter_ax = axes[2]
+            if len(indices) == 1:
+                sns.scatterplot(data=df_subject, x="Observed", y="Model", ax=scatter_ax)
+            else:
+                df_subject["Subject"] = df_subject["Subject"].astype(str)
+                sns.scatterplot(
+                    data=df_subject,
+                    x="Observed",
+                    y="Model",
+                    hue="Subject",
+                    ax=scatter_ax,
+                )
+
+            min_val = float(min(df_subject["Observed"].min(), df_subject["Model"].min()))
+            max_val = float(max(df_subject["Observed"].max(), df_subject["Model"].max()))
+            scatter_ax.plot([min_val, max_val], [min_val, max_val], color="black", linestyle="--")
+            scatter_ax.set_title("Agent predictions")
+            scatter_ax.set_xlabel("Observed")
+            scatter_ax.set_ylabel("Model")
+
+            if len(indices) == 1 and scatter_ax.get_legend() is not None:
+                scatter_ax.get_legend().remove()
+
+        if show:
+            plt.show()
+
+        return fig
+
+    def scipy_minimize(self, prior: Any | None = None) -> dict[str, Any]:
         """Fit each subject independently using :func:`scipy.optimize.minimize`.
 
         Args:

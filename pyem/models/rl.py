@@ -94,11 +94,13 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
             nll += -np.log(p[c] + 1e-12)
 
     if output == "all":
+        choices_A = (np.asarray(choices) == "A").astype(float)
         subj_dict = {
             'params'  : [beta, alpha],
             'choices' : choices,
             'rewards' : rewards,
             'EV'      : EV,
+            'choices_A': choices_A,
             'nll'     : nll,
         }
         return subj_dict
@@ -200,12 +202,14 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
             nll += -np.log(p[c] + 1e-12)
 
     if output == "all":
+        choices_A = (np.asarray(choices) == "A").astype(float)
         subj_dict = {
             'params'  : [beta, alpha_pos, alpha_neg],
             'choices' : choices,
             'rewards' : rewards,
             'EV'      : EV,
             'PE'      : PE,
+            'choices_A': choices_A,
             'nll'     : nll,
         }
         return subj_dict

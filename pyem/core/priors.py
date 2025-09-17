@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from math import lgamma
-from typing import Protocol
+
 import numpy as np
 
 @dataclass
@@ -22,8 +21,12 @@ class GaussianPrior:
         var = self.sigma
         return float(-0.5 * np.sum(np.log(2 * np.pi * var) + (x - self.mu) ** 2 / var))
 
-def default_prior(nparams: int, seed: int | None = None) -> GaussianPrior:
-    rng = np.random.default_rng(seed)
-    mu = 0.1 * rng.standard_normal(nparams)
-    sigma = np.full(nparams, 100.0)
-    return GaussianPrior(mu=mu, sigma=sigma)
+    @classmethod
+    def default(cls, nparams: int, seed: int | None = None) -> GaussianPrior:
+        """Return a weakly-informative default prior."""
+
+        rng = np.random.default_rng(seed)
+        mu = 0.1 * rng.standard_normal(nparams)
+        sigma = np.full(nparams, 100.0)
+        return cls(mu=mu, sigma=sigma)
+

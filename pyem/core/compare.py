@@ -1,12 +1,13 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Dict, Any, Sequence, Callable, TYPE_CHECKING
+from typing import Any, List, Sequence
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from ..utils.stats import calc_LME, calc_BICint, pseudo_r2_from_nll
+
 from ..api import EMModel
+from ..utils.stats import calc_BICint, calc_LME, pseudo_r2_from_nll
 
 @dataclass
 class ComparisonRow:
