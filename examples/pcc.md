@@ -11,11 +11,11 @@ the simple Rescorla–Wagner (``rw1a1b``) reinforcement learning model. We will:
 
 ```python
 import numpy as np
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate
 
 # Step 1: simulate a small cohort
-nsubjects, nblocks, ntrials = 10, 3, 24
+nsubjects, nblocks, ntrials = 100, 3, 16
 true_params = np.column_stack([
     np.random.randn(nsubjects),  # inverse temperature (Gaussian space)
     np.random.randn(nsubjects),  # learning rate    (Gaussian space)
@@ -30,7 +30,7 @@ model = EMModel(
     param_names=["beta", "alpha"],
     simulate_func=rw1a1b_simulate,
 )
-model.fit(mstep_maxit=25, verbose=0, njobs=1)
+fit_result = model.fit(mstep_maxit=25, verbose=0, njobs=1)
 
 # Step 3: run PPCs for two different outputs
 choices_result = model.pcc(
@@ -44,14 +44,14 @@ rewards_result = model.pcc(
     sim_kwargs={"nblocks": nblocks, "ntrials": ntrials},
 )
 
-print(f"Choices_A PPC p-value: {choices_result.p_value:.3f}")
-print(f"Rewards PPC p-value: {rewards_result.p_value:.3f}")
+print(f"Correct Choices p-val: {choices_result.p_value:.3f}")
+print(f"Rewards p-val: {rewards_result.p_value:.3f}")
 
 # Step 4: visualize the PPC diagnostics
 fig_choices = model.plot_pcc(choices_result, plot_all_agents=True, show=False)
 fig_rewards = model.plot_pcc(rewards_result, agent_index=0, show=False)
 
-fig_choices.suptitle("Posterior Predictive Check — choices_A")
+fig_choices.suptitle("Posterior Predictive Check — choices")
 fig_rewards.suptitle("Posterior Predictive Check — rewards")
 
 # Display or save the figures as desired
