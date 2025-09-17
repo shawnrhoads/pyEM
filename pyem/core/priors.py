@@ -4,6 +4,11 @@ from math import lgamma
 from typing import Protocol
 import numpy as np
 
+class Prior(Protocol):
+    """Protocol for prior objects."""
+    def logpdf(self, x: np.ndarray) -> float:
+        """Return the log probability density of ``x``."""
+
 @dataclass
 class GaussianPrior:
     """Independent Gaussian prior."""
