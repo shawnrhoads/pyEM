@@ -2,9 +2,8 @@
 Tests for enhanced EMModel methods and ModelComparison class.
 (Refactored to remove redundant parameter sampling.)
 """
-import numpy as np
+import numpy as np, matplotlib.pyplot as plt
 import pytest
-from scipy.stats import truncnorm, beta as beta_dist
 from pyem.api import EMModel
 from pyem.models.rl import rw1a1b_simulate as rw_simulate, rw1a1b_fit as rw_fit
 from pyem.core.compare import ModelComparison
@@ -77,7 +76,7 @@ def test_parameter_recovery():
     nsubjects, nblocks, ntrials = 10, 2, 8
     true_params = _simulate_rw_params(nsubjects)
 
-    model = EMModel(all_data=None, fit_func=rw_fit, param_names=["beta", "alpha"], simulate_func=rw_simulate)
+    model = EMModel(all_data=None, fit_func=rw_fit, param_names=["beta", "alpha"], simulate_func=rw_simulate, param_xform=[norm2beta, norm2alpha])
     recovery_dict = model.recover(true_params, nblocks=nblocks, ntrials=ntrials)
 
     assert 'true_params' in recovery_dict
@@ -87,8 +86,9 @@ def test_parameter_recovery():
     assert recovery_dict['correlation'].shape == (true_params.shape[1],)
 
     # Test plot_recovery
-    fig = model.plot_recovery(recovery_dict)
+    fig = model.plot_recovery(recovery_dict, show=False)
     assert fig is not None
+    plt.close(fig)
 
 
 def test_parameter_transformations():

@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import truncnorm, beta as beta_dist
 from pyem.api import EMModel
 from pyem.core.priors import GaussianPrior
 from pyem.models.rl import rw1a1b_fit as rw_fit, rw1a1b_simulate as rw_simulate
