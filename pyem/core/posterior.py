@@ -1,51 +1,7 @@
-
 from __future__ import annotations
 import numpy as np
 from dataclasses import dataclass
-from typing import Callable, Sequence, Any
-
-@dataclass
-class PPCResult:
-    sims_stats: np.ndarray  # (n_sims,)
-    obs_stat: float
-    p_value: float
-
-def posterior_predictive_check(
-    simulate_func: Callable[..., dict],
-    fit_result: dict,
-    all_data: Sequence[Sequence[Any]],
-    stat_fn: Callable[[Sequence[Sequence[Any]]], float],
-    n_sims: int = 200,
-    rng: np.random.Generator | None = None,
-    assemble_data: Callable[[dict], list] | None = None
-) -> PPCResult:
-    """
-    Simulate datasets from the fitted posterior (Normal approx per subject) and compare a statistic.
-    - simulate_func: function(params, ...) -> dict with 'choices'/'rewards' or domain-specific
-    - fit_result: dict returned by EMfit
-    - stat_fn: maps a dataset (same structure as all_data) -> scalar
-    - assemble_data: optional adapter to turn simulate_func output dict into all_data-like list
-    """
-    if rng is None:
-        rng = np.random.default_rng()
-    m = fit_result["m"]          # (nparams, nsubjects)
-    inv_h = fit_result["inv_h"]  # (nparams, nparams, nsubjects)
-    nparams, nsubjects = m.shape
-    sims = []
-    for _ in range(n_sims):
-        samples = np.zeros_like(m.T)  # (nsubjects, nparams)
-        for s in range(nsubjects):
-            cov = inv_h[:, :, s]
-            # numerical guard: ensure PSD
-            cov = cov + 1e-8 * np.eye(cov.shape[0])
-            samples[s] = rng.multivariate_normal(mean=m[:, s], cov=cov)
-        sim_out = simulate_func(samples, **fit_result.get("sim_kwargs", {}))
-        sim_data = assemble_data(sim_out) if assemble_data is not None else sim_out
-        sims.append(stat_fn(sim_data))
-    sims = np.asarray(sims)
-    obs = stat_fn(all_data)
-    p = float((np.sum(sims >= obs) + 1) / (len(sims) + 1))
-    return PPCResult(sims_stats=sims, obs_stat=obs, p_value=p)
+from typing import Callable
 
 @dataclass
 class RecoveryResult:

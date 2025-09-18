@@ -4,7 +4,7 @@ import numpy as np
 from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
 
 def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
-                     outcomes: np.ndarray | None = None):
+                    outcomes: np.ndarray | None = None):
     """Simulate a simple Rescorla–Wagner model with one learning rate.
 
     Each subject repeatedly chooses between two options (A/B).  Rewards are
@@ -26,9 +26,15 @@ def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
     rng = np.random.default_rng()
     this_block_probs = np.array([0.8, 0.2])  # reward probability for option A
 
-    # transform all params
-    all_beta = norm2beta(params[:, 0])
-    all_alpha = norm2alpha(params[:, 1])
+    # all params (assuming raw params)
+    all_beta = params[:, 0]
+    all_alpha = params[:, 1]
+    
+    # bounds checks
+    if not ((all_beta >= 1e-5) & (all_beta <= 20.0)).all():
+        raise ValueError("Beta values out of bounds")
+    if not ((all_alpha >= 0.0)  & (all_alpha <= 1.0)).all():
+        raise ValueError("Alpha values out of bounds")
 
     for s in range(nsubjects):
         beta = float(all_beta[s])
@@ -81,6 +87,7 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
 
     nblocks, ntrials = rewards.shape
     EV = np.zeros((nblocks, ntrials + 1, 2))
+    PE = np.zeros((nblocks, ntrials))
     nll = 0.0
     for b in range(nblocks):
         EV[b, 0, :] = 0.5
@@ -88,18 +95,21 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
             c = 0 if choices[b, t] == "A" else 1
             p = softmax(EV[b, t, :], beta)
             r = rewards[b, t]
-            pe = r - EV[b, t, c]
+            PE[b, t] = r - EV[b, t, c]
             EV[b, t + 1, :] = EV[b, t, :]
-            EV[b, t + 1, c] = EV[b, t, c] + alpha * pe
+            EV[b, t + 1, c] = EV[b, t, c] + alpha * PE[b, t]
             nll += -np.log(p[c] + 1e-12)
 
     if output == "all":
+        choices_A = (np.asarray(choices) == "A").astype(float)
         subj_dict = {
-            'params'  : [beta, alpha],
-            'choices' : choices,
-            'rewards' : rewards,
-            'EV'      : EV,
-            'nll'     : nll,
+            'params'   : [beta, alpha],
+            'choices'  : choices,
+            'choices_A': choices_A,
+            'rewards'  : rewards,
+            'EV'       : EV,
+            'PE'       : PE,
+            'nll'      : nll,
         }
         return subj_dict
 
@@ -122,10 +132,18 @@ def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
     rng = np.random.default_rng()
     this_block_probs = np.array([0.8, 0.2])
 
-    # transform all params
-    all_beta = norm2beta(params[:, 0])
-    all_alpha_pos = norm2alpha(params[:, 1])
-    all_alpha_neg = norm2alpha(params[:, 2])
+    # all params (assuming raw params)
+    all_beta = params[:, 0]
+    all_alpha_pos = params[:, 1]
+    all_alpha_neg = params[:, 2]
+    
+    # bounds checks
+    if not ((all_beta >= 1e-5) & (all_beta <= 20.0)).all():
+        raise ValueError("Beta values out of bounds")
+    if not ((all_alpha_pos >= 0.0)  & (all_alpha_pos <= 1.0)).all():
+        raise ValueError("Alpha_pos values out of bounds")
+    if not ((all_alpha_neg >= 0.0)  & (all_alpha_neg <= 1.0)).all():
+        raise ValueError("Alpha_neg values out of bounds")
 
     for s in range(nsubjects):
         beta = float(all_beta[s])
@@ -200,13 +218,15 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
             nll += -np.log(p[c] + 1e-12)
 
     if output == "all":
+        choices_A = (np.asarray(choices) == "A").astype(float)
         subj_dict = {
-            'params'  : [beta, alpha_pos, alpha_neg],
-            'choices' : choices,
-            'rewards' : rewards,
-            'EV'      : EV,
-            'PE'      : PE,
-            'nll'     : nll,
+            'params'   : [beta, alpha_pos, alpha_neg],
+            'choices'  : choices,
+            'rewards'  : rewards,
+            'choices_A': choices_A,
+            'EV'       : EV,
+            'PE'       : PE,
+            'nll'      : nll,
         }
         return subj_dict
 
