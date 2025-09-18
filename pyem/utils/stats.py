@@ -70,10 +70,6 @@ def pseudo_r2_from_nll(nll: np.ndarray, ntrials_total: int, noptions: int, metri
         random_baseline = float(np.mean(-np.log(1.0 / noptions) * ntrials_total))
         return 1.0 - (mean_nll / random_baseline)
 
-import numpy as np
-
-import numpy as np
-
 def likelihood_r2(nll: np.ndarray, metric: str = 'median') -> float:
     """
     R^2-style score from per-subject summed negative log-likelihoods.
