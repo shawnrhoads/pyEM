@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import truncnorm, beta as beta_dist
 from pyem.core.posterior import parameter_recovery, model_identifiability
 from pyem.api import EMModel
 from pyem.models.rl import (
