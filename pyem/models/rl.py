@@ -81,6 +81,7 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
 
     nblocks, ntrials = rewards.shape
     EV = np.zeros((nblocks, ntrials + 1, 2))
+    PE = np.zeros((nblocks, ntrials))
     nll = 0.0
     for b in range(nblocks):
         EV[b, 0, :] = 0.5
@@ -88,18 +89,21 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
             c = 0 if choices[b, t] == "A" else 1
             p = softmax(EV[b, t, :], beta)
             r = rewards[b, t]
-            pe = r - EV[b, t, c]
+            PE[b, t] = r - EV[b, t, c]
             EV[b, t + 1, :] = EV[b, t, :]
-            EV[b, t + 1, c] = EV[b, t, c] + alpha * pe
+            EV[b, t + 1, c] = EV[b, t, c] + alpha * PE[b, t]
             nll += -np.log(p[c] + 1e-12)
 
     if output == "all":
+        choices_A = (np.asarray(choices) == "A").astype(float)
         subj_dict = {
-            'params'  : [beta, alpha],
-            'choices' : choices,
-            'rewards' : rewards,
-            'EV'      : EV,
-            'nll'     : nll,
+            'params'   : [beta, alpha],
+            'choices'  : choices,
+            'choices_A': choices_A,
+            'rewards'  : rewards,
+            'EV'       : EV,
+            'PE'       : PE,
+            'nll'      : nll,
         }
         return subj_dict
 
@@ -200,13 +204,15 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
             nll += -np.log(p[c] + 1e-12)
 
     if output == "all":
+        choices_A = (np.asarray(choices) == "A").astype(float)
         subj_dict = {
-            'params'  : [beta, alpha_pos, alpha_neg],
-            'choices' : choices,
-            'rewards' : rewards,
-            'EV'      : EV,
-            'PE'      : PE,
-            'nll'     : nll,
+            'params'   : [beta, alpha_pos, alpha_neg],
+            'choices'  : choices,
+            'rewards'  : rewards,
+            'choices_A': choices_A,
+            'EV'       : EV,
+            'PE'       : PE,
+            'nll'      : nll,
         }
         return subj_dict
 
