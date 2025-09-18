@@ -332,7 +332,8 @@ class EMModel:
             all_data=all_data,
             fit_func=self.fit_func,
             param_names=self.param_names,
-            simulate_func=simulate_func
+            simulate_func=simulate_func,
+            param_xform=self.param_xform,
         )
         
         # Fit the model
@@ -341,7 +342,6 @@ class EMModel:
         # grab estimated params with transformations applied if applicable
         estimated_params = recovery_model.subject_params()
 
-        true_params = sim['params']
         corr = parameter_recovery(true_params, estimated_params).corr
         recovery_dict = {
             'true_params': true_params,

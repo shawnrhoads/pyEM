@@ -18,18 +18,25 @@ This is a Python implementation of the Hierarchical Expectation Maximization alg
 ### Basic Usage
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
+import numpy as np, matplotlib.pyplot as plt
+from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
-from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
-from pyem.utils.math import norm2beta, norm2alpha
 from pyem.utils import plotting
+from pyem.utils.math import norm2beta, norm2alpha
+from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
 
-# Generate sample data
-nsubjects, nblocks, ntrials = 100, 6, 24
-true_params = np.column_stack([np.random.normal(-1.5,1,nsubjects), 
-                               np.random.normal(0,1,nsubjects)]) # Untransformed parameters in Gaussian space
-sim = rw1a1b_simulate(true_params, nblocks=3, ntrials=24)
+# Settings
+nsubjects, nblocks, ntrials = 100, 4, 24
+betamin, betamax = .75, 10 # inverse temperature
+alphamin, alphamax = .05, .95 # learning rate
+
+# Generate distribution of parameters within range
+beta_rv  = truncnorm((betamin-0)/1, (betamax-0)/1, loc=0, scale=2).rvs(nsubjects)
+a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
+alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
+
+true_params = np.column_stack((beta_rv, alpha_rv))
+sim = rw1a1b_simulate(true_params, nblocks=nblocks, ntrials=ntrials)
 all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
 # Create and fit model
@@ -37,7 +44,7 @@ model = EMModel(
     all_data=all_data,
     fit_func=rw1a1b_fit,
     param_names=["beta", "alpha"],
-    param_xform=[norm2beta, norm2alpha],  # Parameter transformation functions
+    param_xform=[norm2beta, norm2alpha], # Parameter transformation functions
 )
 
 # Fit the model
@@ -63,19 +70,40 @@ for param_idx, param_label in enumerate(['beta','alpha']):
 We can also use the `EMModel.recover()` method to perform parameter recovery directly if you provide the 
 
 ```python
+import numpy as np, matplotlib.pyplot as plt
+from scipy.stats import truncnorm, beta as beta_dist
+from pyem import EMModel
+from pyem.utils import plotting
+from pyem.utils.math import norm2beta, norm2alpha
+from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
+
+# Settings
+nsubjects, nblocks, ntrials = 100, 4, 24
+betamin, betamax = .75, 10
+alphamin, alphamax = .05, .95
+
+# Generate distribution of parameters within range
+beta_rv  = truncnorm((betamin-0)/1, (betamax-0)/1, loc=0, scale=2).rvs(nsubjects)
+a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
+alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
+
+true_params = np.column_stack((beta_rv, alpha_rv))
+sim = rw1a1b_simulate(true_params, nblocks=nblocks, ntrials=ntrials)
+all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
+
 # Create model object
 model = EMModel(
     all_data=all_data,
     fit_func=rw1a1b_fit,
     param_names=["beta", "alpha"],
-    param_xform=[norm2beta, norm2alpha],  # Parameter transformation functions
+    param_xform=[norm2beta, norm2alpha], # Parameter transformation functions
     simulate_func=rw1a1b_simulate
 )
 
 # Perform parameter recovery
 recovery_dict = model.recover(
     true_params=true_params,
-    nblocks=3, ntrials=24 # settings for simulate function
+    nblocks=nblocks, ntrials=ntrials # settings for simulate function
 )
 
 # Plot recovery results
@@ -93,43 +121,52 @@ When we have two different models, we can use the `ModelComparison` class to com
 * **Integrated BIC** (Integrated Bayesian Information Criterion): Integrates over the distribution of parameters, which incorporates uncertainty about the parameter values into the model selection process while penalizing model complexity
 
 ```python
+import numpy as np
+from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
 from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
 from pyem.utils.math import norm2alpha, norm2beta
 
+# Settings
+nsubjects, nblocks, ntrials = 50, 4, 24
+betamin, betamax = .75, 10
+alphamin, alphamax = .05, .95
+
+# Generate distribution of parameters within range
+beta_rv  = truncnorm((betamin-0)/1, (betamax-0)/1, loc=0, scale=2).rvs(nsubjects)
+a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
+alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
+true_params = np.column_stack((beta_rv, alpha_rv))
+
+rw1a1b_sim = rw1a1b_simulate(true_params, nblocks=nblocks, ntrials=ntrials)
+rw1a1b_data = [[c, r] for c, r in zip(rw1a1b_sim["choices"], rw1a1b_sim["rewards"])]
+
 # Create multiple models for comparison
-model1 = EMModel(all_data, rw1a1b_fit, 
+model1 = EMModel(rw1a1b_data, rw1a1b_fit, 
                  param_names=["beta", "alpha"],
                  param_xform=[norm2beta, norm2alpha],
                  simulate_func=rw1a1b_simulate)
 
-model2 = EMModel(all_data, rw2a1b_fit,
+model2 = EMModel(rw1a1b_data, rw2a1b_fit,
                  param_names=["beta", "alpha_pos", "alpha_neg"],
                  param_xform=[norm2beta, norm2alpha, norm2alpha],
                  simulate_func=rw2a1b_simulate)
 
 # Fit both models
-model1.fit(verbose=0)
-model2.fit(verbose=0)
+res1 = model1.fit(verbose=0)
+res2 = model2.fit(verbose=0)
 
 # Compare models
 mc = ModelComparison([model1, model2], ["RW1", "RW2"])
-bicint_kwargs = {"nsamples":2000, "func_output":"all", "nll_key":"nll"}
-r2_kwargs = {"ntrials": nblocks*ntrials, "nopts": 2} # two-armed bandit has 2 options
-compare_results = mc.compare(bicint_kwargs=bicint_kwargs, r2_kwargs=r2_kwargs)
 
-# Print comparison results
-for result in compare_results:
-    print(
-        f"{result.name}: "
-        f"LME = {result.LME:.2f}, "
-        f"BICint = {result.BICint:.2f}, "
-        f"R^2 = {result.R2:.2f}"
-    )
+bicint_kwargs = {"nsamples":1000, "func_output":"all", "nll_key":"nll"}
+r2_kwargs = {"ntrials_total":ntrials*nblocks, "noptions": 2} # two-armed bandit has 2 options
+comparison_df = mc.compare(bicint_kwargs=bicint_kwargs, r2_kwargs=r2_kwargs)
+display(comparison_df)
 ```
 
-We can also compute these metrics using the EMModel class directly.
+We can also compute these metrics individually using the `EMModel` class directly.
 
 ```python
 # Compute integrated BIC
@@ -177,16 +214,16 @@ model2 = EMModel(all_data, rw2a1b_fit,
                  simulate_func=rw2a1b_simulate)
 
 # Run identifiability analysis
-mc = ModelComparison([model1, model2], ["RW1", "RW2"])
-df = mc.identify(
-    rounds=10,
-    sim_kwargs={"nblocks":3, "ntrials": 24}, # args for simulate_func
+mi_df = mc.identify(
+    mi_inputs=['choices','rewards'], # inputs from sim_func required by fit_func
+    nrounds=3, # how many rounds to run for MI exercise
+    nsubjects=50, # how many computer agents are doing the task? (default: 100)
+    sim_kwargs={"nblocks":nblocks, "ntrials": ntrials}, # args for simulate_func
     fit_kwargs={"mstep_maxit": 50},
-    r2_kwargs={"ntrials": 3*24, "nopts": 2},
     verbose=1,
 )
 
-print(df.head())
+print(mi_df.head())
 #    Simulated  Estimated  LME  BICint  bestlme  bestbic
 # 0  RW1        RW1 ...
 # 1  RW1        RW2 ...
@@ -194,8 +231,8 @@ print(df.head())
 # 3  RW2        RW2 ...
 
 # Plot results as proportion of rounds won
-mc.plot_identifiability(df, metric="LME")
-mc.plot_identifiability(df, metric="BICint")
+mc.plot_identifiability(metric="LME")
+mc.plot_identifiability(metric="BICint")
 ```
 
 ### Miscellanous functions

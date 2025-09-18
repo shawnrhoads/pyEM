@@ -4,7 +4,7 @@ import numpy as np
 from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
 
 def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
-                     outcomes: np.ndarray | None = None):
+                    outcomes: np.ndarray | None = None):
     """Simulate a simple Rescorla–Wagner model with one learning rate.
 
     Each subject repeatedly chooses between two options (A/B).  Rewards are
@@ -26,9 +26,15 @@ def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
     rng = np.random.default_rng()
     this_block_probs = np.array([0.8, 0.2])  # reward probability for option A
 
-    # transform all params
-    all_beta = norm2beta(params[:, 0])
-    all_alpha = norm2alpha(params[:, 1])
+    # all params (assuming raw params)
+    all_beta = params[:, 0]
+    all_alpha = params[:, 1]
+    
+    # bounds checks
+    if not ((all_beta >= 1e-5) & (all_beta <= 20.0)).all():
+        return ValueError("Beta values out of bounds")
+    if not ((all_alpha >= 0.0)  & (all_alpha <= 1.0)).all():
+        return ValueError("Alpha values out of bounds")
 
     for s in range(nsubjects):
         beta = float(all_beta[s])
@@ -126,10 +132,18 @@ def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
     rng = np.random.default_rng()
     this_block_probs = np.array([0.8, 0.2])
 
-    # transform all params
-    all_beta = norm2beta(params[:, 0])
-    all_alpha_pos = norm2alpha(params[:, 1])
-    all_alpha_neg = norm2alpha(params[:, 2])
+    # all params (assuming raw params)
+    all_beta = params[:, 0]
+    all_alpha_pos = params[:, 1]
+    all_alpha_neg = params[:, 2]
+    
+    # bounds checks
+    if not ((all_beta >= 1e-5) & (all_beta <= 20.0)).all():
+        return ValueError("Beta values out of bounds")
+    if not ((all_alpha_pos >= 0.0)  & (all_alpha_pos <= 1.0)).all():
+        return ValueError("Alpha_pos values out of bounds")
+    if not ((all_alpha_neg >= 0.0)  & (all_alpha_neg <= 1.0)).all():
+        return ValueError("Alpha_neg values out of bounds")
 
     for s in range(nsubjects):
         beta = float(all_beta[s])
