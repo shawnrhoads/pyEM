@@ -60,9 +60,9 @@ print(f"Available outputs: {list(output_dict.keys())}")
 # Plot recovery
 for param_idx, param_label in enumerate(['beta','alpha']):
     simulated_param = sim['params'][:,param_idx]
-    estimated_params = output_dict['params'][:,param_idx]
+    estimated_param = output_dict['params'][:,param_idx]
     ax = plotting.plot_scatter(simulated_param, f'Simulated {param_label}', 
-                 estimated_params, f'Estimated {param_label}')
+                 estimated_param, f'Estimated {param_label}')
 ```
 
 ### Parameter Recovery Analysis
