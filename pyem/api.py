@@ -343,7 +343,7 @@ class EMModel:
         # Fit the model
         fit_result = recovery_model.fit(verbose=0)
 
-        # grab estimated params
+        # grab estimated params with transformations applied if applicable
         estimated_params = recovery_model.subject_params()
 
         true_params = sim['params']
@@ -356,6 +356,7 @@ class EMModel:
             'correlation': corr,
         }
 
+        self._out = recovery_model._out
         return recovery_dict
 
     def plot_recovery(self, recovery_dict: dict, show_line: bool = True,
