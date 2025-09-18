@@ -5,7 +5,7 @@ from pyem.models.rl import (
     rw1a1b_simulate, rw1a1b_fit,
     rw2a1b_simulate, rw2a1b_fit,
 )
-
+from test_helpers import _simulate_rw_params
 
 def test_parameter_recovery_function():
     true = np.array([[0.0, 1.0], [1.0, 0.0]])
@@ -23,8 +23,8 @@ def test_model_identifiability():
                     param_names=["beta", "alpha_pos", "alpha_neg"],
                     simulate_func=rw2a1b_simulate)
     models = [cand1, cand2]
-    params1 = np.zeros((1, 2))
-    params2 = np.zeros((1, 3))
+    params1 = _simulate_rw_params(10, nparams=2)
+    params2 = _simulate_rw_params(10, nparams=3)
     param_sets = [(cand1, params1), (cand2, params2)]
     chooser = lambda out: np.sum(out["NPL"])
     res = model_identifiability(models, param_sets, nblocks=1, ntrials=5, chooser=chooser)

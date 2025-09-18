@@ -60,7 +60,47 @@ def calc_BICint(
     bicint = -2*np.sum(iLogs) + npar*np.log(total_trials)
     return float(bicint)
 
-def pseudo_r2_from_nll(nll: np.ndarray, ntrials: int, nopts: int) -> float:
-    mean_nll = float(np.mean(nll))
-    random_baseline = -np.log(1.0 / nopts) * ntrials
-    return 1.0 - (mean_nll / random_baseline)
+def pseudo_r2_from_nll(nll: np.ndarray, ntrials_total: int, noptions: int, metric: str = 'median') -> float:
+    if metric == 'median':
+        median_nll = float(np.median(nll))
+        random_baseline = float(np.median(-np.log(1.0 / noptions) * ntrials_total))
+        return 1.0 - (median_nll / random_baseline)
+    else:
+        mean_nll = float(np.mean(nll))
+        random_baseline = float(np.mean(-np.log(1.0 / noptions) * ntrials_total))
+        return 1.0 - (mean_nll / random_baseline)
+
+def likelihood_r2(nll: np.ndarray, metric: str = 'median') -> float:
+    """
+    R^2-style score from per-subject summed negative log-likelihoods.
+
+    Steps:
+      1) Convert to per-subject joint likelihoods: L_i = exp(-nll_i)
+      2) Aggregate across subjects using either the median (default) or mean
+      3) Square the aggregate to get the final score
+
+    Parameters
+    ----------
+    nll : np.ndarray
+        1D array of shape (nsubjects,) with summed negative log-likelihoods.
+        NaNs are ignored in aggregation.
+    metric : {'median', 'mean'}, default 'median'
+        Aggregation across subjects.
+
+    Returns
+    -------
+    float
+        R^2-like scalar (NaN if all inputs are NaN).
+    """
+    if metric not in {'median', 'mean'}:
+        raise ValueError("metric must be 'median' or 'mean'")
+
+    nll = np.asarray(nll, dtype=float)
+    if nll.ndim != 1:
+        raise ValueError("nll must be a 1D array of shape (nsubjects,)")
+
+    with np.errstate(over='ignore', invalid='ignore'):
+        likelihoods = np.exp(-nll)  # per-subject joint likelihood in (0, 1], NaN-preserving
+
+    agg = np.nanmedian(likelihoods) if metric == 'median' else np.nanmean(likelihoods)
+    return float(agg ** 2)

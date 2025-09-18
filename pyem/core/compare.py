@@ -1,7 +1,6 @@
-
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Dict, Any, Sequence, Callable, TYPE_CHECKING
+from typing import Any, List, Sequence
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -18,19 +17,21 @@ class ComparisonRow:
 
 def compare_models(
     models,  # list of EMModel (already fit) or tuples (name, FitResult, extras)
+    model_names: List[str] | None = None,
     metric_order: Sequence[str] = ("LME", "BICint", "R2"),
     bicint_kwargs: dict | None = {"nsamples":2000, "func_output":"all", "nll_key":"nll"},
     r2_kwargs: dict | None = None,
 ) -> List[ComparisonRow]:
     rows: List[ComparisonRow] = []
-    for item in models:
+    for mod_idx, item in enumerate(models):
         if hasattr(item, "fit_func") or hasattr(item, "fit"):  # EMModel instance
-            name = getattr(item, "name", item.fit_func.__name__ if hasattr(item, "fit_func") else "model")
+            # name = getattr(item, "name", item.fit_func.__name__ if hasattr(item, "fit_func") else "model")
             out = item._out or {}
             all_data = item.all_data
             fit_func = item.fit_func
         else:
-            name, out, all_data, fit_func = item  # explicit tuple
+            _, out, all_data, fit_func = item  # explicit tuple
+        name = model_names[mod_idx]
         LME = None
         if "inv_h" in out and "NPL" in out:
             _, lme, _ = calc_LME(out["inv_h"], out["NPL"])
@@ -39,7 +40,7 @@ def compare_models(
         if out.get("posterior") is not None and bicint_kwargs is not None:
             mu = out["posterior"]["mu"]; sigma = out["posterior"]["sigma"]
             BICint = calc_BICint(all_data, out.get("param_names", []), mu, sigma, fit_func, **bicint_kwargs)
-        R2 = None
+        R2 = np.nan
         if r2_kwargs is not None and "NLL" in out:
             R2 = pseudo_r2_from_nll(out["NLL"], **r2_kwargs)
         rows.append(ComparisonRow(name=name, LME=LME, BICint=BICint, R2=R2))
@@ -71,22 +72,35 @@ class ModelComparison:
         self.comparison_results = None
         self.identifiability_matrix = None
         
-    def compare(self, **kwargs) -> List[ComparisonRow]:
+    def compare(self, **kwargs) -> pd.DataFrame:
         """
-        Run model comparison.
-        
-        Args:
-            **kwargs: Arguments passed to compare_models function
-            
-        Returns:
-            List of comparison results
+        Run model comparison and return a pandas DataFrame indexed by model name.
+
+        Columns:
+            - "LME (largest is best)"
+            - "BICint (smallest is best)"
+            - "pseudoR^2 (largest is best)"
         """
-        self.comparison_results = compare_models(self.models, **kwargs)
-        return self.comparison_results
+        rows = compare_models(self.models, self.model_names, **kwargs)
+
+        df = pd.DataFrame(
+            [(r.name, r.LME, r.BICint, r.R2) for r in rows],
+            columns=[
+                "name",
+                "LME (largest is best)",
+                "BICint (smallest is best)",
+                "pseudoR^2 (largest is best)",
+            ],
+        ).set_index("name").dropna(axis=1)
+
+        self.comparison_results = df
+        return df
     
     def identify(
         self,
-        rounds: int = 10,
+        mi_inputs: List[str],
+        nrounds: int = 10,
+        nsubjects: int = 100,
         *,
         sim_kwargs: dict | None = None,
         fit_kwargs: dict | None = None,
@@ -113,8 +127,7 @@ class ModelComparison:
         if bicint_kwargs is None:
             bicint_kwargs = {"nsamples": 2000, "func_output": "all", "nll_key": "nll"}
         if r2_kwargs is None:
-            r2_kwargs = {}
-
+            r2_kwargs = np.nan
         names = self.model_names
 
         # accumulators
@@ -128,9 +141,9 @@ class ModelComparison:
         best_r2  = {(s, e): 0 for s in names for e in names}
 
         # ---------- OUTER LOOP OVER ROUNDS ----------
-        for r in range(rounds):
+        for r in range(nrounds):
             if verbose >= 1:
-                print(f"[identify] round {r+1}/{rounds}")
+                print(f"[identify] round {r+1}/{nrounds}")
 
             # loop over SIMULATED models
             for sm_i, sim_model in enumerate(self.models):
@@ -142,20 +155,42 @@ class ModelComparison:
                     )
 
                 # choose parameters to simulate with
-                if getattr(sim_model, "_out", None) is not None:
-                    true_params = sim_model._out["m"].T
-                else:
-                    nsubjects = 10
-                    nparams = len(getattr(sim_model, "param_names", [])) or 2
-                    true_params = rng.normal(size=(nsubjects, nparams))
+                nparams = len(getattr(sim_model, "param_names", [])) or 2
+                true_params = rng.normal(size=(nsubjects, nparams))
+                # apply transforms if available
+                if hasattr(sim_model, "param_xform"):
+                    for pi in range(nparams):
+                        xform = sim_model.param_xform[pi]
+                        if xform is not None and callable(xform):
+                            true_params[:, pi] = xform(true_params[:, pi])
 
                 # simulate data
-                sim = sim_model.simulate_func(true_params, **sim_kwargs)
-                if not (isinstance(sim, dict) and "choices" in sim and "rewards" in sim):
+                try:
+                    sim = sim_model.simulate_func(true_params, **sim_kwargs)
+                except Exception as e:
+                    raise RuntimeError(f"Simulation from '{sim_name}' failed: {e}") from e
+                
+                # Validate structure
+                if not isinstance(sim, dict):
+                    raise ValueError(f"Simulation from '{sim_name}' did not return a dict.")
+
+                missing = [k for k in mi_inputs if k not in sim]
+                if missing:
                     raise ValueError(
-                        f"Simulation from '{sim_name}' did not return expected keys 'choices' and 'rewards'."
+                        f"Simulation from '{sim_name}' is missing expected keys: {missing}. "
+                        f"Available keys: {list(sim.keys())}"
                     )
-                all_data = [[c, rw] for c, rw in zip(sim["choices"], sim["rewards"])]
+
+                # Validate equal lengths for all requested inputs
+                lengths = {k: len(sim[k]) for k in mi_inputs}
+                if len(set(lengths.values())) != 1:
+                    raise ValueError(
+                        f"Inconsistent lengths among requested inputs: {lengths}. "
+                        "All requested series must be the same length."
+                    )
+
+                # Build all_data as rows of the selected inputs (e.g., [choice, reward] per trial)
+                all_data = [list(row) for row in zip(*(sim[k] for k in mi_inputs))]
 
                 # fit EVERY model to this simulated dataset
                 per_round_LME = []
@@ -250,8 +285,8 @@ class ModelComparison:
 
         df = pd.DataFrame(rows)
 
-        self.identifiability_matrix = df
-        self._identify_rounds = rounds
+        self.identifiability_matrix = df.dropna(axis=1)
+        self._identify_rounds = nrounds
         if verbose >= 1:
             print("[identify] done")
         return df
@@ -265,7 +300,7 @@ class ModelComparison:
         df: pd.DataFrame | None = None,
         metric: str = "LME",
         *,
-        rounds: int | None = None,
+        nrounds: int | None = None,
         cmap: str = "viridis",
         annotate: bool = True,
         figsize: tuple = (8, 6),
@@ -308,12 +343,12 @@ class ModelComparison:
         counts = df.pivot(index="Simulated", columns="Estimated", values=best_col).astype(float)
 
         # Determine denominators (rounds). Prefer explicit arg, else internal, else infer per-row.
-        if rounds is None:
-            rounds = getattr(self, "_identify_rounds", None)
+        if nrounds is None:
+            nrounds = getattr(self, "_identify_rounds", None)
 
-        if rounds is not None:
+        if nrounds is not None:
             # Single scalar denominator for all rows
-            denom = pd.Series(rounds, index=counts.index, dtype=float)
+            denom = pd.Series(nrounds, index=counts.index, dtype=float)
         else:
             # Infer per Simulated model: sum of winner counts across columns
             # (handles cases with occasional no-winner rounds by yielding < 1.0 max)

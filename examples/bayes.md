@@ -6,7 +6,7 @@ colour ratio. The single parameter `lambda` governs how quickly beliefs about th
 
 ```python
 import numpy as np
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.models.bayes import simulate, fit
 from pyem.utils.math import norm2alpha
 

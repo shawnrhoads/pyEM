@@ -8,15 +8,20 @@ learning rate (``alpha``).
 
 ```python
 import numpy as np
-from pyem.api import EMModel
+from scipy.stats import truncnorm, beta as beta_dist
+from pyem import EMModel
 from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
 
 # --- simulate subjects ----------------------------------------------------
-nsubjects, nblocks, ntrials = 50, 6, 24
-true_params = np.column_stack([
-    np.random.randn(nsubjects),  # beta in Gaussian space
-    np.random.randn(nsubjects),  # alpha in Gaussian space
-])
+nsubjects, nblocks, ntrials = 100, 6, 24
+betamin, betamax = .75, 10 # inverse temperature
+alphamin, alphamax = .05, .95 # learning rate
+
+# Generate distribution of parameters within range
+beta_rv  = truncnorm((betamin-0)/1, (betamax-0)/1, loc=0, scale=2).rvs(nsubjects)
+a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
+alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
+true_params = np.column_stack((beta_rv, alpha_rv))
 
 # use EMModel.recover to run simulation, fitting and recovery metrics
 model = EMModel(all_data=None, fit_func=rw1a1b_fit,
@@ -29,4 +34,5 @@ fig = model.plot_recovery(recovery)
 ```
 
 The recovery dictionary also contains numerical summaries such as
-`recovery['correlation']`.
+`recovery['correlation']`, which provides a correlation coefficient for each
+parameter.

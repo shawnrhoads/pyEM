@@ -6,7 +6,7 @@ all subjects simultaneously using ``EMModel``.
 
 ```python
 import numpy as np
-from pyem.api import EMModel
+from pyem import EMModel
 from pyem.models.glm import simulate, fit
 
 # --- simulate -------------------------------------------------------------
@@ -21,7 +21,8 @@ model = EMModel(all_data=all_data, fit_func=fit,
 result = model.fit(verbose=0)
 estimated = result.m.T
 
-# simple recovery metric
-corr = np.corrcoef(true_params.flatten(), estimated.flatten())[0, 1]
-print("Recovery correlation:", corr)
+# simple recovery metrics per parameter
+corr = np.array([np.corrcoef(true_params[:, j], estimated[:, j])[0, 1]
+                 for j in range(nparams)])
+print("Recovery correlations:", corr)
 ```
