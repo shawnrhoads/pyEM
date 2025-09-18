@@ -399,7 +399,7 @@ pip install -e .
 
 ## Requirements
 
-* Python >= 3.9
+* Python >= 3.10
 * numpy >= 1.22
 * scipy >= 1.10
 * pandas >= 1.5
