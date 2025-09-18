@@ -37,7 +37,7 @@ def test_rw2a1b_fit():
 def test_bayes_fit():
     nsubjects, nblocks, ntrials = 10, 2, 10
     true_lambda = np.random.uniform(0.2, 0.8, size=(nsubjects, 1))
-    sim = bayes_simulate(true_lambda, n_blocks=nblocks, n_trials=ntrials)
+    sim = bayes_simulate(true_lambda, nblocks=nblocks, ntrials=ntrials)
     all_data = [[sim["choices"][i], sim["observations"][i]] for i in range(nsubjects)]
     model = EMModel(all_data=all_data, fit_func=bayes_fit, param_names=["lambda"])
     res = model.fit(mstep_maxit=5, verbose=0, njobs=1)
