@@ -135,7 +135,8 @@ class EMModel:
                 raise ValueError("Provide both prior_mu and prior_sigma to override the prior.")
             prior = GaussianPrior(mu=np.asarray(prior_mu).reshape(-1), sigma=np.asarray(prior_sigma).reshape(-1))
 
-        if prior is not None and not isinstance(prior, GaussianPrior):
+        if prior is None:
+            print("Warning: No prior specified, using scipy.optimize.minimize")
             out = self.scipy_minimize(prior=prior)
         else:
             out = EMfit(
@@ -258,12 +259,9 @@ class EMModel:
 
         return arrays_dict
 
-    def scipy_minimize(self, prior: Prior | None = None) -> dict[str, Any]:
-        """Fit each subject independently using :func:`scipy.optimize.minimize`.
+    def scipy_minimize(self) -> dict[str, Any]:
+        """Fit each subject independently using :func:`scipy.optimize.minimize`."""
 
-        Args:
-            prior: Prior distribution applied to each subject independently.
-        """
         if self.all_data is None:
             raise ValueError("all_data must be provided to fit the model.")
 
@@ -273,19 +271,19 @@ class EMModel:
         m = np.zeros((nparams, nsubjects))
         inv_h = np.zeros((nparams, nparams, nsubjects))
         NPL = np.zeros(nsubjects)
-        NLPrior = np.zeros(nsubjects)
 
         for subj_idx, args in enumerate(self.all_data):
             if not isinstance(args, (list, tuple)):
                 args = (args,)
 
             def obj_func(params: np.ndarray) -> float:
-                return self.fit_func(params, *args, prior=prior, output="npl")
+                return self.fit_func(params, *args, output="npl")
 
             x0 = np.random.randn(nparams)
             res = minimize(obj_func, x0=x0, method="BFGS")
             m[:, subj_idx] = res.x
             NPL[subj_idx] = res.fun
+
             if hasattr(res, "hess_inv"):
                 try:
                     inv_h[:, :, subj_idx] = np.asarray(res.hess_inv)
@@ -293,10 +291,7 @@ class EMModel:
                     inv_h[:, :, subj_idx] = np.eye(nparams) * max(1.0, np.linalg.norm(res.x) + 1e-6)
             else:
                 inv_h[:, :, subj_idx] = np.eye(nparams) * max(1.0, np.linalg.norm(res.x) + 1e-6)
-            if prior is not None:
-                NLPrior[subj_idx] = -prior.logpdf(res.x)
 
-        NLL = NPL - NLPrior
         posterior_sigma = np.array([np.diag(inv_h[:, :, i]) for i in range(nsubjects)]).T
 
         return {
@@ -304,11 +299,10 @@ class EMModel:
             "inv_h": inv_h,
             "posterior": {"mu": m, "sigma": posterior_sigma},
             "NPL": NPL,
-            "NLPrior": NLPrior,
-            "NLL": NLL,
             "convergence": True,
             "individual_fit": True,
         }
+
 
     def recover(self, true_params: np.ndarray, simulate_func: Callable = None, **sim_kwargs) -> dict[str, Any]:
         """
