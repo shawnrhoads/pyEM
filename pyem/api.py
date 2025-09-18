@@ -299,7 +299,7 @@ class EMModel:
         }
 
 
-    def recover(self, true_params: np.ndarray, simulate_func: Callable = None, **sim_kwargs) -> dict[str, Any]:
+    def recover(self, true_params: np.ndarray, pr_inputs: List[str], simulate_func: Callable = None,**sim_kwargs) -> dict[str, Any]:
         """
         Parameter recovery analysis given true parameters and simulation function.
         
@@ -322,11 +322,24 @@ class EMModel:
         sim = simulate_func(true_params, **sim_kwargs)
         
         # Prepare data for fitting
-        if 'choices' in sim and 'rewards' in sim:
-            all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
-        else:
-            raise ValueError("Simulation must return 'choices' and 'rewards' keys")
-        
+        missing = [k for k in pr_inputs if k not in sim]
+        if missing:
+            raise ValueError(
+                f"Simulation output is missing expected keys: {missing}. "
+                f"Available keys: {list(sim.keys())}"
+            )
+
+        # Validate equal lengths for all requested inputs
+        lengths = {k: len(sim[k]) for k in pr_inputs}
+        if len(set(lengths.values())) != 1:
+            raise ValueError(
+                f"Inconsistent lengths among requested inputs: {lengths}. "
+                "All requested series must be the same length."
+            )
+
+        # Build all_data as rows of the selected inputs (e.g., [choice, reward] per trial)
+        all_data = [list(row) for row in zip(*(sim[k] for k in pr_inputs))]
+
         # Create new model instance with simulated data
         recovery_model = EMModel(
             all_data=all_data,
