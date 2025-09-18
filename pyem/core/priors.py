@@ -1,6 +1,5 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from math import lgamma
 from typing import Protocol
 import numpy as np
 
