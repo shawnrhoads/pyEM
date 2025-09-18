@@ -77,7 +77,7 @@ def test_parameter_recovery():
     true_params = _simulate_rw_params(nsubjects)
 
     model = EMModel(all_data=None, fit_func=rw_fit, param_names=["beta", "alpha"], simulate_func=rw_simulate, param_xform=[norm2beta, norm2alpha])
-    recovery_dict = model.recover(true_params, nblocks=nblocks, ntrials=ntrials)
+    recovery_dict = model.recover(true_params, pr_inputs=['choices','rewards'], nblocks=nblocks, ntrials=ntrials)
 
     assert 'true_params' in recovery_dict
     assert 'estimated_params' in recovery_dict

@@ -60,9 +60,9 @@ print(f"Available outputs: {list(output_dict.keys())}")
 # Plot recovery
 for param_idx, param_label in enumerate(['beta','alpha']):
     simulated_param = sim['params'][:,param_idx]
-    fitted_params = output_dict['params'][:,param_idx]
+    estimated_params = output_dict['params'][:,param_idx]
     ax = plotting.plot_scatter(simulated_param, f'Simulated {param_label}', 
-                 fitted_params, f'Estimated {param_label}')
+                 estimated_params, f'Estimated {param_label}')
 ```
 
 ### Parameter Recovery Analysis
@@ -103,6 +103,7 @@ model = EMModel(
 # Perform parameter recovery
 recovery_dict = model.recover(
     true_params=true_params,
+    pr_inputs=["choices", "rewards"], # inputs needed for fit func
     nblocks=nblocks, ntrials=ntrials # settings for simulate function
 )
 
