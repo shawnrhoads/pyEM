@@ -15,7 +15,7 @@ def _generate_fishp(lambda1: float, n_fish: int) -> np.ndarray:
     fishp = np.eye(n_fish) * m + (1 - np.eye(n_fish)) * s
     return fishp
 
-def simulate(params: np.ndarray, n_blocks: int = 10, n_trials: int = 15,
+def simulate(params: np.ndarray, nblocks: int = 10, ntrials: int = 15,
              n_fish: int = 3) -> dict:
     """Simulate the fish task described in the repository documentation.
 
@@ -31,26 +31,26 @@ def simulate(params: np.ndarray, n_blocks: int = 10, n_trials: int = 15,
                                    [0.1, 0.8, 0.1],
                                    [0.1, 0.1, 0.8]])
 
-    choices = np.empty((n_subjects, n_blocks, n_trials), dtype=int)
-    observations = np.empty((n_subjects, n_blocks, n_trials), dtype=int)
-    probabilities = np.empty((n_subjects, n_blocks, n_trials + 1, n_fish))
-    ponds = np.empty((n_subjects, n_blocks, n_trials), dtype=int)
+    choices = np.empty((n_subjects, nblocks, ntrials), dtype=int)
+    observations = np.empty((n_subjects, nblocks, ntrials), dtype=int)
+    probabilities = np.empty((n_subjects, nblocks, ntrials + 1, n_fish))
+    ponds = np.empty((n_subjects, nblocks, ntrials), dtype=int)
     rng = np.random.default_rng()
 
     for s in range(n_subjects):
         lambda1 = params[s, 0]
         fishp = _generate_fishp(lambda1, n_fish)
         # determine which pond is correct for each block
-        base = np.array([0, 1, 2] * (n_blocks // 3 + 1))
-        block_to_pond = rng.permutation(base[:n_blocks])
-        for b in range(n_blocks):
+        base = np.array([0, 1, 2] * (nblocks // 3 + 1))
+        block_to_pond = rng.permutation(base[:nblocks])
+        for b in range(nblocks):
             pond_type = block_to_pond[b]
             # sequence of observed fish colours for this block
-            fish_disp = rng.choice(n_fish, size=n_trials,
+            fish_disp = rng.choice(n_fish, size=ntrials,
                                    p=pond_distributions[pond_type])
-            pondp = np.ones((n_trials + 1, n_fish)) / n_fish  # prior over ponds
+            pondp = np.ones((ntrials + 1, n_fish)) / n_fish  # prior over ponds
             probabilities[s, b, 0, :] = pondp[0, :]
-            for t in range(n_trials):
+            for t in range(ntrials):
                 ponds[s, b, t] = pond_type
                 observations[s, b, t] = fish_disp[t]
                 den = np.sum(pondp[t, :] * fishp[fish_disp[t], :])
@@ -79,13 +79,13 @@ def fit(params, choices, observations, prior=None, output: str = 'npl'):
     ``'all'``, additional diagnostic values.
     """
     lambda1 = norm2alpha(params[0])
-    n_blocks, n_trials = choices.shape
+    nblocks, ntrials = choices.shape
     n_fish = 3
     fishp = _generate_fishp(lambda1, n_fish)
     nll = 0.0
-    for b in range(n_blocks):
-        pondp = np.ones((n_trials + 1, n_fish)) / n_fish
-        for t in range(n_trials):
+    for b in range(nblocks):
+        pondp = np.ones((ntrials + 1, n_fish)) / n_fish
+        for t in range(ntrials):
             fish_disp = observations[b, t]
             real_choice = choices[b, t]
             den = np.sum(pondp[t, :] * fishp[fish_disp, :])
