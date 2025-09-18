@@ -32,9 +32,9 @@ def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
     
     # bounds checks
     if not ((all_beta >= 1e-5) & (all_beta <= 20.0)).all():
-        return ValueError("Beta values out of bounds")
+        raise ValueError("Beta values out of bounds")
     if not ((all_alpha >= 0.0)  & (all_alpha <= 1.0)).all():
-        return ValueError("Alpha values out of bounds")
+        raise ValueError("Alpha values out of bounds")
 
     for s in range(nsubjects):
         beta = float(all_beta[s])
@@ -139,11 +139,11 @@ def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
     
     # bounds checks
     if not ((all_beta >= 1e-5) & (all_beta <= 20.0)).all():
-        return ValueError("Beta values out of bounds")
+        raise ValueError("Beta values out of bounds")
     if not ((all_alpha_pos >= 0.0)  & (all_alpha_pos <= 1.0)).all():
-        return ValueError("Alpha_pos values out of bounds")
+        raise ValueError("Alpha_pos values out of bounds")
     if not ((all_alpha_neg >= 0.0)  & (all_alpha_neg <= 1.0)).all():
-        return ValueError("Alpha_neg values out of bounds")
+        raise ValueError("Alpha_neg values out of bounds")
 
     for s in range(nsubjects):
         beta = float(all_beta[s])
