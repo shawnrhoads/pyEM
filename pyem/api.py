@@ -2,7 +2,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Sequence
-
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize
@@ -134,12 +133,8 @@ class EMModel:
             if prior_mu is None or prior_sigma is None:
                 raise ValueError("Provide both prior_mu and prior_sigma to override the prior.")
             prior = GaussianPrior(mu=np.asarray(prior_mu).reshape(-1), sigma=np.asarray(prior_sigma).reshape(-1))
-
-        if prior is None:
-            print("Warning: No prior specified, using scipy.optimize.minimize")
-            out = self.scipy_minimize(prior=prior)
-        else:
-            out = EMfit(
+        
+        out = EMfit(
                 all_data=self.all_data,
                 objfunc=self.fit_func,
                 param_names=self.param_names,
