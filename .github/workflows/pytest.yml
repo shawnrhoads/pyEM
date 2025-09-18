@@ -1,5 +1,4 @@
-# .github/workflows/pytest.yml
-name: PyTest
+name: pytest
 
 on:
   push:
@@ -7,67 +6,23 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: read
-
-concurrency:
-  group: pytest-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  tests:
-    name: Python ${{ matrix.python-version }} • ${{ runner.os }}
+  test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-
     steps:
       - name: Check out repo
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          python-version: "3.9"
 
-      - name: Upgrade pip + install dependencies
-        shell: bash
+      - name: Install package and test deps
         run: |
           python -m pip install --upgrade pip
-          # If you keep dev/test deps in extras, this installs them:
-          if [ -f pyproject.toml ]; then
-            # Try to install with dev extras if defined; fall back to editable install
-            python - <<'PY'
-import tomllib, sys, subprocess, pathlib
-pp = pathlib.Path("pyproject.toml")
-data = tomllib.loads(pp.read_text()) if pp.exists() else {}
-extras = data.get("project", {}).get("optional-dependencies", {})
-cmd = ["python","-m","pip","install"]
-if "dev" in extras:
-    cmd.append(".[dev]")
-else:
-    cmd.append("-e .")
-sys.exit(subprocess.call(cmd))
-PY
-          else
-            python -m pip install -e .
-          fi
-          # Ensure pytest present (and coverage helpful in CI)
-          python -m pip install pytest pytest-cov
+          python -m pip install ".[dev]" || python -m pip install -e .
+          python -m pip install pytest
 
       - name: Run tests
-        run: |
-          pytest -q --maxfail=1 --disable-warnings \
-            --cov=pyEM --cov-report=xml --cov-report=term-missing
-        env:
-          PYTHONWARNINGS: default
-
-      - name: Upload coverage artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.python-version }}
-          path: coverage.xml
+        run: pytest -q
