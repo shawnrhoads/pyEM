@@ -232,7 +232,7 @@ class ModelComparison:
 
                     # pseudo-R² (higher better)
                     try:
-                        r2 = pseudo_r2_from_nll(fit_res.nll, **r2_kwargs)
+                        r2 = pseudo_r2_from_nll(fit_res.NLL, **r2_kwargs)
                     except Exception:
                         r2 = np.nan
 
