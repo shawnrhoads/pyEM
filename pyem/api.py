@@ -367,8 +367,7 @@ class EMModel:
         self._out = recovery_model._out
         return recovery_dict
 
-    def plot_recovery(self, recovery_dict: dict, show_line: bool = True,
-                      figsize: tuple = (10, 4), show: bool = True) -> plt.Figure:
+    def plot_recovery(self, recovery_dict: dict, show_line: bool = True, figsize: tuple = (10, 4), show: bool = True) -> plt.Figure:
         """
         Plot parameter recovery as scatter plots of simulated vs estimated parameters.
 
@@ -387,8 +386,12 @@ class EMModel:
         estimated_params = recovery_dict['estimated_params']
         nparams = true_params.shape[1]
 
-        # Create 1 x nparams layout (keep squeeze=False to always get 2D array, then ravel)
-        fig, axes = plt.subplots(1, nparams, figsize=figsize, squeeze=False)
+        # Set fixed number of columns and calculate rows dynamically
+        ncols = 3  # Fixed number of columns
+        nrows = int(np.ceil(nparams / ncols))  # Calculate rows based on total parameters
+
+        # Adjust figure size based on grid dimensions
+        fig, axes = plt.subplots(nrows, ncols, figsize=(figsize[0], figsize[1] * nrows / 2), squeeze=False)
         axes = axes.ravel()
 
         # In case self.param_names is longer than nparams
