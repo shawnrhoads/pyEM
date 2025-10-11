@@ -233,7 +233,7 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
     return calc_fval(nll, params, prior=prior, output=output)
 
 # --------------------------
-# 3α-1β SIMULATE (natural)
+# 3α-1β SIMULATE
 # --------------------------
 def rw3a1b_simulate(params: np.ndarray,
                     nblocks: int = 9,
@@ -355,7 +355,7 @@ def rw3a1b_simulate(params: np.ndarray,
 
 
 # ----------------------
-# 3α-1β FIT (normalized)
+# 3α-1β FIT
 # ----------------------
 def rw3a1b_fit(params: np.ndarray,
                choices: np.ndarray,
@@ -449,7 +449,7 @@ def rw3a1b_fit(params: np.ndarray,
 
 
 # ---------------------------
-# 1Q-4α-1β SIMULATE (natural)
+# 1Q-4α-1β SIMULATE
 # ---------------------------
 def rw4a1b_simulate(params: np.ndarray,
                     nblocks: int = 12,
@@ -457,7 +457,7 @@ def rw4a1b_simulate(params: np.ndarray,
                     outcomes: np.ndarray | None = None):
     """
     4-option RW with one EV vector, one beta, and four learning rates:
-      a_self_pos, a_self_neg, a_other_pos, a_other_neg  (NATURAL space).
+      a_self_pos, a_self_neg, a_other_pos, a_other_neg.
 
     params:  (S,5) = [beta, a_self_pos, a_self_neg, a_other_pos, a_other_neg]
     outcomes (optional): (B, T, 4, 2) with last dim [self, other]; values can be real.
@@ -595,7 +595,7 @@ def rw4a1b_simulate(params: np.ndarray,
 
 
 # -------------------------
-# 1Q-4α-1β FIT (normalized)
+# 1Q-4α-1β FIT
 # -------------------------
 def rw4a1b_fit(params: np.ndarray,
                choices: np.ndarray,
