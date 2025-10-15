@@ -5,7 +5,7 @@ from pyem.models.rl import (
     rw2a1b_simulate, rw2a1b_fit,
 )
 from pyem.models.bayes import simulate as bayes_simulate, fit as bayes_fit
-from pyem.models.glm import simulate as glm_simulate, fit as glm_fit, simulate_decay, fit_decay
+from pyem.models.glm import glm_sim as glm_simulate, glm_fit, glm_decay_sim as simulate_decay, glm_decay_fit as fit_decay
 from test_helpers import _simulate_rw_params
 
 def test_rw1a1b_fit():
