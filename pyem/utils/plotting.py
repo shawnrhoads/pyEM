@@ -71,10 +71,10 @@ def plot_scatter(
     x = np.asarray(x)
     y = np.asarray(y)
 
-    # Create axes if needed
     created_fig = None
     if ax is None:
-        created_fig, ax = plt.subplots(1, 1, figsize=(5, 4))
+        # If used standalone, give it a sensible size and turn on constrained layout
+        created_fig, ax = plt.subplots(1, 1, figsize=(3.6, 3.6), constrained_layout=True)
 
     # Scatter
     ax.scatter(x, y, s=s, alpha=alpha, color=colorname)
@@ -85,31 +85,34 @@ def plot_scatter(
 
     # Pearson r annotation
     if annotate:
-        # Be robust to NaNs
         mask = np.isfinite(x) & np.isfinite(y)
         if mask.any() and mask.sum() > 1:
             corr = np.corrcoef(x[mask], y[mask])[0, 1]
             ax.annotate(f'Pearson r = {corr:.2f}', xy=(0.05, 0.95),
                         xycoords='axes fraction', va='top', fontsize=11)
 
-    # Optional x=y line
+    # Optional x=y line and equal limits
     if show_line:
-        # Determine common bounds from data & current limits
         data_min = np.nanmin([np.nanmin(x, initial=np.nan), np.nanmin(y, initial=np.nan)])
         data_max = np.nanmax([np.nanmax(x, initial=np.nan), np.nanmax(y, initial=np.nan)])
-        # Fall back to current axis limits if needed
         cur_xmin, cur_xmax = ax.get_xlim()
         cur_ymin, cur_ymax = ax.get_ylim()
         lo = np.nanmin([data_min, cur_xmin, cur_ymin])
         hi = np.nanmax([data_max, cur_xmax, cur_ymax])
-        ax.plot([lo, hi], [lo, hi], linestyle='--', color='k', alpha=0.75, zorder=0)
+        ax.plot([lo, hi], [lo, hi], linestyle='--', color='k', alpha=0.6, zorder=0)
 
         if equal_limits:
             ax.set_xlim(lo, hi)
             ax.set_ylim(lo, hi)
-            ax.set_aspect('equal', adjustable='box')
-    
+            # Keep the box square without triggering excessive outer padding
+            try:
+                ax.set_box_aspect(1)
+            except Exception:
+                pass
+
+    # A touch of margin so points/labels aren’t flush against the frame
+    ax.margins(0.05)
+
     sns.despine()
-    # Important: don't call plt.show() in library/helper code
     return ax
 
