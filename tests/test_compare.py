@@ -1,7 +1,7 @@
 
 import numpy as np
 from pyem.api import EMModel
-from pyem.models.rl import rw1a1b_simulate as rw_simulate, rw1a1b_fit as rw_fit
+from pyem.models.rl import rw1a1b_sim as rw_simulate, rw1a1b_fit as rw_fit
 from pyem.core.compare import compare_models
 from pyem.utils.stats import calc_BICint
 from test_helpers import _simulate_rw_params

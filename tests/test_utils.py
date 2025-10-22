@@ -2,8 +2,8 @@ import numpy as np
 from pyem.core.posterior import parameter_recovery, model_identifiability
 from pyem.api import EMModel
 from pyem.models.rl import (
-    rw1a1b_simulate, rw1a1b_fit,
-    rw2a1b_simulate, rw2a1b_fit,
+    rw1a1b_sim, rw1a1b_fit,
+    rw2a1b_sim, rw2a1b_fit,
 )
 from test_helpers import _simulate_rw_params
 
@@ -18,10 +18,10 @@ def test_parameter_recovery_function():
 def test_model_identifiability():
     # two simple RL models
     cand1 = EMModel(all_data=None, fit_func=rw1a1b_fit, param_names=["beta", "alpha"],
-                    simulate_func=rw1a1b_simulate)
+                    simulate_func=rw1a1b_sim)
     cand2 = EMModel(all_data=None, fit_func=rw2a1b_fit,
                     param_names=["beta", "alpha_pos", "alpha_neg"],
-                    simulate_func=rw2a1b_simulate)
+                    simulate_func=rw2a1b_sim)
     models = [cand1, cand2]
     params1 = _simulate_rw_params(10, nparams=2)
     params2 = _simulate_rw_params(10, nparams=3)
