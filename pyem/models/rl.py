@@ -1,9 +1,9 @@
 
-from __future__ import annotations
-import numpy as np
+import numpy as np, random
+from itertools import permutations, chain
 from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
 
-def rw1a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
+def rw1a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
                     outcomes: np.ndarray | None = None):
     """Simulate a simple Rescorla–Wagner model with one learning rate.
 
@@ -117,8 +117,8 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
     return calc_fval(nll, params, prior=prior, output=output)
 
 
-def rw2a1b_simulate(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
-                     outcomes: np.ndarray | None = None):
+def rw2a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
+               outcomes: np.ndarray | None = None):
     """Simulate a Rescorla–Wagner model with separate learning rates for gains and losses."""
     nsubjects = params.shape[0]
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
@@ -232,13 +232,13 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
 
     return calc_fval(nll, params, prior=prior, output=output)
 
-# --------------------------
-# 3α-1β SIMULATE (natural)
-# --------------------------
-def rw3a1b_simulate(params: np.ndarray,
-                    nblocks: int = 9,
-                    ntrials: int = 16,
-                    outcomes: np.ndarray | None = None):
+# --------------------------------------
+# 3α-1β SIMULATE (Lockwood et al., 2016)
+# --------------------------------------
+def rw3a1b_sim(params: np.ndarray,
+               nblocks: int = 9,
+               ntrials: int = 16,
+               outcomes: np.ndarray | None = None):
     """
     Two-option task (A/B each trial) with three binary outcome channels:
     self, other, noone. NATURAL-SPACE params.
@@ -353,21 +353,18 @@ def rw3a1b_simulate(params: np.ndarray,
         "rewards"       : rewards_payload,  # for EMModel.recover(pr_inputs=['choices','rewards'])
     }
 
-
-# ----------------------
-# 3α-1β FIT (normalized)
-# ----------------------
+# --------------------------------------
+# 3α-1β FIT (Lockwood et al., 2016)
+# --------------------------------------
 def rw3a1b_fit(params: np.ndarray,
                choices: np.ndarray,
                rewards,
                prior=None,
                output: str = "npl"):
     """
-    NORMALIZED params -> natural via norm2beta/norm2alpha.
-
+    choices: (B,T) of 'A'/'B'
     rewards: dict with keys {'rewards_self','rewards_other','rewards_noone'}
              or tuple (Rself, Rother, Rnone).
-    choices: (B,T) of 'A'/'B'
     """
     # unpack rewards
     if isinstance(rewards, dict):
@@ -447,81 +444,45 @@ def rw3a1b_fit(params: np.ndarray,
 
     return calc_fval(NLL, params, prior=prior, output=output)
 
+# ----------------------------------------
+# 1Q–4α–1β  SIMULATE (Rhoads et al., 2025)
+# ----------------------------------------
+def gen_rnd_blocks(items, nblocks=2, nsubjects=100):
+    perms = list(permutations(items))
+    for _ in range(nsubjects):
+        # Randomly pick nblocks permutations with replacement
+        blocks = random.choices(perms, k=nblocks)
+        combined = tuple(chain.from_iterable(blocks))
+        yield combined
 
-# ------------------------------------------------------------
-# 1Q–4α–1β  SIMULATE  (natural space)
-# ------------------------------------------------------------
-def rw4a1b_simulate(params: np.ndarray,
+def rw4a1b_sim(params: np.ndarray,
                     nblocks: int = 12,
-                    ntrials: int = 20,
-                    rng: np.random.Generator | None = None,
-                    return_diagnostics: bool = False):
+                    ntrials: int = 20):
     """
     Simulate a 4-option 1Q RW with one beta and four learning rates:
-      a_self_pos, a_self_neg, a_other_pos, a_other_neg   (NATURAL space)
+      a_self_pos, a_self_neg, a_other_pos, a_other_neg
 
     Each trial shows a PAIR OF OPTIONS (indices 0..3) and the agent picks one of those two.
-    Outcomes for SELF and OTHER are drawn independently from option-specific marginals over {-1,0,+1}.
+    Outcomes for SELF and OTHER are drawn independently from option-specific marginals over {-1,0,+1}
 
     Fixed design:
       - There are 6 unique option-pairs from {0,1,2,3}: (0,1),(0,2),(0,3),(1,2),(1,3),(2,3).
       - For 12 blocks, we cycle those 6 pairs twice (blocks 0..11).
-      - Across participants: even-index subjects use forward block order, odd-index use the reverse (counterbalanced).
       - Each block also has a fixed pattern type for outcome marginals, cycled over 4 types:
             (+/+), (+/-), (-/+), (-/-)  and then repeat.
         Pattern type is fixed within a block.
 
-    Returns (fast by default):
-      - choices          : (S,B,T) uint8 indices 0..3 (chosen option among the shown pair)
-      - outcomes_self    : (S,B,T) int8  in {-1,0,+1}
-      - outcomes_other   : (S,B,T) int8  in {-1,0,+1}
-      - option_pairs     : (S,B,T,2) uint8 indices for the two shown options on each trial
-      - If return_diagnostics=True, also EV, choice_prob (over 4), and PE components
+    Returns:
+      - choices          : (S,B,T) int indices 0..3 (chosen option among the shown pair)
+      - outcomes_self    : (S,B,T) int  in {-1,0,+1}
+      - outcomes_other   : (S,B,T) int  in {-1,0,+1}
+      - option_pairs     : (S,B,T,2) int indices for the two shown options on each trial
+      - also EV, ch_prob (over 4), and PE components
     """
-    if rng is None:
-        rng = np.random.default_rng()
-
-    nsubjects = params.shape[0]
-
-    # Outputs 
-    choices        = np.zeros((nsubjects, nblocks, ntrials), dtype=np.uint8)   # chosen option 0..3
-    outcomes_self  = np.zeros((nsubjects, nblocks, ntrials), dtype=np.int8)    # -1/0/+1
-    outcomes_other = np.zeros((nsubjects, nblocks, ntrials), dtype=np.int8)    # -1/0/+1
-    option_pairs   = np.zeros((nsubjects, nblocks, ntrials, 2), dtype=np.uint8)
-
-    # Optional diagnostics
-    if return_diagnostics:
-        EV_history   = np.zeros((nsubjects, nblocks, ntrials + 1, 4), dtype=np.float32)
-        choice_prob4 = np.zeros((nsubjects, nblocks, ntrials, 4), dtype=np.float32)
-        pe_self      = np.zeros((nsubjects, nblocks, ntrials), dtype=np.float32)
-        pe_other     = np.zeros((nsubjects, nblocks, ntrials), dtype=np.float32)
-        pe_self_pos  = np.zeros((nsubjects, nblocks, ntrials), dtype=np.float32)
-        pe_self_neg  = np.zeros((nsubjects, nblocks, ntrials), dtype=np.float32)
-        pe_other_pos = np.zeros((nsubjects, nblocks, ntrials), dtype=np.float32)
-        pe_other_neg = np.zeros((nsubjects, nblocks, ntrials), dtype=np.float32)
-
-    # ---- Outcome marginals P([-1, 0, +1]) with "none" fixed at 0.10 ----
-    dist_positive = np.array([0.15, 0.10, 0.75], dtype=np.float32)  # gains likely
-    dist_negative = np.array([0.75, 0.10, 0.15], dtype=np.float32)  # losses likely
-    outcome_values = np.array([-1, 0, +1], dtype=np.int8)
-
-    # Pattern types: (self_marginal, other_marginal)
-    pattern_types = (
-        (dist_positive, dist_positive),  # (+/+)
-        (dist_positive, dist_negative),  # (+/-)
-        (dist_negative, dist_positive),  # (-/+)
-        (dist_negative, dist_negative),  # (-/-)
-    )
-
-    # Fixed block sequence of pattern types (cycled); counterbalanced across participants
-    base_pattern_order = np.arange(4, dtype=np.int8)        # [0,1,2,3] repeating over blocks
-
-    # Fixed block sequence of option-pairs (cycled): 6 unique pairs repeated twice → 12 blocks
-    base_pairs = np.array([(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)], dtype=np.uint8)
-    base_pair_order = np.concatenate([base_pairs, base_pairs], axis=0)  # length 12
-
-    # Bounds check (NATURAL space)
-    beta_all, a_self_pos_all, a_self_neg_all, a_other_pos_all, a_other_neg_all = (params[:, i].astype(np.float32) for i in range(5))
+    assert nblocks % 6 == 0, "nblocks should be multiple of 6 for full counterbalancing"
+    
+    # Bounds check
+    beta_all, a_self_pos_all, a_self_neg_all, a_other_pos_all, a_other_neg_all = (params[:, i].astype(float) for i in range(5))
     if not ((beta_all > 1e-5) & (beta_all <= 20.0)).all():
         raise ValueError("beta out of bounds")
     for arr, name in [(a_self_pos_all, "a_self_pos"), (a_self_neg_all, "a_self_neg"),
@@ -529,230 +490,200 @@ def rw4a1b_simulate(params: np.ndarray,
         if not ((0.0 <= arr) & (arr <= 1.0)).all():
             raise ValueError(f"{name} out of bounds")
 
-    for s in range(nsubjects):
-        beta        = float(beta_all[s])
-        a_self_pos  = float(a_self_pos_all[s])
-        a_self_neg  = float(a_self_neg_all[s])
-        a_other_pos = float(a_other_pos_all[s])
-        a_other_neg = float(a_other_neg_all[s])
+    rng = np.random.default_rng()
+    nsubjects = params.shape[0]
 
-        # Counterbalance block order across participants (pattern & pairs together)
-        if (s % 2) == 0:
-            pattern_order = base_pattern_order
-            pair_order    = base_pair_order
-        else:
-            pattern_order = base_pattern_order[::-1]
-            pair_order    = base_pair_order[::-1]
+    # Outputs 
+    choices        = np.zeros((nsubjects, nblocks, ntrials), dtype=object) # A,B,C,D
+    outcomes_self  = np.zeros((nsubjects, nblocks, ntrials), dtype=int)    # -1/0/+1
+    outcomes_other = np.zeros((nsubjects, nblocks, ntrials), dtype=int)    # -1/0/+1
+    option_pairs   = np.zeros((nsubjects, nblocks, ntrials, 2), dtype=object)
+
+    # Optional diagnostics
+    EV           = np.zeros((nsubjects, nblocks, ntrials + 1, 4), dtype=float)
+    ch_prob      = np.zeros((nsubjects, nblocks, ntrials, 4), dtype=float)
+    pe_self      = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    pe_other     = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    pe_self_pos  = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    pe_self_neg  = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    pe_other_pos = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    pe_other_neg = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+
+    # create task structure
+    all_pairs = ['AB', 'AC', 'AD', 'BC', 'BD', 'CD']
+    letter_to_idx = {'A':0, 'B':1, 'C':2, 'D':3}
+    block_orders = list(gen_rnd_blocks(['AB', 'AC', 'AD', 'BC', 'BD', 'CD'], 
+                        nblocks=nblocks, nsubjects=nsubjects))
+    if ntrials == 20:
+        # high 75%, mid 15%, low 10%
+        opt_templates = {'+': [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 0, 0, 0, -1, -1],
+                         '-': [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0,  1,  1]}
+    else: # get proportion of good (1,0,-1) and bad (-1,0,1) at high 75%, mid 15%, low 10%
+        opt_templates = {'+': np.random.choice([1, 0, -1], size=ntrials, p=[0.75, 0.15, 0.10]),
+                         '-': np.random.choice([-1, 0, 1], size=ntrials, p=[0.75, 0.15, 0.10])}
+    opt_types = {'A': ('+','+'), 'B': ('+','-'),'C': ('-','+'), 'D': ('-','-')}
+
+    for s in range(nsubjects):
+        beta        = beta_all[s]
+        a_self_pos  = a_self_pos_all[s]
+        a_self_neg  = a_self_neg_all[s]
+        a_other_pos = a_other_pos_all[s]
+        a_other_neg = a_other_neg_all[s]
 
         for b in range(nblocks):
-            # Pattern type for this block (fixed within block)
-            pt_idx = int(pattern_order[b % 4])
-            self_marginal, other_marginal = pattern_types[pt_idx]
-            cdf_self  = np.cumsum(self_marginal)
-            cdf_other = np.cumsum(other_marginal)
+            # get block pair
+            opt1, opt2 = block_orders[s][b]
+            o1, o2 = letter_to_idx[opt1], letter_to_idx[opt2]
 
-            # Option-pair for this block (fixed within block)
-            op_a, op_b = pair_order[b]  # two option indices shown on every trial in this block
-            # Keep a small EV vector for 4 options, update it in place
-            ev_row = np.zeros(4, dtype=np.float32)
-            if return_diagnostics:
-                EV_history[s, b, 0, :] = ev_row
-
+            # create possible outcomes for this block
+            all_outcomes = {'A_self' :[np.nan]*ntrials, 'A_other':[np.nan]*ntrials,
+                            'B_self' :[np.nan]*ntrials, 'B_other':[np.nan]*ntrials,
+                            'C_self' :[np.nan]*ntrials, 'C_other':[np.nan]*ntrials,
+                            'D_self' :[np.nan]*ntrials, 'D_other':[np.nan]*ntrials
+                            }
+            for this_opt in (opt1, opt2):
+                self_kind, other_kind = opt_types[this_opt]
+                all_outcomes[f'{this_opt}_self']  = rng.permutation(opt_templates[self_kind])
+                all_outcomes[f'{this_opt}_other'] = rng.permutation(opt_templates[other_kind])
+            
+            EV[s, b, 0, :] = 0
             for t in range(ntrials):
                 # the two shown options on this trial (fixed per block)
-                option_pairs[s, b, t, 0] = op_a
-                option_pairs[s, b, t, 1] = op_b
-                shown = (op_a, op_b)
+                option_pairs[s, b, t, 0] = opt1
+                option_pairs[s, b, t, 1] = opt2
+                
+                # softmax over the two shown options
+                shown_vals = np.array([EV[s, b, t, o1], EV[s, b, t, o2]], dtype=float)
+                p = softmax(shown_vals, beta)
+                ch_prob[s, b, t, o1] = p[0]
+                ch_prob[s, b, t, o2] = p[1]
+                choices[s, b, t] = rng.choice([opt1, opt2], p=p)
+                c = letter_to_idx[choices[s, b, t]]
 
-                # ---- softmax over the two shown options ONLY (inline, stable) ----
-                shown_vals = np.array([ev_row[op_a], ev_row[op_b]], dtype=np.float64)
-                max_v = shown_vals.max()
-                exp_v = np.exp((shown_vals - max_v) * beta)
-                probs_two = exp_v / exp_v.sum()
+                # get outcomes from choices and all_outcomes
+                outcomes_self[s, b, t] = all_outcomes[f'{choices[s, b, t]}_self'][t]
+                outcomes_other[s, b, t] = all_outcomes[f'{choices[s, b, t]}_other'][t]
 
-                # sample one of the two options
-                chosen_local = int(rng.choice(2, p=probs_two))
-                option_idx = shown[chosen_local]
-                choices[s, b, t] = option_idx
+                # compute prediction errors
+                pe_self[s, b, t] = outcomes_self[s, b, t] - EV[s, b, t, c]
+                pe_other[s, b, t] = outcomes_other[s, b, t] - EV[s, b, t, c]
 
-                # (Optional) full 4-way probabilities for diagnostics
-                if return_diagnostics:
-                    # write the two shown probs into a 4-length vector
-                    p4 = np.zeros(4, dtype=np.float32)
-                    p4[op_a] = float(probs_two[0])
-                    p4[op_b] = float(probs_two[1])
-                    choice_prob4[s, b, t, :] = p4
+                pe_self_pos[s, b, t]  = pe_self[s, b, t] if pe_self[s, b, t]   >= 0.0 else 0.0
+                pe_self_neg[s, b, t]  = pe_self[s, b, t] if pe_self[s, b, t]   <  0.0 else 0.0
+                pe_other_pos[s, b, t] = pe_other[s, b, t] if pe_other[s, b, t] >= 0.0 else 0.0
+                pe_other_neg[s, b, t] = pe_other[s, b, t] if pe_other[s, b, t] <  0.0 else 0.0
 
-                # ---- sample outcomes for SELF and OTHER via inverse-CDF ----
-                r1 = rng.random()
-                r2 = rng.random()
-                outcomes_self[s,  b, t] = outcome_values[int(np.searchsorted(cdf_self,  r1))]
-                outcomes_other[s, b, t] = outcome_values[int(np.searchsorted(cdf_other, r2))]
+                # update the chosen option
+                EV[s, b, t+1, :] = EV[s, b, t, :].copy()
+                EV[s, b, t+1, c] = EV[s, b, t, c] + (a_self_pos  * pe_self_pos[s, b, t] + 
+                                                     a_self_neg  * pe_self_neg[s, b, t] + 
+                                                     a_other_pos * pe_other_pos[s, b, t] + 
+                                                     a_other_neg * pe_other_neg[s, b, t])
 
-                # ---- prediction errors ----
-                pe_self_value  = float(outcomes_self[s,  b, t]) - float(ev_row[option_idx])
-                pe_other_value = float(outcomes_other[s, b, t]) - float(ev_row[option_idx])
-
-                pe_self_pos_value  = pe_self_value  if pe_self_value  > 0.0 else 0.0
-                pe_self_neg_value  = pe_self_value  if pe_self_value  < 0.0 else 0.0
-                pe_other_pos_value = pe_other_value if pe_other_value > 0.0 else 0.0
-                pe_other_neg_value = pe_other_value if pe_other_value < 0.0 else 0.0
-
-                # ---- update only the chosen option ----
-                ev_row[option_idx] = (
-                    ev_row[option_idx]
-                    + a_self_pos  * pe_self_pos_value
-                    + a_self_neg  * pe_self_neg_value
-                    + a_other_pos * pe_other_pos_value
-                    + a_other_neg * pe_other_neg_value
-                )
-
-                if return_diagnostics:
-                    pe_self[s,  b, t] = pe_self_value
-                    pe_other[s, b, t] = pe_other_value
-                    pe_self_pos[s,  b, t]  = pe_self_pos_value
-                    pe_self_neg[s,  b, t]  = pe_self_neg_value
-                    pe_other_pos[s, b, t]  = pe_other_pos_value
-                    pe_other_neg[s, b, t]  = pe_other_neg_value
-                    EV_history[s, b, t + 1, :] = ev_row
-
-    result = {
-        "params": params,
-        "choices": choices,                # chosen option indices (0..3)
-        "outcomes_self": outcomes_self,    # -1/0/+1
-        "outcomes_other": outcomes_other,  # -1/0/+1
-        "option_pairs": option_pairs,      # which two options were shown on each trial
-    }
-    if return_diagnostics:
-        result.update({
-            "EV": EV_history,
-            "choice_prob": choice_prob4,
+    return {"params": params,
+            "choices": choices,                # chosen option indices (A,B,C,D)
+            "outcomes_self": outcomes_self,    # -1/0/+1
+            "outcomes_other": outcomes_other,  # -1/0/+1
+            "option_pairs": option_pairs,      # which two options were shown on each trial
+            "EV": EV,
+            "ch_prob": ch_prob,
             "pe_self": pe_self,
             "pe_other": pe_other,
             "pe_self_pos": pe_self_pos,
             "pe_self_neg": pe_self_neg,
             "pe_other_pos": pe_other_pos,
             "pe_other_neg": pe_other_neg,
-        })
-    return result
+            }
 
-
-# ------------------------------------------------------------
-# 1Q–4α–1β  FIT  (normalized space)
-# ------------------------------------------------------------
+# ----------------------------------
+# 1Q–4α–1β FIT (Rhoads et al., 2025)
+# ----------------------------------
 def rw4a1b_fit(params: np.ndarray,
-               choices: np.ndarray,          # (B,T) chosen option indices 0..3 (int ok; letters also accepted)
-               outcomes_self: np.ndarray,    # (B,T) in {-1,0,+1}
-               outcomes_other: np.ndarray,   # (B,T) in {-1,0,+1}
-               option_pairs: np.ndarray,     # (B,T,2) indices of shown options per trial
+               choices: np.ndarray,        # (B,T) chosen options (A,B,C,D)
+               outcomes_self: np.ndarray,  # (B,T) in {-1,0,+1}
+               outcomes_other: np.ndarray, # (B,T) in {-1,0,+1}
+               option_pairs: np.ndarray,   # (B,T,2) indices of shown options per trial
                prior=None,
                output: str = "npl"):
-    """
-    Thin EM adapter using ONLY the two shown options per trial for likelihood.
-    params are in NORMALIZED space; mapped via your helpers:
 
-      beta        = norm2beta(params[0])
-      a_self_pos  = norm2alpha(params[1])
-      a_self_neg  = norm2alpha(params[2])
-      a_other_pos = norm2alpha(params[3])
-      a_other_neg = norm2alpha(params[4])
-
-    Returns calc_fval(NLL, ...) unless output == "all", which returns diagnostics.
-    """
-    beta        = float(norm2beta(params[0]))
-    a_self_pos  = float(norm2alpha(params[1]))
-    a_self_neg  = float(norm2alpha(params[2]))
-    a_other_pos = float(norm2alpha(params[3]))
-    a_other_neg = float(norm2alpha(params[4]))
+    beta        = norm2beta(params[0])
+    a_self_pos  = norm2alpha(params[1])
+    a_self_neg  = norm2alpha(params[2])
+    a_other_pos = norm2alpha(params[3])
+    a_other_neg = norm2alpha(params[4])
 
     # Bounds
-    if not (1e-5 <= beta <= 20.0): return 1e7
+    if not (1e-5 <= beta <= 20.0):
+        return 1e7
     for a in (a_self_pos, a_self_neg, a_other_pos, a_other_neg):
-        if not (0.0 <= a <= 1.0): return 1e7
+        if not (0.0 <= a <= 1.0):
+            return 1e7
 
-    # Ensure integer choices (accept letters too)
+    # Convert choices (accepts letters or indices)
     choices_arr = np.asarray(choices)
     if not np.issubdtype(choices_arr.dtype, np.number):
         letter_to_idx = {'A':0, 'B':1, 'C':2, 'D':3}
         choices_arr = np.vectorize(letter_to_idx.get)(choices_arr)
-    choices_arr = choices_arr.astype(np.uint8, copy=False)
+    choices_arr = choices_arr.astype(int, copy=False)
 
     nblocks, ntrials = outcomes_self.shape
-    EV  = np.zeros((nblocks, ntrials + 1, 4), dtype=np.float32)
+    EV           = np.zeros((nblocks, ntrials + 1, 4), dtype=float)
+    ch_prob      = np.zeros((nblocks, ntrials, 4), dtype=float)
+    pe_self      = np.zeros((nblocks, ntrials), dtype=float)
+    pe_other     = np.zeros((nblocks, ntrials), dtype=float)
+    pe_self_pos  = np.zeros((nblocks, ntrials), dtype=float)
+    pe_self_neg  = np.zeros((nblocks, ntrials), dtype=float)
+    pe_other_pos = np.zeros((nblocks, ntrials), dtype=float)
+    pe_other_neg = np.zeros((nblocks, ntrials), dtype=float)
+
     nll = 0.0
-
-    if output == "all":
-        choice_prob = np.zeros((nblocks, ntrials, 2), dtype=np.float32)
-        pe_self     = np.zeros((nblocks, ntrials), dtype=np.float32)
-        pe_other    = np.zeros((nblocks, ntrials), dtype=np.float32)
-        pe_self_pos = np.zeros((nblocks, ntrials), dtype=np.float32)
-        pe_self_neg = np.zeros((nblocks, ntrials), dtype=np.float32)
-        pe_other_pos= np.zeros((nblocks, ntrials), dtype=np.float32)
-        pe_other_neg= np.zeros((nblocks, ntrials), dtype=np.float32)
-
     for b in range(nblocks):
         EV[b, 0, :] = 0.0
         for t in range(ntrials):
-            shown_a = int(option_pairs[b, t, 0])
-            shown_b = int(option_pairs[b, t, 1])
-            shown   = (shown_a, shown_b)
+            # get shown options
+            opt1, opt2 = option_pairs[b, t, 0], option_pairs[b, t, 1]
+            o1, o2 = letter_to_idx[opt1], letter_to_idx[opt2]
 
-            # softmax over the two shown options ONLY (inline, stable)
-            shown_vals = np.array([EV[b, t, shown_a], EV[b, t, shown_b]], dtype=np.float64)
-            max_v = shown_vals.max()
-            exp_v = np.exp((shown_vals - max_v) * beta)
-            probs_two = exp_v / exp_v.sum()
+            # get probability of the chosen option
+            c = letter_to_idx[choices[b, t]]
+            shown_vals = np.array([EV[b, t, o1], EV[b, t, o2]], dtype=float)
+            probs_two  = softmax(shown_vals, beta)  # len=2
+            ch_prob[b, t, o1] = probs_two[0]
+            ch_prob[b, t, o2] = probs_two[1]
+            nll += -np.log(probs_two[0] if c == o1 else probs_two[1] + 1e-12)
 
-            chosen_option = int(choices_arr[b, t])
-            chosen_local  = 0 if chosen_option == shown_a else 1  # index within the shown pair
+            # compute prediction errors
+            pe_self[b, t]  = outcomes_self[b, t]  - EV[b, t, c]
+            pe_other[b, t] = outcomes_other[b, t] - EV[b, t, c]
 
-            if output == "all":
-                choice_prob[b, t, :] = probs_two
-            nll += -np.log(float(probs_two[chosen_local]) + 1e-12)
+            pe_self_pos[b, t]  = pe_self[b, t]  if pe_self[b, t]  >= 0.0 else 0.0
+            pe_self_neg[b, t]  = pe_self[b, t]  if pe_self[b, t]  <  0.0 else 0.0
+            pe_other_pos[b, t] = pe_other[b, t] if pe_other[b, t] >= 0.0 else 0.0
+            pe_other_neg[b, t] = pe_other[b, t] if pe_other[b, t] <  0.0 else 0.0
 
-            # PEs w.r.t. chosen option
-            pe_self_value  = float(outcomes_self[b, t])  - float(EV[b, t, chosen_option])
-            pe_other_value = float(outcomes_other[b, t]) - float(EV[b, t, chosen_option])
-
-            pe_self_pos_value  = pe_self_value  if pe_self_value  > 0.0 else 0.0
-            pe_self_neg_value  = pe_self_value  if pe_self_value  < 0.0 else 0.0
-            pe_other_pos_value = pe_other_value if pe_other_value > 0.0 else 0.0
-            pe_other_neg_value = pe_other_value if pe_other_value < 0.0 else 0.0
-
-            # Update chosen option only
-            EV[b, t + 1, :] = EV[b, t, :]
-            EV[b, t + 1, chosen_option] = (
-                EV[b, t, chosen_option]
-                + a_self_pos  * pe_self_pos_value
-                + a_self_neg  * pe_self_neg_value
-                + a_other_pos * pe_other_pos_value
-                + a_other_neg * pe_other_neg_value
-            )
-
-            if output == "all":
-                pe_self[b,  t] = pe_self_value
-                pe_other[b, t] = pe_other_value
-                pe_self_pos[b,  t]  = pe_self_pos_value
-                pe_self_neg[b,  t]  = pe_self_neg_value
-                pe_other_pos[b, t]  = pe_other_pos_value
-                pe_other_neg[b, t]  = pe_other_neg_value
+            # update chosen option
+            EV[b, t+1, :] = EV[b, t, :].copy()
+            EV[b, t+1, c] = EV[b, t, c] + (a_self_pos  * pe_self_pos[b, t] +
+                                           a_self_neg  * pe_self_neg[b, t] +
+                                           a_other_pos * pe_other_pos[b, t] +
+                                           a_other_neg * pe_other_neg[b, t])
 
     if output == "all":
         return {
             "params": [beta, a_self_pos, a_self_neg, a_other_pos, a_other_neg],
+            "choices": choices_arr,
+            "outcomes_self": outcomes_self,
+            "outcomes_other": outcomes_other,
+            "option_pairs": option_pairs,
             "EV": EV,
             "nll": nll,
-            "choice_prob_two": choice_prob,  # probabilities over the two shown options
+            "ch_prob": ch_prob,
             "pe_self": pe_self,
             "pe_other": pe_other,
             "pe_self_pos": pe_self_pos,
             "pe_self_neg": pe_self_neg,
             "pe_other_pos": pe_other_pos,
             "pe_other_neg": pe_other_neg,
-            "choices": choices_arr,
-            "outcomes_self": outcomes_self,
-            "outcomes_other": outcomes_other,
-            "option_pairs": option_pairs,
         }
-
-    return calc_fval(nll, params, prior=prior, output=output)
+    else:
+        return calc_fval(nll, params, prior=prior, output=output)
