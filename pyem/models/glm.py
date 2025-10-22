@@ -1,10 +1,9 @@
 
-from __future__ import annotations
 import numpy as np
 from scipy.stats import norm
 from ..utils.math import norm2alpha, calc_fval
 
-def simulate(params: np.ndarray, ntrials: int = 100):
+def glm_sim(params: np.ndarray, ntrials: int = 100):
     """Generate data from a standard linear regression model."""
     n_obs, nparams = params.shape
     Y = np.zeros((n_obs, ntrials))
@@ -18,7 +17,7 @@ def simulate(params: np.ndarray, ntrials: int = 100):
         Y[s, :] = X[s].dot(params[s]) + rng.normal(size=(ntrials,))
     return X, Y
 
-def fit(params, X, Y, prior=None, output: str = 'npl'):
+def glm_fit(params, X, Y, prior=None, output: str = 'npl'):
     """Negative log-likelihood for a Gaussian GLM."""
     pred = X.dot(params)
     resid_sigma = np.std(Y - pred)
@@ -33,7 +32,7 @@ def fit(params, X, Y, prior=None, output: str = 'npl'):
             'BIC': len(params) * np.log(len(Y)) + 2 * negll,
         }
 
-def simulate_decay(params, ntrials: int = 100):
+def glm_decay_sim(params, ntrials: int = 100):
     """Simulate GLM data with exponentially discounted predictors."""
     n_obs, nparams_with_gamma = params.shape
     nparams = nparams_with_gamma - 1
@@ -54,7 +53,7 @@ def simulate_decay(params, ntrials: int = 100):
             Y[s, t] = discounted.dot(pv) + rng.normal()
     return X, Y
 
-def fit_decay(params, X, Y, prior=None, output: str = 'npl', decay: str = 'twostep'):
+def glm_decay_fit(params, X, Y, prior=None, output: str = 'npl', decay: str = 'twostep'):
     """GLM with exponentially decaying regressors.
 
     ``params`` contains the regression weights followed by a discount factor
