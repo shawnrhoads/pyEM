@@ -1,4 +1,3 @@
-from __future__ import annotations
 import numpy as np
 from ..utils.math import norm2alpha, calc_fval
 
@@ -15,7 +14,7 @@ def _generate_fishp(lambda1: float, n_fish: int) -> np.ndarray:
     fishp = np.eye(n_fish) * m + (1 - np.eye(n_fish)) * s
     return fishp
 
-def simulate(params: np.ndarray, nblocks: int = 10, ntrials: int = 15,
+def bayes_sim(params: np.ndarray, nblocks: int = 10, ntrials: int = 15,
              n_fish: int = 3) -> dict:
     """Simulate the fish task described in the repository documentation.
 
@@ -68,7 +67,7 @@ def simulate(params: np.ndarray, nblocks: int = 10, ntrials: int = 15,
         "ponds": ponds,
     }
 
-def fit(params, choices, observations, prior=None, output: str = 'npl'):
+def bayes_fit(params, choices, observations, prior=None, output: str = 'npl'):
     """Likelihood for the fish task.
 
     Parameters are supplied in Gaussian space and transformed to ``lambda1``
