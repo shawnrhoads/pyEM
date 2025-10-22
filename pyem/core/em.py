@@ -19,7 +19,7 @@ class EMConfig:
     convergence_custom: Literal["relative_npl","running_average", None] = None
     convergence_crit: float = 1e-3
     convergence_precision: int = 6
-    njobs: int = -1
+    njobs: int = -2
     optim: OptimConfig = field(default_factory=OptimConfig)
     seed: int | None = None
     max_subject_retries: int = 0              # additional retries if optimizer fails badly

@@ -101,7 +101,7 @@ class EMModel:
         convergence_custom: str | None = None,
         convergence_crit: float = 1e-3,
         convergence_precision: int = 6,
-        njobs: int = -1,
+        njobs: int = -2,
         optim_method: str = "BFGS",
         optim_options: dict | None = None,
         max_restarts: int = 2,
