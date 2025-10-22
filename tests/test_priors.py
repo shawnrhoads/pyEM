@@ -1,13 +1,13 @@
 import numpy as np
 from pyem.api import EMModel
 from pyem.core.priors import GaussianPrior
-from pyem.models.rl import rw1a1b_fit as rw_fit, rw1a1b_simulate as rw_simulate
+from pyem.models.rl import rw1a1b_fit as rw_fit, rw1a1b_sim as rw_sim
 from test_helpers import _simulate_rw_params
 
 def test_uniform_prior_and_fit():
     nsubjects, nblocks, ntrials = 10, 1, 4
     params = _simulate_rw_params(nsubjects)
-    sim = rw_simulate(params, nblocks=nblocks, ntrials=ntrials)
+    sim = rw_sim(params, nblocks=nblocks, ntrials=ntrials)
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
     prior = GaussianPrior(mu=[0.0, 0.0], sigma=[100.0, 100.0])
