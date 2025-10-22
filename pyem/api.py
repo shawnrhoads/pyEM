@@ -415,7 +415,7 @@ class EMModel:
 
         # Fine-tune constrained_layout paddings (reduces big gutters)
         # w_pad/h_pad: padding around the figure edges; wspace/hspace: padding between subplots
-        fig.set_constrained_layout_pads()
+        fig.get_layout_engine().set() #h_pad=X, w_pad=Y, hspace=Z, wspace=W
 
         axes = axes.ravel()
         names = list(self.param_names)[:nparams]
