@@ -9,7 +9,7 @@
 <b>If you use these materials for teaching or research, please use the following citation:</b>
 > Rhoads, S. A. (2023). pyEM: Expectation Maximization with MAP estimation in Python. Zenodo. <a href="https://doi.org/10.5281/zenodo.10415396">https://doi.org/10.5281/zenodo.10415396</a>
 
-> Rhoads, S. A., Gan, L., Berluti, K., O'Connell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2025). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. In press at *Nature Communications*.
+> Rhoads, S. A., Gan, L., Berluti, K., O'Connell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2025). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. In press at *Nature Communications*. https://doi.org/10.1038/s41467-025-64424-9
 
 This is a Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation for fitting models to behavioral data. [See below](#key-concepts) for more information on the algorithm.
 
@@ -23,7 +23,7 @@ from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
-from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
+from pyem.models.rl import rw1a1b_sim, rw1a1b_fit
 
 # Settings
 nsubjects, nblocks, ntrials = 100, 4, 24
@@ -36,7 +36,7 @@ a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
 alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
 
 true_params = np.column_stack((beta_rv, alpha_rv))
-sim = rw1a1b_simulate(true_params, nblocks=nblocks, ntrials=ntrials)
+sim = rw1a1b_sim(true_params, nblocks=nblocks, ntrials=ntrials)
 all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
 # Create and fit model
@@ -75,7 +75,7 @@ from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
-from pyem.models.rl import rw1a1b_simulate, rw1a1b_fit
+from pyem.models.rl import rw1a1b_sim, rw1a1b_fit
 
 # Settings
 nsubjects, nblocks, ntrials = 100, 4, 24
@@ -88,7 +88,7 @@ a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
 alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
 
 true_params = np.column_stack((beta_rv, alpha_rv))
-sim = rw1a1b_simulate(true_params, nblocks=nblocks, ntrials=ntrials)
+sim = rw1a1b_sim(true_params, nblocks=nblocks, ntrials=ntrials)
 all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
 # Create model object
@@ -97,7 +97,7 @@ model = EMModel(
     fit_func=rw1a1b_fit,
     param_names=["beta", "alpha"],
     param_xform=[norm2beta, norm2alpha], # Parameter transformation functions
-    simulate_func=rw1a1b_simulate
+    simulate_func=rw1a1b_sim
 )
 
 # Perform parameter recovery
@@ -126,7 +126,7 @@ import numpy as np
 from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
-from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
+from pyem.models.rl import rw1a1b_fit, rw1a1b_sim, rw2a1b_fit, rw2a1b_sim
 from pyem.utils.math import norm2alpha, norm2beta
 
 # Settings
@@ -140,19 +140,19 @@ a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
 alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
 true_params = np.column_stack((beta_rv, alpha_rv))
 
-rw1a1b_sim = rw1a1b_simulate(true_params, nblocks=nblocks, ntrials=ntrials)
+rw1a1b_sim = rw1a1b_sim(true_params, nblocks=nblocks, ntrials=ntrials)
 rw1a1b_data = [[c, r] for c, r in zip(rw1a1b_sim["choices"], rw1a1b_sim["rewards"])]
 
 # Create multiple models for comparison
 model1 = EMModel(rw1a1b_data, rw1a1b_fit, 
                  param_names=["beta", "alpha"],
                  param_xform=[norm2beta, norm2alpha],
-                 simulate_func=rw1a1b_simulate)
+                 simulate_func=rw1a1b_sim)
 
 model2 = EMModel(rw1a1b_data, rw2a1b_fit,
                  param_names=["beta", "alpha_pos", "alpha_neg"],
                  param_xform=[norm2beta, norm2alpha, norm2alpha],
-                 simulate_func=rw2a1b_simulate)
+                 simulate_func=rw2a1b_sim)
 
 # Fit both models
 res1 = model1.fit(verbose=0)
@@ -200,19 +200,19 @@ You can visualize these results with `plot_identifiability()`, which plots an **
 ```python
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
-from pyem.models.rl import rw1a1b_fit, rw1a1b_simulate, rw2a1b_fit, rw2a1b_simulate
+from pyem.models.rl import rw1a1b_fit, rw1a1b_sim, rw2a1b_fit, rw2a1b_sim
 from pyem.utils.math import norm2alpha, norm2beta
 
 # Construct two candidate models
 model1 = EMModel(all_data, rw1a1b_fit, 
                  param_names=["beta", "alpha"],
                  param_xform=[norm2beta, norm2alpha],
-                 simulate_func=rw1a1b_simulate)
+                 simulate_func=rw1a1b_sim)
 
 model2 = EMModel(all_data, rw2a1b_fit,
                  param_names=["beta", "alpha_pos", "alpha_neg"],
                  param_xform=[norm2beta, norm2alpha, norm2alpha],
-                 simulate_func=rw2a1b_simulate)
+                 simulate_func=rw2a1b_sim)
 
 # Run identifiability analysis
 mi_df = mc.identify(
@@ -268,8 +268,8 @@ The package includes several pre-implemented models:
 
 ### Reinforcement Learning Models (`pyem.models.rl`)
 
-* **`rw1a1b_simulate/fit`**: Rescorla-Wagner model with single learning rate
-* **`rw2a1b_simulate/fit`**: Rescorla-Wagner model with separate learning rates for positive/negative prediction errors
+* **`rw1a1b_sim/fit`**: Rescorla-Wagner model with single learning rate
+* **`rw2a1b_sim/fit`**: Rescorla-Wagner model with separate learning rates for positive/negative prediction errors
 
 ### Creating Custom Models
 
@@ -318,7 +318,7 @@ def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
 
     return calc_fval(nll, params, prior=prior, output=output)
 
-def my_model_simulate(params, **kwargs):
+def my_model_sim(params, **kwargs):
     """
     Simulation function for your custom model.
     
