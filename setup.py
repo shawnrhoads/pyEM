@@ -23,6 +23,6 @@ setup(
     ),
     url=github_url,
     author=', '.join(authors), 
-    packages=find_packages(),
+    packages=find_packages(include=["pyem", "pyem.*"]),
     install_requires=required,
 )
