@@ -228,3 +228,69 @@ def logit_decay_fit(
             'BIC': len(params) * np.log(len(Y)) + 2 * negll,
             'gamma': gamma,
         }
+
+def glm_ar_sim(params: np.ndarray, ntrials: int = 100):
+    """
+    Generate data from a linear regression model with an AR(1) term.
+    params: shape (n_obs, nparams). Last column is AR(1) coefficient phi.
+    """
+    n_obs, nparams = params.shape
+    phi_idx = nparams - 1  # last parameter = AR coefficient
+    beta_idx = np.arange(nparams - 1)  # all but last param
+
+    Y = np.zeros((n_obs, ntrials))
+    X = np.zeros((n_obs, ntrials, nparams - 1))
+    rng = np.random.default_rng(2021)
+
+    for s in range(n_obs):
+        # predictors: intercept + random covariates (exclude AR param)
+        X[s, :, :] = np.concatenate(
+            [np.ones((ntrials, 1)), rng.normal(size=(ntrials, nparams - 2))],
+            axis=1
+        )
+
+        beta = params[s, beta_idx]
+        phi = params[s, phi_idx]
+
+        # baseline linear part
+        lin = X[s].dot(beta)
+
+        # apply AR(1) recursion: y_t = lin_t + phi * y_{t-1} + noise
+        y = np.zeros(ntrials)
+        y[0] = lin[0] + rng.normal()  # initial
+        for t in range(1, ntrials):
+            y[t] = lin[t] + phi * y[t-1] + rng.normal()
+
+        Y[s, :] = y
+
+    return X, Y
+
+def glm_ar_fit(params, X, Y, prior=None, output: str = 'npl'):
+    """
+    Negative log-likelihood for Gaussian regression with an AR(1) term.
+    params: includes intercept, betas..., phi
+    """
+    beta = params[:-1]
+    phi = params[-1]
+
+    # linear predictor without AR part
+    lin = X.dot(beta)
+
+    # construct AR(1) predictions over time
+    pred = np.zeros_like(Y)
+    pred[0] = lin[0]
+    for t in range(1, len(Y)):
+        pred[t] = lin[t] + phi * Y[t-1]  # AR uses observed y_{t-1}
+
+    resid_sigma = np.std(Y - pred)
+    negll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
+
+    if output in ('npl', 'nll'):
+        return calc_fval(negll, params, prior=prior, output=output)
+    elif output == 'all':
+        return {
+            'params': np.hstack([beta, phi]),
+            'predicted_y': pred,
+            'negll': negll,
+            'BIC': len(params) * np.log(len(Y)) + 2 * negll,
+        }
