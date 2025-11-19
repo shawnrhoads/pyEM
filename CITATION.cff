@@ -1,0 +1,11 @@
+cff-version: 0.2.2
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Rhoads"
+  given-names: "Shawn A."
+  orcid: "https://orcid.org0000-0003-1350-9458"
+title: "pyEM: Expectation Maximization with MAP estimation in Python"
+version: 0.2.2
+doi: 10.5281/zenodo.10415396
+date-released: 2023-12-21
+url: "https://github.com/shawnrhoads/pyEMt"
