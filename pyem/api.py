@@ -338,11 +338,11 @@ class EMModel:
             )
 
         # Build all_data as rows of the selected inputs (e.g., [choice, reward] per trial)
-        all_data = [list(row) for row in zip(*(sim[k] for k in pr_inputs))]
+        self.all_data = [list(row) for row in zip(*(sim[k] for k in pr_inputs))]
 
         # Create new model instance with simulated data
         recovery_model = EMModel(
-            all_data=all_data,
+            all_data=self.all_data,
             fit_func=self.fit_func,
             param_names=self.param_names,
             simulate_func=simulate_func,
