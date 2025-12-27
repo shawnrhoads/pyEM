@@ -362,6 +362,7 @@ class EMModel:
             'sim': sim,
             'fit_result': fit_result,
             'correlation': corr,
+            'recovery_model': recovery_model
         }
 
         self._out = recovery_model._out
