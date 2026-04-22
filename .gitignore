@@ -153,3 +153,4 @@ cython_debug/
 
 # use `.scratch` to store temporary files
 .scratch/
+venv.zip
