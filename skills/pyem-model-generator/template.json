@@ -1,0 +1,78 @@
+{
+  "model_class": "",
+  "model_name": "",
+  "module_path": "pyem/models/{model_class}.py",
+  "imports": [
+    "import numpy as np",
+    "from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval"
+  ],
+  "parameters": [
+    {
+      "name": "beta",
+      "index": 0,
+      "description": "Inverse temperature",
+      "sim_space": "natural",
+      "fit_space": "normalized",
+      "transform": "norm2beta",
+      "bounds": [1e-05, 20.0]
+    },
+    {
+      "name": "alpha",
+      "index": 1,
+      "description": "Learning rate",
+      "sim_space": "natural",
+      "fit_space": "normalized",
+      "transform": "norm2alpha",
+      "bounds": [0.0, 1.0]
+    }
+  ],
+  "sim": {
+    "signature": "{model_name}_sim(params, nblocks, ntrials, **kwargs)",
+    "inputs": {
+      "nblocks": 4,
+      "ntrials": 12,
+      "custom": [
+        {
+          "name": "seed",
+          "type": "int | None",
+          "required": false,
+          "description": "Seed for np.random.default_rng."
+        },
+        {
+          "name": "outcomes",
+          "type": "np.ndarray | None",
+          "required": false,
+          "description": "Optional externally supplied outcomes."
+        }
+      ]
+    },
+    "state_arrays": ["choices", "rewards", "EV", "PE", "nll"],
+    "output_keys": ["params", "choices", "rewards", "EV", "PE", "nll"]
+  },
+  "fit": {
+    "signature": "{model_name}_fit(params, *, prior=None, output=\"npl\", **kwargs)",
+    "required_inputs": ["choices", "rewards"],
+    "output_modes": ["npl", "nll", "all"],
+    "all_output_keys": ["params", "nll"],
+    "failure_return": 10000000.0,
+    "objective": "calc_fval(nll, params, prior=prior, output=output)"
+  },
+  "variants": {
+    "requested": false,
+    "variant_names": [],
+    "differences": ""
+  },
+  "notebook": {
+    "path": "examples/{model_class}.ipynb",
+    "include_parameter_recovery_plot": true,
+    "sections": [
+      "Model and task overview",
+      "Parameter specification",
+      "Simulation example",
+      "Fit simulated behavior",
+      "Parameter recovery plot",
+      "Result summary"
+    ],
+    "random_seed": 123
+  }
+}
