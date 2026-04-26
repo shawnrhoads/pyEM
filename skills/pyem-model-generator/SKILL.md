@@ -34,6 +34,33 @@ Required items to confirm:
 4. Sim output keys and fit output modes.
 5. Variant definitions (if requested).
 
+
+## Converting free-text model descriptions into code
+
+When the user provides prose/equations instead of a filled template:
+
+1. Copy the text into `template.description_input.raw_text`.
+2. Extract structured fields into `template.description_input.extracted_spec`:
+   - task flow (stimulus, choice set, outcomes, feedback),
+   - tensor shapes (subject/block/trial/option),
+   - latent state names (`Q_self`, `Q_other`, etc.),
+   - update equations,
+   - choice policy equation(s),
+   - variant catalog and parameter toggles.
+3. Normalize equation variables into valid Python names and map them to parameter definitions.
+4. If any mapping is ambiguous (for example sign conventions or variant naming), ask targeted follow-up questions before code generation.
+5. Generate sim/fit using the extracted spec and preserve the user's intended equations exactly.
+
+### Example: social signals description
+
+For text like a “social signals task” with three options (A/B/C), dual value tracks (`Q_self`, `Q_other`), and policy variants, produce:
+
+- arrays shaped `(nsubjects, nblocks, ntrials, 3)` for option-level values/probabilities,
+- update rules for `Q_self` and `Q_other` with separate learning-rate/valence parameters where requested,
+- base policy `softmax(beta * (w_self * Q_self + w_other * Q_other))`,
+- arbitration variants `p = (1-omega) * softmax(beta * Q_self) + omega * softmax(beta * Q_other)`,
+- variant names tracked in template `variants.variant_names` and parsed parameter switches in `description_input.extracted_spec.variant_rules`.
+
 ## pyEM import and function format (pseudo code)
 
 ```python
@@ -125,8 +152,8 @@ def {model_name}_fit(
 
 ## Generation workflow
 
-1. Load `template.json` and, if package context is missing, load the two files under `references/`.
-2. If fields are missing, ask follow-up questions and wait for answers.
+1. Load `template.json` and, if package context is missing, load relevant files under `references/`.
+2. If the user supplied prose/equations, parse them into `description_input.extracted_spec`; if fields remain missing, ask follow-up questions and wait for answers.
 3. Generate `pyem/models/{model_class}.py` using imports, signatures, transforms, and output keys in the template.
 4. Generate `examples/{model_class}.ipynb` from `references/example-notebook-template.json` and align section order to `examples/rl.ipynb`, `examples/bayes.ipynb`, and `examples/glm.ipynb` conventions:
    - model/task description,

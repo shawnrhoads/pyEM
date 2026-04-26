@@ -1,6 +1,6 @@
 # pyem-model-generator skill
 
-Use this skill to scaffold new computational cognitive models for pyEM that are not in base `pyem`.
+Use this skill to scaffold new computational cognitive models for pyEM that are not in base `pyem`, including from free-text task/model descriptions with equations.
 
 ## What it generates
 
@@ -34,3 +34,9 @@ If the runtime does not include full `pyem` source files, use:
 - `references/parameter-recovery-notebook.md`
 
 These provide enough contract detail to generate pyEM-compatible sim/fit functions and notebook recovery plots.
+
+
+## Free-text description support
+
+If you provide prose + equations instead of a filled template, the skill will parse text into `description_input.extracted_spec`.
+Use `description_examples.social_signals` in `template.json` as a worked example of this conversion.

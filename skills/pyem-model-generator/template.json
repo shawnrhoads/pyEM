@@ -111,5 +111,69 @@
       "plot_identity_line": true,
       "plot_corr_in_title": true
     }
+  },
+  "description_input": {
+    "raw_text": "",
+    "extracted_spec": {
+      "task_name": "",
+      "task_flow": [],
+      "choice_set": [
+        "A",
+        "B"
+      ],
+      "nchoices": 2,
+      "state_tensors": [
+        {
+          "name": "Q_self",
+          "shape": "(nsubjects, nblocks, ntrials+1, nchoices)"
+        },
+        {
+          "name": "Q_other",
+          "shape": "(nsubjects, nblocks, ntrials+1, nchoices)"
+        }
+      ],
+      "update_equations": [],
+      "choice_rule": "",
+      "variant_rules": []
+    }
+  },
+  "description_examples": {
+    "social_signals": {
+      "task_name": "social signals task",
+      "nsubjects": 100,
+      "sim_inputs": {
+        "nblocks": 4,
+        "ntrials": 12,
+        "nchoices": 3
+      },
+      "task_flow": [
+        "show three options A/B/C",
+        "store choice in (subject, block, trial) array",
+        "observe clear signal outcome_self in {0,1}",
+        "observe partner social feedback mapped to outcome_other"
+      ],
+      "state_tensors": [
+        {
+          "name": "Q_self",
+          "shape": "(nsubjects, nblocks, ntrials+1, 3)"
+        },
+        {
+          "name": "Q_other",
+          "shape": "(nsubjects, nblocks, ntrials+1, 3)"
+        }
+      ],
+      "update_equations": [
+        "Q_self[s,b,t+1,c] = Q_self[s,b,t,c] + alpha_self * (outcome_self[s,b,t] - Q_self[s,b,t,c])",
+        "Q_other[s,b,t+1,c] = Q_other[s,b,t,c] + alpha_other * (outcome_other[s,b,t] - Q_other[s,b,t,c])"
+      ],
+      "choice_rule": "p(choice) = softmax(beta * (w_self*Q_self[s,b,t,c] + w_other*Q_other[s,b,t,c]))",
+      "outcome_other_definition": "social_sensitivity_pos*1 if positive else social_sensitivity_neg*-1",
+      "variant_rules": [
+        "1b2w2a: alpha_self, alpha_other with valence-sensitive theta terms",
+        "1b2w2a2t: alpha_self_pos, alpha_self_neg, alpha_other_pos, alpha_other_neg",
+        "1b2w2a4t: separate self and other sensitivity for pos/neg outcomes",
+        "1b1o2a4t/1b1o1a4t/1b1o2a2t/1b1o2a: arbitration p=(1-omega)*softmax(beta*Q_self)+omega*softmax(beta*Q_other)"
+      ]
+    }
   }
 }
