@@ -16,6 +16,7 @@ Use this skill to scaffold new computational cognitive models for pyEM that are 
 
 - `template.json` (simple main template)
 - `rl.json`, `bayes.json`, `glm.json` (reference anchors)
+- `references/example-notebook-template.json` (parameter recovery notebook template)
 
 ## How to use
 

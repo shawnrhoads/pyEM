@@ -14,7 +14,10 @@
       "sim_space": "natural",
       "fit_space": "normalized",
       "transform": "norm2beta",
-      "bounds": [1e-05, 20.0]
+      "bounds": [
+        1e-05,
+        20.0
+      ]
     },
     {
       "name": "alpha",
@@ -23,7 +26,10 @@
       "sim_space": "natural",
       "fit_space": "normalized",
       "transform": "norm2alpha",
-      "bounds": [0.0, 1.0]
+      "bounds": [
+        0.0,
+        1.0
+      ]
     }
   ],
   "sim": {
@@ -46,14 +52,37 @@
         }
       ]
     },
-    "state_arrays": ["choices", "rewards", "EV", "PE", "nll"],
-    "output_keys": ["params", "choices", "rewards", "EV", "PE", "nll"]
+    "state_arrays": [
+      "choices",
+      "rewards",
+      "EV",
+      "PE",
+      "nll"
+    ],
+    "output_keys": [
+      "params",
+      "choices",
+      "rewards",
+      "EV",
+      "PE",
+      "nll"
+    ]
   },
   "fit": {
     "signature": "{model_name}_fit(params, *, prior=None, output=\"npl\", **kwargs)",
-    "required_inputs": ["choices", "rewards"],
-    "output_modes": ["npl", "nll", "all"],
-    "all_output_keys": ["params", "nll"],
+    "required_inputs": [
+      "choices",
+      "rewards"
+    ],
+    "output_modes": [
+      "npl",
+      "nll",
+      "all"
+    ],
+    "all_output_keys": [
+      "params",
+      "nll"
+    ],
     "failure_return": 10000000.0,
     "objective": "calc_fval(nll, params, prior=prior, output=output)"
   },
@@ -73,6 +102,14 @@
       "Parameter recovery plot",
       "Result summary"
     ],
-    "random_seed": 123
+    "random_seed": 123,
+    "template_file": "references/example-notebook-template.json",
+    "pattern_source": "examples/rl.ipynb, examples/bayes.ipynb, examples/glm.ipynb",
+    "nsubjects": 50,
+    "param_recovery": {
+      "use_emmodel_recover": true,
+      "plot_identity_line": true,
+      "plot_corr_in_title": true
+    }
   }
 }

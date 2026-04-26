@@ -17,6 +17,7 @@ When full `pyem` package files are unavailable, load:
 
 - `references/pyem-runtime-contract.md` for utility and fit contracts.
 - `references/parameter-recovery-notebook.md` for notebook structure and plotting requirements.
+- `references/example-notebook-template.json` for a ready-to-fill notebook cell template.
 
 In offline mode, follow these references instead of guessing utility behavior.
 
@@ -127,13 +128,23 @@ def {model_name}_fit(
 1. Load `template.json` and, if package context is missing, load the two files under `references/`.
 2. If fields are missing, ask follow-up questions and wait for answers.
 3. Generate `pyem/models/{model_class}.py` using imports, signatures, transforms, and output keys in the template.
-4. Generate `examples/{model_class}.ipynb` with:
+4. Generate `examples/{model_class}.ipynb` from `references/example-notebook-template.json` and align section order to `examples/rl.ipynb`, `examples/bayes.ipynb`, and `examples/glm.ipynb` conventions:
    - model/task description,
    - simulation demo,
-   - fit simulated behavior,
-   - parameter recovery plot (same intent as `examples/rl.ipynb`).
+   - fit simulated behavior via `EMModel.recover`,
+   - parameter recovery plot with identity line and correlation per parameter.
 5. Run smoke checks: import module, run sim, run fit with `output="npl"`.
 
 ## Optional reference alignment
 
 If needed, consult `rl.json`, `bayes.json`, and `glm.json` to mirror existing style and output contracts.
+
+## Notebook generation without repository access
+
+When no local `examples/` notebooks are accessible:
+
+1. Load `references/parameter-recovery-notebook.md`.
+2. Load `references/example-notebook-template.json`.
+3. Fill placeholders and write a valid `.ipynb` (nbformat 4).
+4. Ensure imports include `EMModel` and the generated sim/fit functions.
+5. Ensure final cells run simulation, fitting, and recovery plotting end-to-end.

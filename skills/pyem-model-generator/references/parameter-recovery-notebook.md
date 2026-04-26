@@ -2,6 +2,15 @@
 
 Use this reference to implement `examples/{model_class}.ipynb` even when base example notebooks are unavailable.
 
+This pattern is distilled from the repository notebooks under `examples/` (`rl.ipynb`, `bayes.ipynb`, `glm.ipynb`):
+
+- Intro markdown title + task subtitle.
+- Import block (`numpy`, plotting, model sim/fit, `EMModel`).
+- Simulation setup cell.
+- Simulation execution cell.
+- Fit-and-recover cell using `EMModel.recover(...)`.
+- Parameter recovery scatter plots with identity lines.
+
 ## Required sections
 
 1. Model and task overview.
@@ -11,12 +20,16 @@ Use this reference to implement `examples/{model_class}.ipynb` even when base ex
 5. Parameter recovery plot.
 6. Brief interpretation.
 
+## Template source
+
+Use `references/example-notebook-template.json` as the base cell template. Replace all placeholders (for example `{model_name}`, `{model_class}`, bounds, and parameter names).
+
 ## Minimal recovery workflow
 
 1. Choose `N` synthetic subjects (e.g., `N=50`).
 2. Sample true parameters in natural space.
 3. Run `{model_name}_sim` to generate behavior.
-4. Fit each synthetic subject with `{model_name}_fit` via pyEM optimizer flow.
+4. Fit each synthetic subject with `{model_name}_fit` via `EMModel.recover`.
 5. Compare true vs recovered parameters.
 
 ## Plot requirements
