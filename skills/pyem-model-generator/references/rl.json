@@ -1,0 +1,30 @@
+{
+  "source": "pyem/models/rl.py",
+  "module": "pyem.models.rl",
+  "imports": [
+    "import numpy as np",
+    "from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval"
+  ],
+  "functions": [
+    {
+      "name": "rw1a1b_sim",
+      "kind": "sim",
+      "signature": "rw1a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24, outcomes: np.ndarray | None = None)",
+      "param_space": "natural",
+      "state_keys": ["choices", "rewards", "EV", "ch_prob", "choices_A", "PE", "nll"],
+      "output_keys": ["params", "choices", "rewards", "EV", "ch_prob", "choices_A", "PE", "nll"]
+    },
+    {
+      "name": "rw1a1b_fit",
+      "kind": "fit",
+      "signature": "rw1a1b_fit(params, choices, rewards, prior=None, output=\"npl\")",
+      "transform_map": [
+        {"index": 0, "name": "beta", "transform": "norm2beta", "bounds": [1e-05, 20.0]},
+        {"index": 1, "name": "alpha", "transform": "norm2alpha", "bounds": [0.0, 1.0]}
+      ],
+      "output_modes": ["npl", "nll", "all"],
+      "all_output_keys": ["params", "choices", "choices_A", "rewards", "EV", "PE", "nll"],
+      "objective_call": "calc_fval(nll, params, prior=prior, output=output)"
+    }
+  ]
+}

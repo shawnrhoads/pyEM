@@ -1,0 +1,40 @@
+{
+  "source": "pyem/models/glm.py",
+  "module": "pyem.models.glm",
+  "imports": [
+    "import numpy as np",
+    "from scipy.stats import norm",
+    "from scipy.special import expit",
+    "from ..utils.math import norm2alpha, calc_fval"
+  ],
+  "functions": [
+    {
+      "name": "glm_sim",
+      "kind": "sim",
+      "signature": "glm_sim(params: np.ndarray, ntrials: int = 100)",
+      "param_space": "natural",
+      "output_shape": "tuple",
+      "output_keys": ["X", "Y"]
+    },
+    {
+      "name": "glm_fit",
+      "kind": "fit",
+      "signature": "glm_fit(params, X, Y, prior=None, output: str = 'npl')",
+      "transform_map": [],
+      "output_modes": ["npl", "nll", "all"],
+      "all_output_keys": ["params", "predicted_y", "negll", "BIC"],
+      "objective_call": "calc_fval(negll, params, prior=prior, output=output)"
+    },
+    {
+      "name": "glm_decay_fit",
+      "kind": "fit",
+      "signature": "glm_decay_fit(params, X, Y, prior=None, output: str = 'npl', decay: str = 'twostep')",
+      "transform_map": [
+        {"index": -1, "name": "gamma", "transform": "norm2alpha", "bounds": [0.0, 1.0]}
+      ],
+      "output_modes": ["npl", "nll", "all"],
+      "all_output_keys": ["params", "predicted_y", "nll", "BIC"],
+      "objective_call": "calc_fval(negll, params, prior=prior, output=output)"
+    }
+  ]
+}
