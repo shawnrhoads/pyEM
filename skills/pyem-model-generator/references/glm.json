@@ -1,27 +1,18 @@
 {
   "model_class": "glm",
+  "utils_file": "modclass_utils.py",
   "models": [
     {
       "model_name": "glm_linear",
-      "model_file": "pyem/models/glm_linear.py",
-      "model_file_contract": {
-        "attributes": ["mod_desc", "mod_spec", "mod_id", "MODEL"],
-        "functions": ["mod_params", "mod_sim", "mod_fit"],
-        "shared_import": "from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params"
-      },
-      "mod_spec": {
-        "cr": {
-          "linear": ["w0", "w1", "sigma"]
-        }
-      },
+      "model_file": "glm_linear.py",
+      "notebook_file": "glm_linear.ipynb",
+      "required_attributes": ["mod_desc", "mod_spec", "mod_id", "MODEL"],
+      "required_functions": ["mod_params", "mod_sim", "mod_fit"],
+      "shared_import": "from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params",
+      "math_import": "from pyem.utils.math import norm2alpha, norm2beta, softmax, calc_fval",
       "parameters": ["w0", "w1", "sigma"],
       "sim_outputs": ["params", "X", "y", "pred", "nll"],
-      "fit_outputs": {
-        "scalar": ["npl", "nll"],
-        "all": ["params", "pred", "nll", "bic"]
-      }
+      "fit_outputs": ["npl", "nll", "all"]
     }
-  ],
-  "utils_file": "pyem/models/glm_utils.py",
-  "utils_required_symbols": ["_alloc_sim", "_alloc_fit", "ModelSpec", "spec_to_id", "build_params"]
+  ]
 }

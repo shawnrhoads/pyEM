@@ -1,6 +1,6 @@
 # Parameter recovery notebook pattern
 
-Use this reference to implement `examples/{model_class}.ipynb` even when base example notebooks are unavailable.
+Use this reference to implement `{model_name}.ipynb` in a flat output directory, even when base example notebooks are unavailable.
 
 This pattern follows the bundled offline templates and anchor specs (`references/rl.json`, `references/bayes.json`, `references/glm.json`) so notebook generation does not require repository access:
 
@@ -22,7 +22,7 @@ This pattern follows the bundled offline templates and anchor specs (`references
 
 ## Template source
 
-Use `references/example-notebook-template.json` as the base cell template. Replace all placeholders (for example `{model_name}`, `{model_class}`, bounds, and parameter names).
+Use `references/example-notebook-template.json` as the base cell template. Replace all placeholders (for example `{model_name}`, bounds, and parameter names).
 
 ## Minimal recovery workflow
 

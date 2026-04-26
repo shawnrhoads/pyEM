@@ -1,28 +1,18 @@
 {
   "model_class": "rl",
+  "utils_file": "modclass_utils.py",
   "models": [
     {
       "model_name": "rw1a1b",
-      "model_file": "pyem/models/rw1a1b.py",
-      "model_file_contract": {
-        "attributes": ["mod_desc", "mod_spec", "mod_id", "MODEL"],
-        "functions": ["mod_params", "mod_sim", "mod_fit"],
-        "shared_import": "from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params"
-      },
-      "mod_spec": {
-        "rl": {
-          "softmax": ["beta"],
-          "rw": ["alpha"]
-        }
-      },
+      "model_file": "rw1a1b.py",
+      "notebook_file": "rw1a1b.ipynb",
+      "required_attributes": ["mod_desc", "mod_spec", "mod_id", "MODEL"],
+      "required_functions": ["mod_params", "mod_sim", "mod_fit"],
+      "shared_import": "from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params",
+      "math_import": "from pyem.utils.math import norm2alpha, norm2beta, softmax, calc_fval",
       "parameters": ["beta", "alpha"],
       "sim_outputs": ["params", "choices", "ev", "ch_prob", "pe", "nll"],
-      "fit_outputs": {
-        "scalar": ["npl", "nll"],
-        "all": ["params", "ev", "ch_prob", "pe", "nll"]
-      }
+      "fit_outputs": ["npl", "nll", "all"]
     }
-  ],
-  "utils_file": "pyem/models/rl_utils.py",
-  "utils_required_symbols": ["_alloc_sim", "_alloc_fit", "ModelSpec", "spec_to_id", "build_params"]
+  ]
 }

@@ -27,7 +27,7 @@
         "import numpy as np\\n",
         "import matplotlib.pyplot as plt\\n",
         "from pyem.api import EMModel\\n",
-        "from pyem.models.{model_class} import {model_name}_sim, {model_name}_fit"
+        "from {model_name} import mod_sim, mod_fit"
       ]
     },
     {
@@ -46,15 +46,15 @@
     {
       "cell_type": "code",
       "source": [
-        "sim = {model_name}_sim(true_params, nblocks=nblocks, ntrials=ntrials)\\n",
+        "sim = mod_sim(true_params, nblocks=nblocks, ntrials=ntrials)\\n",
         "sim.keys()"
       ]
     },
     {
       "cell_type": "code",
       "source": [
-        "em = EMModel({model_name}_fit, prior='laplace')\\n",
-        "recovery = em.recover(sim, {model_name}_fit, n_jobs=1)\\n",
+        "em = EMModel(mod_fit, prior='laplace')\\n",
+        "recovery = em.recover(sim, mod_fit, n_jobs=1)\\n",
         "recovery.keys()"
       ]
     },

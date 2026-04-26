@@ -1,73 +1,42 @@
-# pyEM runtime contract (offline reference)
+# Runtime contract for generated models
 
-Use this file when the full `pyem` package is unavailable. It defines minimal contracts needed to generate compatible model modules.
-
-## Expected utility imports
-
-Preferred import in generated model files:
+Generated model files should import math helpers directly from pyem:
 
 ```python
-from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
+from pyem.utils.math import norm2alpha, norm2beta, softmax, calc_fval
 ```
 
-## Utility behavior
+The shared `modclass_utils.py` file should **not** define these math helpers.
+It should only provide:
 
-### `softmax(values, beta)`
+- `_alloc_sim`
+- `_alloc_fit`
+- `ModelSpec`
+- `ParamDef`
+- `spec_to_id`
+- `build_params`
+- `PARAM_REGISTRY`
 
-- Inputs:
-  - `values`: 1D array-like action values.
-  - `beta`: inverse temperature (`> 0`).
-- Output:
-  - Probability vector matching `values` length.
-- Stable form:
+## Function contracts
 
-```python
-z = beta * (values - np.max(values))
-exp_z = np.exp(z)
-p = exp_z / np.sum(exp_z)
-```
+## `mod_params(nsubj, rng=None)`
 
-### `norm2alpha(x)`
+- Returns `(param_names, param_xform, true_params)`.
+- `true_params` shape: `(nsubj, nparams)`.
 
-- Maps unconstrained real `x` to `(0, 1)`.
-- Logistic form is acceptable:
+## `mod_sim(params, ..., **kwargs)`
 
-```python
-alpha = 1.0 / (1.0 + np.exp(-x))
-```
+- Returns dictionary with stable keys (at least params/choices/state/nll keys).
+- Uses natural-space parameters for simulation unless otherwise specified.
 
-### `norm2beta(x)`
+## `mod_fit(params, ..., prior=None, output="npl")`
 
-- Maps unconstrained real `x` to `(1e-5, 20]`.
-- Compatible bounded-sigmoid form:
+- Must support `output="npl"`, `"nll"`, and optionally `"all"`.
+- Uses transformed parameters (`norm2alpha`, `norm2beta`) when constraints require.
+- Returns large penalty (commonly `1e7`) for invalid parameter regions.
+- Uses `calc_fval` for scalar objective outputs.
 
-```python
-beta = 1e-5 + (20.0 - 1e-5) / (1.0 + np.exp(-x))
-```
+## Prior handling
 
-### `calc_fval(nll, params, prior=None, output="npl")`
-
-- `output="nll"`: return `nll`.
-- `output="npl"`: return `nll - log_prior(params)` if prior exists; else `nll`.
-- `output="all"`: typically handled by caller model function.
-
-## Prior contract
-
-Use a lightweight prior dictionary that can be passed through unchanged to pyEM:
-
-```python
-prior = {
-    "mu": np.array([...]),
-    "sigma": np.array([...]),
-}
-```
-
-If prior shape mismatches params, return a large penalty value (commonly `1e7`).
-
-## Fit function contract
-
-- Signature pattern:
-  - `{model_name}_fit(params, *, prior=None, output="npl", **kwargs)`
-- Must support at least `output in {"npl", "nll", "all"}`.
-- Must return scalar for `"npl"`/`"nll"`.
-- For invalid transformed params, return `1e7`.
+- Prior can be `None` or a dictionary accepted by `calc_fval`.
+- Pass prior through unchanged to `calc_fval`.

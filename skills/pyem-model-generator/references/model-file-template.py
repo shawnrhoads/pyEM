@@ -1,18 +1,15 @@
-"""Template for one generated model module within a model class."""
+"""Template for one generated model module."""
 
 from __future__ import annotations
 
 import numpy as np
 
+from pyem.utils.math import calc_fval, norm2alpha, norm2beta, softmax
 from .modclass_utils import (
     ModelSpec,
     _alloc_fit,
     _alloc_sim,
     build_params,
-    calc_fval,
-    norm2alpha,
-    norm2beta,
-    softmax,
     spec_to_id,
 )
 
