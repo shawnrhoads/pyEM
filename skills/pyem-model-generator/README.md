@@ -53,56 +53,84 @@ This skill is self-contained and does not require repository model files:
 
 ## Example prompts
 
-Use prompts like the following with this skill.
+Use the same prompt structure for all tasks:
+
+1. **Context** (task design and data-generating process)
+2. **Model requirements** (equations, variants, parameter set)
+3. **Output contract** (utils file, model file(s), notebook)
+4. **Clarification instruction** (ask questions before generating if ambiguous)
 
 ### 1) Reversal learning (Kalman filter RL)
 
 ```text
 Use pyem-model-generator.
-Task: Reversal learning RL with two options A (80% reward) and B (20% reward), 2 blocks, 40 trials per block, reversals every 10 trials.
-Per trial: choose A or B, then observe reward (+1) or no reward (0).
-Generate a Kalman filter model to simulate behavior and fit the same model to simulated behavior.
-Please output:
-1) pyem/models/{model_class}_utils.py
-2) pyem/models/{model_name}.py with mod_desc/mod_spec/mod_id/MODEL and mod_params/mod_sim/mod_fit
-3) examples/{model_class}.ipynb with parameter recovery plots.
-If anything is ambiguous, ask follow-up questions first.
+
+Context:
+Reversal learning RL task with two options A (80% reward) and B (20% reward), 2 blocks, 40 trials per block, reversals every 10 trials. Per trial: choose A/B, then observe reward (+1) or no reward (0).
+
+Model requirements:
+Implement a Kalman filter RL model and fit the same model to simulated behavior.
+
+Output contract:
+- pyem/models/{model_class}_utils.py
+- pyem/models/{model_name}.py with mod_desc, mod_spec, mod_id, MODEL and functions mod_params, mod_sim, mod_fit
+- examples/{model_class}.ipynb with simulation, fitting, and parameter-recovery plots
+
+If any details are ambiguous, ask follow-up questions before generating files.
 ```
 
 ### 2) Two-step task (model-free, model-based, hybrid)
 
 ```text
 Use pyem-model-generator.
-Task: Two-step task with two stages per trial.
-Stage 1: choose between two first-stage options; common transition p=0.70 and rare transition p=0.30 to one of two second-stage states (fixed mapping).
-Stage 2: choose between two options in reached state; reward/no reward outcome.
-Second-stage reward probabilities (4 arms) drift by independent bounded Gaussian random walks in [0.25, 0.75].
+
+Context:
+Two-step task with two stages per trial.
+- Stage 1: choose between two first-stage options.
+- Transition structure: common transition p=0.70, rare transition p=0.30, fixed mapping to two second-stage states.
+- Stage 2: choose between two options in reached state and observe reward/no reward.
+- Four second-stage reward probabilities drift independently by bounded Gaussian random walks in [0.25, 0.75].
+
+Model requirements:
 Generate three variants:
-- Model-free SARSA(lambda) with parameters alpha_1, alpha_2, lambda, beta_1, beta_2, p
-- Model-based with Bellman-style prospective first-stage valuation
-- Hybrid with Q_net = w*Q_MB + (1-w)*Q_TD and parameters beta_1, beta_2, alpha_1, alpha_2, lambda, p, w
-Please generate files using the model-class utility layout and include a recovery notebook that compares recovered parameters for all variants.
-Ask clarifying questions if needed.
+1) Model-free SARSA(lambda) with parameters alpha_1, alpha_2, lambda, beta_1, beta_2, p.
+2) Model-based learner using known transition structure and prospective first-stage valuation.
+3) Hybrid learner with Q_net = w*Q_MB + (1-w)*Q_TD and parameters beta_1, beta_2, alpha_1, alpha_2, lambda, p, w.
+
+Output contract:
+- pyem/models/{model_class}_utils.py
+- pyem/models/{model_name}.py (or one file per variant) with mod_desc, mod_spec, mod_id, MODEL and functions mod_params, mod_sim, mod_fit
+- examples/{model_class}.ipynb with simulation, fitting, and parameter-recovery comparison across variants
+
+If any details are ambiguous, ask follow-up questions before generating files.
 ```
 
 ### 3) Social signals task with variants
 
 ```text
 Use pyem-model-generator.
-The task is called the social signals task. On each trial, participants see three options (A,B,C) and choose one option (stored in subject, block, trial arrays), then observe clear signal (+1) or not (0), then receive social feedback (thumbs up/down).
-Use 100 agents, 4 blocks, 12 trials per block.
-Model equations:
+
+Context:
+Social signals task. On each trial, participants see options A/B/C, choose one option (store in subject-block-trial arrays), observe clear signal (+1) or not (0), then receive social feedback (thumbs up/down). Use 100 agents, 4 blocks, 12 trials per block.
+
+Model requirements:
+Use equations:
 Q_self[s,b,t+1,c] = Q_self[s,b,t,c] + alpha_self * (outcome_self[s,b,t] - Q_self[s,b,t,c])
 Q_other[s,b,t+1,c] = Q_other[s,b,t,c] + alpha_other * (outcome_other[s,b,t] - Q_other[s,b,t,c])
 outcome_self in {0,1}
-outcome_other = social_sensitivity_pos*1 (if positive) or social_sensitivity_neg*-1 (if negative), label this theta
+outcome_other = social_sensitivity_pos*1 (if positive) or social_sensitivity_neg*-1 (if negative), labeled theta
 p(choice) = softmax(beta * (w_self*Q_self[s,b,t,c] + w_other*Q_other[s,b,t,c]))
-Variants include:
+Variants:
 - 1b2w2a
 - 1b2w2a2t
 - 1b2w2a4t
-- arbitration variants: 1b1o2a4t, 1b1o1a4t, 1b1o2a2t, 1b1o2a using
-  p(choice) = (1-omega)*softmax(beta * Q_self[s,b,t,c]) + omega*softmax(beta * Q_other[s,b,t,c])
-Generate utility + model files + notebook with parameter recovery for each variant.
-Ask follow-up questions for any ambiguous naming/sign conventions.
+- arbitration variants 1b1o2a4t, 1b1o1a4t, 1b1o2a2t, 1b1o2a with
+  p(choice) = (1-omega)*softmax(beta*Q_self[s,b,t,c]) + omega*softmax(beta*Q_other[s,b,t,c])
+
+Output contract:
+- pyem/models/{model_class}_utils.py
+- pyem/models/{model_name}.py (or one file per variant) with mod_desc, mod_spec, mod_id, MODEL and functions mod_params, mod_sim, mod_fit
+- examples/{model_class}.ipynb with simulation, fitting, and parameter-recovery plots for each variant
+
+If any details are ambiguous, ask follow-up questions before generating files.
 ```
