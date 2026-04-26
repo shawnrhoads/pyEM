@@ -1,40 +1,27 @@
 {
-  "source": "pyem/models/glm.py",
-  "module": "pyem.models.glm",
-  "imports": [
-    "import numpy as np",
-    "from scipy.stats import norm",
-    "from scipy.special import expit",
-    "from ..utils.math import norm2alpha, calc_fval"
-  ],
-  "functions": [
+  "model_class": "glm",
+  "models": [
     {
-      "name": "glm_sim",
-      "kind": "sim",
-      "signature": "glm_sim(params: np.ndarray, ntrials: int = 100)",
-      "param_space": "natural",
-      "output_shape": "tuple",
-      "output_keys": ["X", "Y"]
-    },
-    {
-      "name": "glm_fit",
-      "kind": "fit",
-      "signature": "glm_fit(params, X, Y, prior=None, output: str = 'npl')",
-      "transform_map": [],
-      "output_modes": ["npl", "nll", "all"],
-      "all_output_keys": ["params", "predicted_y", "negll", "BIC"],
-      "objective_call": "calc_fval(negll, params, prior=prior, output=output)"
-    },
-    {
-      "name": "glm_decay_fit",
-      "kind": "fit",
-      "signature": "glm_decay_fit(params, X, Y, prior=None, output: str = 'npl', decay: str = 'twostep')",
-      "transform_map": [
-        {"index": -1, "name": "gamma", "transform": "norm2alpha", "bounds": [0.0, 1.0]}
-      ],
-      "output_modes": ["npl", "nll", "all"],
-      "all_output_keys": ["params", "predicted_y", "nll", "BIC"],
-      "objective_call": "calc_fval(negll, params, prior=prior, output=output)"
+      "model_name": "glm_linear",
+      "model_file": "pyem/models/glm_linear.py",
+      "model_file_contract": {
+        "attributes": ["mod_desc", "mod_spec", "mod_id", "MODEL"],
+        "functions": ["mod_params", "mod_sim", "mod_fit"],
+        "shared_import": "from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params"
+      },
+      "mod_spec": {
+        "cr": {
+          "linear": ["w0", "w1", "sigma"]
+        }
+      },
+      "parameters": ["w0", "w1", "sigma"],
+      "sim_outputs": ["params", "X", "y", "pred", "nll"],
+      "fit_outputs": {
+        "scalar": ["npl", "nll"],
+        "all": ["params", "pred", "nll", "bic"]
+      }
     }
-  ]
+  ],
+  "utils_file": "pyem/models/glm_utils.py",
+  "utils_required_symbols": ["_alloc_sim", "_alloc_fit", "ModelSpec", "spec_to_id", "build_params"]
 }

@@ -2,7 +2,7 @@
 
 Use this reference to implement `examples/{model_class}.ipynb` even when base example notebooks are unavailable.
 
-This pattern is distilled from the repository notebooks under `examples/` (`rl.ipynb`, `bayes.ipynb`, `glm.ipynb`):
+This pattern follows the bundled offline templates and anchor specs (`references/rl.json`, `references/bayes.json`, `references/glm.json`) so notebook generation does not require repository access:
 
 - Intro markdown title + task subtitle.
 - Import block (`numpy`, plotting, model sim/fit, `EMModel`).

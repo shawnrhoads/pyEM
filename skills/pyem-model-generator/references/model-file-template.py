@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import numpy as np
 
-from pyem.utils.math import calc_fval, norm2alpha, norm2beta, softmax
-from .model_class_utils import (
+from .modclass_utils import (
     ModelSpec,
     _alloc_fit,
     _alloc_sim,
     build_params,
+    calc_fval,
+    norm2alpha,
+    norm2beta,
+    softmax,
     spec_to_id,
 )
 
@@ -78,7 +81,7 @@ def mod_fit(params, choices, rewards, prior=None, output="npl"):
 
     if output == "all":
         return {"params": [beta, alpha], **dat}
-    return calc_fval(dat["nll"], params, prior=prior, output=output)
+    return calc_fval(dat["nll"], np.asarray(params), prior=prior, output=output)
 
 
 MODEL = ModelSpec(

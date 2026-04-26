@@ -1,35 +1,30 @@
 {
-  "source": "pyem/models/bayes.py",
-  "module": "pyem.models.bayes",
-  "imports": [
-    "import numpy as np",
-    "from ..utils.math import norm2alpha, calc_fval"
-  ],
-  "helpers": [
+  "model_class": "bayes",
+  "models": [
     {
-      "name": "_generate_fishp",
-      "signature": "_generate_fishp(lambda1: float, n_fish: int) -> np.ndarray"
+      "model_name": "bayes_fish",
+      "model_file": "pyem/models/bayes_fish.py",
+      "model_file_contract": {
+        "attributes": ["mod_desc", "mod_spec", "mod_id", "MODEL"],
+        "functions": ["mod_params", "mod_sim", "mod_fit"],
+        "shared_import": "from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params"
+      },
+      "mod_spec": {
+        "rl": {
+          "softmax": ["beta"]
+        },
+        "link": {
+          "bayes": ["lambda1"]
+        }
+      },
+      "parameters": ["beta", "lambda1"],
+      "sim_outputs": ["params", "choices", "observations", "posterior", "nll"],
+      "fit_outputs": {
+        "scalar": ["npl", "nll"],
+        "all": ["params", "posterior", "nll"]
+      }
     }
   ],
-  "functions": [
-    {
-      "name": "bayes_sim",
-      "kind": "sim",
-      "signature": "bayes_sim(params: np.ndarray, nblocks: int = 10, ntrials: int = 15, n_fish: int = 3) -> dict",
-      "param_space": "natural",
-      "state_keys": ["choices", "observations", "probabilities", "ponds"],
-      "output_keys": ["params", "choices", "observations", "probabilities", "ponds"]
-    },
-    {
-      "name": "bayes_fit",
-      "kind": "fit",
-      "signature": "bayes_fit(params, choices, observations, prior=None, output: str = 'npl')",
-      "transform_map": [
-        {"index": 0, "name": "lambda1", "transform": "norm2alpha", "bounds": [0.0, 1.0]}
-      ],
-      "output_modes": ["npl", "nll", "all"],
-      "all_output_keys": ["params", "nll"],
-      "objective_call": "calc_fval(nll, params, prior=prior, output=output)"
-    }
-  ]
+  "utils_file": "pyem/models/bayes_utils.py",
+  "utils_required_symbols": ["_alloc_sim", "_alloc_fit", "ModelSpec", "spec_to_id", "build_params"]
 }
