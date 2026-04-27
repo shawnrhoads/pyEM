@@ -28,8 +28,7 @@ It should only provide:
 
 - Returns a dictionary with stable keys appropriate to the model class.
 - Common required outputs are `params` and `choices`; include `rewards` when the task/model uses reward feedback or when downstream fitting/diagnostics require it.
-- Model-specific latent/diagnostic arrays such as `state`, `ev`, `pe`, and similar traces may be included, but no single latent key is required for all models.
-- Uses natural-space parameters for simulation unless otherwise specified.
+- Model-specific latent/diagnostic arrays such as `ev`, `pe`, and similar traces may be included, but no single latent key is required for all models.
 
 ## `mod_fit(params, ..., prior=None, output="npl")`
 
@@ -40,5 +39,5 @@ It should only provide:
 
 ## Prior handling
 
-- Prior can be `None` or a dictionary accepted by `calc_fval`.
-- Pass prior through unchanged to `calc_fval`.
+- Prior can be `None` or a prior-like object that implements a `logpdf` method compatible with `calc_fval`.
+- Pass the prior object through unchanged to `calc_fval`.

@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from pyem.utils.math import calc_fval, norm2alpha, norm2beta, softmax
-from .modclass_utils import (
+from modclass_utils import (
     ModelSpec,
     _alloc_fit,
     _alloc_sim,
@@ -41,6 +41,7 @@ def mod_sim(params: np.ndarray, nblocks: int = 4, ntrials: int = 12, **kwargs):
                 c = rng.choice([0, 1], p=p)
                 r = float(rng.integers(0, 2))
                 dat["choices"][s, b, t] = "A" if c == 0 else "B"
+                dat["rewards"][s, b, t] = r
                 dat["ch_prob"][s, b, t, :] = p
                 dat["pe"][s, b, t] = r - dat["ev"][s, b, t, c]
                 dat["ev"][s, b, t + 1, :] = dat["ev"][s, b, t, :]

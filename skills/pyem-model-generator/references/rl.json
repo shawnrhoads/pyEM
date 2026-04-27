@@ -11,7 +11,7 @@
       "shared_import": "from modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params",
       "math_import": "from pyem.utils.math import norm2alpha, norm2beta, softmax, calc_fval",
       "parameters": ["beta", "alpha"],
-      "sim_outputs": ["params", "choices", "ev", "ch_prob", "pe", "nll"],
+      "sim_outputs": ["params", "choices", "rewards", "ev", "ch_prob", "pe", "nll"],
       "fit_outputs": ["npl", "nll", "all"]
     }
   ]
