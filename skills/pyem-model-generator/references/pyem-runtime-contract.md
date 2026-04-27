@@ -26,7 +26,9 @@ It should only provide:
 
 ## `mod_sim(params, ..., **kwargs)`
 
-- Returns dictionary with stable keys (at least params/choices/state/nll keys).
+- Returns a dictionary with stable keys appropriate to the model class.
+- Common required outputs are `params` and `choices`; include `rewards` when the task/model uses reward feedback or when downstream fitting/diagnostics require it.
+- Model-specific latent/diagnostic arrays such as `state`, `ev`, `pe`, and similar traces may be included, but no single latent key is required for all models.
 - Uses natural-space parameters for simulation unless otherwise specified.
 
 ## `mod_fit(params, ..., prior=None, output="npl")`
