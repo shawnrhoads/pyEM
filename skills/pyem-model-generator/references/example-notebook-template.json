@@ -50,7 +50,7 @@
       "cell_type": "code",
       "source": [
         "sim_outp = mod_sim(true_params, nblocks=nblocks, ntrials=ntrials)\\n",
-        "sim_data = [[sim_outp['choices'][i, ...], sim_outp['ev'][i, ...], sim_outp['pe'][i, ...]] for i in range(nsubj)]\\n",
+        "sim_data = [[sim_outp['choices'][i, ...], sim_outp['rewards'][i, ...]] for i in range(nsubj)]\\n",
         "len(sim_data)"
       ]
     },
