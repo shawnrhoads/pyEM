@@ -62,7 +62,7 @@ Create one shared `{modclass}_utils.py` file containing only:
 Each `{model_name}.py` should import shared helpers with:
 
 ```python
-from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params
+from {modclass}_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params
 ```
 
 ## Per-model file contract
