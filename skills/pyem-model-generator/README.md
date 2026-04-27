@@ -58,7 +58,7 @@ from pyem.utils.math import norm2alpha, norm2beta, softmax, calc_fval
 And imports shared helpers from:
 
 ```python
-from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params
+from {modclass}_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params
 ```
 
 ### Notebook file
