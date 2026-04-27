@@ -8,7 +8,7 @@
       "notebook_file": "bayes_fish.ipynb",
       "required_attributes": ["mod_desc", "mod_spec", "mod_id", "MODEL"],
       "required_functions": ["mod_params", "mod_sim", "mod_fit"],
-      "shared_import": "from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params",
+      "shared_import": "from modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params",
       "math_import": "from pyem.utils.math import norm2alpha, norm2beta, softmax, calc_fval",
       "parameters": ["beta", "lambda1"],
       "sim_outputs": ["params", "choices", "observations", "posterior", "nll"],
