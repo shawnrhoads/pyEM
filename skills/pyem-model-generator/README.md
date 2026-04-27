@@ -1,17 +1,21 @@
 # pyem-model-generator skill
 
-Use this skill to scaffold standalone computational cognitive model files and recovery notebooks from reference specs or free-text equations.
+Use this skill to generate standalone computational cognitive model code and a matching parameter-recovery notebook.
 
-## Plan to fix known flaws
+## What this skill generates
 
-1. Remove smoke-test requirements from the skill workflow.
-2. Enforce notebook import of `EMModel` (`from pyem.api import EMModel`) and forbid `scipy.optimize.minimize` usage in notebook templates.
-3. Remove duplicated template files (`template.json`, `references/template.json`).
-4. Enforce flat output layout in one directory (no `pyem/models/...` or `examples/...` paths).
-5. Restrict shared utils to exactly: `_alloc_sim`, `_alloc_fit`, `ModelSpec`, `ParamDef`, `spec_to_id`, `build_params`, `PARAM_REGISTRY`.
-6. Keep math helper imports (`norm2alpha`, `norm2beta`, `softmax`, `calc_fval`) in model files and document them in `references/pyem-runtime-contract.md`.
+Given a task/model description, the skill generates files in a **single directory**:
 
-## Current references
+- `{modclass}_utils.py`
+- `{model_name}.py`
+- `{model_name}.ipynb`
+
+The generated model file follows a consistent contract:
+
+- attributes: `mod_desc`, `mod_spec`, `mod_id`, `MODEL`
+- functions: `mod_params`, `mod_sim`, `mod_fit`
+
+## Required references bundled with the skill
 
 - `references/rl.json`
 - `references/bayes.json`
@@ -22,21 +26,62 @@ Use this skill to scaffold standalone computational cognitive model files and re
 - `references/parameter-recovery-notebook.md`
 - `references/pyem-runtime-contract.md`
 
-## Output contract
+## Quick start (first-time users)
 
-Generate all files in the same directory:
+1. Describe your task and model in plain language (or equations).
+2. Ask the skill to generate:
+   - `{modclass}_utils.py`
+   - `{model_name}.py`
+   - `{model_name}.ipynb`
+3. If details are missing, answer the skill’s follow-up questions.
+4. Review generated files and run your analysis workflow.
 
-- `modclass_utils.py`
-- `{model_name}.py`
-- `{model_name}.ipynb`
+## Notes on generated files
 
-Each `{model_name}.py` must define:
+### Shared utils file
 
-- `mod_desc`, `mod_spec`, `mod_id`, `MODEL`
-- `mod_params`, `mod_sim`, `mod_fit`
+`{modclass}_utils.py` should define shared helpers used across model files:
 
-Each notebook must use:
+- `_alloc_sim`, `_alloc_fit`
+- `ModelSpec`, `ParamDef`
+- `spec_to_id`, `build_params`
+- `PARAM_REGISTRY`
+
+### Model file
+
+`{model_name}.py` imports math helpers from pyEM:
+
+```python
+from pyem.utils.math import norm2alpha, norm2beta, softmax, calc_fval
+```
+
+And imports shared helpers from:
+
+```python
+from .modclass_utils import _alloc_sim, _alloc_fit, ModelSpec, spec_to_id, build_params
+```
+
+### Notebook file
+
+The notebook template uses:
 
 ```python
 from pyem.api import EMModel
+```
+
+and follows a simulation → fit → recovery plot workflow.
+
+## Example prompt
+
+```text
+Use pyem-model-generator.
+Generate standalone files in one directory:
+- social_utils.py
+- social_rw.py
+- social_rw.ipynb
+
+Task: three-option social learning task with 4 blocks x 12 trials and 100 agents.
+Model: dual-value update equations for self and other values with softmax choice.
+Include parameter recovery plots in the notebook.
+Ask follow-up questions before generation if any details are ambiguous.
 ```
