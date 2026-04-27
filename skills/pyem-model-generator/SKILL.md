@@ -24,7 +24,7 @@ Do not require repository path conventions like `pyem/models/...` or `examples/.
 
 Write files in one directory:
 
-- `modclass_utils.py`
+- `{modclass}_utils.py`
 - `{model_name}.py` (one or more model files)
 - `{model_name}.ipynb` (or one notebook per model class)
 
@@ -49,7 +49,7 @@ When given prose/equations:
 
 ## Shared utility heuristic (required)
 
-Create one shared `modclass_utils.py` file containing only:
+Create one shared `{modclass}_utils.py` file containing only:
 
 - `_alloc_sim`
 - `_alloc_fit`

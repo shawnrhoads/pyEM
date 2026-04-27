@@ -24,57 +24,49 @@
     {
       "cell_type": "code",
       "source": [
+        "import importlib\\n",
         "import numpy as np\\n",
         "import matplotlib.pyplot as plt\\n",
-        "from pyem.api import EMModel\\n",
-        "from {model_name} import mod_sim, mod_fit"
+        "from pyem.api import EMModel"
       ]
     },
     {
       "cell_type": "code",
       "source": [
-        "rng = np.random.default_rng({random_seed})\\n",
-        "nsubjects = {nsubjects}\\n",
+        "script_fn = \"{model_name}\"\\n",
+        "nsubj = {nsubjects}\\n",
         "nblocks = {nblocks}\\n",
         "ntrials = {ntrials}\\n",
-        "true_params = np.column_stack([\\n",
-        "    rng.uniform({p1_low}, {p1_high}, nsubjects),\\n",
-        "    rng.uniform({p2_low}, {p2_high}, nsubjects),\\n",
-        "])"
+        "module = importlib.import_module(f\"{script_fn}\")\\n",
+        "MODEL = module.MODEL\\n",
+        "print(script_fn, end=\"\\n\")\\n",
+        "print(MODEL.id, end=\"\\n\\n\")\\n",
+        "print(MODEL.desc, end=\"\\n\\n\")\\n",
+        "mod_params, mod_sim, mod_fit = MODEL.params, MODEL.sim, MODEL.fit\\n",
+        "param_names, param_xform, true_params = mod_params(nsubj)"
       ]
     },
     {
       "cell_type": "code",
       "source": [
-        "sim = mod_sim(true_params, nblocks=nblocks, ntrials=ntrials)\\n",
-        "sim.keys()"
+        "sim_outp = mod_sim(true_params, nblocks=nblocks, ntrials=ntrials)\\n",
+        "sim_data = [[sim_outp['choices'][i, ...], sim_outp['ev'][i, ...], sim_outp['pe'][i, ...]] for i in range(nsubj)]\\n",
+        "len(sim_data)"
       ]
     },
     {
       "cell_type": "code",
       "source": [
-        "em = EMModel(mod_fit, prior='laplace')\\n",
-        "recovery = em.recover(sim, mod_fit, n_jobs=1)\\n",
-        "recovery.keys()"
+        "model = EMModel(all_data=sim_data, fit_func=mod_fit, param_names=param_names, param_xform=param_xform)\\n",
+        "result = model.fit(verbose=1)\\n",
+        "result"
       ]
     },
     {
       "cell_type": "code",
       "source": [
-        "fitted = np.asarray(recovery['mfit'])\\n",
-        "param_names = {param_names}\\n",
-        "n_params = true_params.shape[1]\\n",
-        "fig, axes = plt.subplots(1, n_params, figsize=(4 * n_params, 4))\\n",
-        "for i, ax in enumerate(np.atleast_1d(axes)):\\n",
-        "    ax.scatter(true_params[:, i], fitted[:, i], alpha=0.7)\\n",
-        "    lo = min(true_params[:, i].min(), fitted[:, i].min())\\n",
-        "    hi = max(true_params[:, i].max(), fitted[:, i].max())\\n",
-        "    ax.plot([lo, hi], [lo, hi], 'k--', linewidth=1)\\n",
-        "    r = np.corrcoef(true_params[:, i], fitted[:, i])[0, 1]\\n",
-        "    ax.set_title(f\"{param_names[i]} (r={r:.2f})\")\\n",
-        "    ax.set_xlabel('True')\\n",
-        "    ax.set_ylabel('Recovered')\\n",
-        "plt.tight_layout()"
+        "fig = model.plot_recovery({'true_params': true_params, 'estimated_params': model.outfit['params']})\\n",
+        "fig"
       ]
     }
   ]
