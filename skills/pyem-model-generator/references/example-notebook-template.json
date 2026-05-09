@@ -1,0 +1,73 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 5,
+  "metadata": {
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cell_templates": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# {model_title}\\n",
+        "\\n",
+        "## {task_title}\\n",
+        "This notebook demonstrates simulation, fitting, and parameter recovery."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import importlib\\n",
+        "import numpy as np\\n",
+        "import matplotlib.pyplot as plt\\n",
+        "from pyem.api import EMModel"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "script_fn = \"{model_name}\"\\n",
+        "nsubj = {nsubjects}\\n",
+        "nblocks = {nblocks}\\n",
+        "ntrials = {ntrials}\\n",
+        "module = importlib.import_module(f\"{script_fn}\")\\n",
+        "MODEL = module.MODEL\\n",
+        "print(script_fn, end=\"\\n\")\\n",
+        "print(MODEL.id, end=\"\\n\\n\")\\n",
+        "print(MODEL.desc, end=\"\\n\\n\")\\n",
+        "mod_params, mod_sim, mod_fit = MODEL.params, MODEL.sim, MODEL.fit\\n",
+        "param_names, param_xform, true_params = mod_params(nsubj)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "sim_outp = mod_sim(true_params, nblocks=nblocks, ntrials=ntrials)\\n",
+        "sim_data = [[sim_outp['choices'][i, ...], sim_outp['rewards'][i, ...]] for i in range(nsubj)]\\n",
+        "len(sim_data)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "model = EMModel(all_data=sim_data, fit_func=mod_fit, param_names=param_names, param_xform=param_xform)\\n",
+        "result = model.fit(verbose=1)\\n",
+        "result"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = model.plot_recovery({'true_params': true_params, 'estimated_params': model.outfit['params']})\\n",
+        "fig"
+      ]
+    }
+  ]
+}
