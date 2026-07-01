@@ -5,6 +5,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from scipy.stats import norm
 from scipy.special import logsumexp
+import warnings
 
 def calc_LME(inv_h: np.ndarray, NPL: np.ndarray) -> tuple[np.ndarray, float, np.ndarray]:
     nparams = inv_h.shape[0]
@@ -76,7 +77,10 @@ def calc_BICint(
     iLogs = np.asarray(iLogs)
     finite = np.isfinite(iLogs)
     if not np.all(finite):
-        print(f"calc_BICint: dropping {int((~finite).sum())}/{len(iLogs)} subject(s) with non-finite integrated log-likelihood")
+        warnings.warn(
+             f"calc_BICint: dropping {int((~finite).sum())}/{len(iLogs)} subject(s) with non-finite integrated log-likelihood",
+             RuntimeWarning,
+         )
         iLogs = iLogs[finite]
     bicint = -2*np.sum(iLogs) + npar*np.log(total_trials)
     return float(bicint)
