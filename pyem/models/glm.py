@@ -25,15 +25,15 @@ def glm_fit(params, X, Y, prior=None, output: str = 'npl'):
     """Negative log-likelihood for a Gaussian GLM."""
     pred = X.dot(params)
     resid_sigma = np.std(Y - pred)
-    negll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
+    nll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': params,
             'predicted_y': pred,
-            'negll': negll,
-            'BIC': _calc_bic(negll, len(params), len(Y)),
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
         }
 
 
@@ -91,15 +91,15 @@ def glm_decay_fit(params, X, Y, prior=None, output: str = 'npl', decay: str = 't
                 discounted += (gamma ** j) * X[t - j, :]
         predicted_y[t] = discounted.dot(pv)
     resid_sigma = np.std(Y - predicted_y)
-    negll = -np.sum(norm.logpdf(Y, loc=predicted_y, scale=resid_sigma))
+    nll = -np.sum(norm.logpdf(Y, loc=predicted_y, scale=resid_sigma))
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': params,
             'predicted_y': predicted_y,
-            'negll': negll,
-            'BIC': _calc_bic(negll, len(params), len(Y)),
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
         }
 
 
@@ -153,15 +153,15 @@ def logit_fit(params, X, Y, prior=None, output: str = 'npl'):
     p = expit(logits)
     eps = 1e-12
     p = np.clip(p, eps, 1 - eps)
-    negll = -np.sum(Y * np.log(p) + (1 - Y) * np.log(1 - p))
+    nll = -np.sum(Y * np.log(p) + (1 - Y) * np.log(1 - p))
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': params,
             'predicted_p': p,
-            'negll': negll,
-            'BIC': _calc_bic(negll, len(params), len(Y)),
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
         }
 
 
@@ -256,16 +256,16 @@ def logit_decay_fit(
     p = expit(logits)
     eps = 1e-12
     p = np.clip(p, eps, 1 - eps)
-    negll = -np.sum(Y * np.log(p) + (1 - Y) * np.log(1 - p))
+    nll = -np.sum(Y * np.log(p) + (1 - Y) * np.log(1 - p))
 
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': params,
             'predicted_p': p,
-            'negll': negll,
-            'BIC': _calc_bic(negll, len(params), len(Y)),
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
             'gamma': gamma,
         }
 
@@ -340,16 +340,16 @@ def glm_ar_fit(params, X, Y, prior=None, output: str = 'npl'):
         pred[t] = lin[t] + phi * Y[t-1]  # AR uses observed y_{t-1}
 
     resid_sigma = np.std(Y - pred)
-    negll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
+    nll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
 
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': np.hstack([beta, phi]),
             'predicted_y': pred,
-            'negll': negll,
-            'BIC': _calc_bic(negll, len(params), len(Y)),
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
         }
 
 
