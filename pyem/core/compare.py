@@ -4,7 +4,6 @@ from typing import Any, List, Sequence
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from ..utils.stats import calc_LME, calc_BICint, pseudo_r2_from_nll
 from ..api import EMModel
 
@@ -19,9 +18,11 @@ def compare_models(
     models,  # list of EMModel (already fit) or tuples (name, FitResult, extras)
     model_names: List[str] | None = None,
     metric_order: Sequence[str] = ("LME", "BICint", "R2"),
-    bicint_kwargs: dict | None = {"nsamples":2000, "func_output":"all", "nll_key":"nll"},
+    bicint_kwargs: dict | None = None,
     r2_kwargs: dict | None = None,
 ) -> List[ComparisonRow]:
+    if bicint_kwargs is None:
+        bicint_kwargs = {"nsamples": 2000, "func_output": "all", "nll_key": "nll"}
     rows: List[ComparisonRow] = []
     for mod_idx, item in enumerate(models):
         if hasattr(item, "fit_func") or hasattr(item, "fit"):  # EMModel instance
@@ -117,8 +118,30 @@ class ModelComparison:
         Returns a DataFrame with columns:
             ['Simulated','Estimated','LME','BICint','pseudoR2','bestlme','bestbic','bestR2']
 
+        Note:
+            "True" parameters for each round are drawn as raw standard-normal
+            values and mapped into natural space via each model's
+            ``param_xform`` before simulating. Construct every model with
+            ``param_xform`` set (as you would for ``.recover()``) — without
+            it, models whose ``simulate_func`` validates its natural-space
+            bounds (e.g. every RW-family model) will raise on the
+            untransformed Gaussian values.
+
+            pseudoR2 requires ``ntrials_total`` and ``noptions`` (see
+            :func:`pyem.utils.stats.pseudo_r2_from_nll`), which have no
+            defaults. Pass them via ``r2_kwargs`` (e.g.
+            ``r2_kwargs={"ntrials_total": ntrials*nblocks, "noptions": 2}``)
+            or the pseudoR2 column will be all-NaN.
+
+            Every model's ``simulate_func`` must return a ``dict`` of named
+            arrays (as the RW and Bayes model families do). This is
+            incompatible with the GLM family (``glm_sim``, ``logit_sim``,
+            ``glm_ar_sim``, etc.), whose ``simulate_func`` returns an
+            ``(X, Y)`` tuple — using a GLM model here raises ``ValueError``.
+
         Raises:
             AttributeError if any simulated model has no simulate_func.
+            ValueError if any simulated model's simulate_func does not return a dict.
         """
         rng = np.random.default_rng(seed)
         sim_kwargs = sim_kwargs or {}
@@ -127,7 +150,7 @@ class ModelComparison:
         if bicint_kwargs is None:
             bicint_kwargs = {"nsamples": 2000, "func_output": "all", "nll_key": "nll"}
         if r2_kwargs is None:
-            r2_kwargs = np.nan
+            r2_kwargs = {}
         names = self.model_names
 
         # accumulators
@@ -155,10 +178,11 @@ class ModelComparison:
                     )
 
                 # choose parameters to simulate with
-                nparams = len(getattr(sim_model, "param_names", [])) or 2
+                nparams = len(sim_model.param_names)
                 true_params = rng.normal(size=(nsubjects, nparams))
-                # apply transforms if available
-                if hasattr(sim_model, "param_xform"):
+                # apply transforms if available (EMModel always defines param_xform, but
+                # it's None unless the caller passed one — hasattr() alone can't detect that)
+                if getattr(sim_model, "param_xform", None) is not None:
                     for pi in range(nparams):
                         xform = sim_model.param_xform[pi]
                         if xform is not None and callable(xform):

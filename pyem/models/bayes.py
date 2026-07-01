@@ -1,5 +1,6 @@
 import numpy as np
 from ..utils.math import norm2alpha, calc_fval
+from ..core.modelspec import ModelSpec
 
 def _generate_fishp(lambda1: float, n_fish: int) -> np.ndarray:
     """Return transition matrix for observing fish colours.
@@ -96,3 +97,16 @@ def bayes_fit(params, choices, observations, prior=None, output: str = 'npl'):
 
     # return requested objective value
     return calc_fval(nll, params, prior=prior, output=output)
+
+
+bayes_desc = """Bayesian belief-updating over which of three ponds a fish came
+from, based on the fish's observed colour on each trial (no feedback given).
+`lambda1` controls how strongly each observation updates the belief; smaller
+values require more confirming evidence before confidence increases.
+Free parameters: lambda1 (belief-update rate, in [0,1])."""
+bayes_id = "bayes"
+bayes_spec = {"bu": {"belief_update": ["lambda1"]}}
+bayes_model = ModelSpec(
+    id=bayes_id, spec=bayes_spec, desc=bayes_desc.strip(),
+    params=None, sim=bayes_sim, fit=bayes_fit,
+)

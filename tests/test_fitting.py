@@ -5,7 +5,10 @@ from pyem.models.rl import (
     rw2a1b_sim, rw2a1b_fit,
 )
 from pyem.models.bayes import bayes_sim, bayes_fit
-from pyem.models.glm import glm_sim, glm_fit, glm_decay_sim, glm_decay_fit
+from pyem.models.glm import (
+    glm_sim, glm_fit, glm_decay_sim, glm_decay_fit,
+    logit_sim, logit_fit, glm_ar_sim, glm_ar_fit,
+)
 from test_helpers import _simulate_rw_params
 
 def test_rw1a1b_fit():
@@ -62,4 +65,28 @@ def test_glm_decay_fit():
     model = EMModel(all_data=all_data, fit_func=glm_decay_fit, param_names=param_names)
     res = model.fit(mstep_maxit=5, verbose=0, njobs=1)
     assert res.m.shape == (nparams + 1, nsubjects)
+    assert res.NPL.shape == (nsubjects,)
+
+def test_logit_fit():
+    nsubjects, nparams, ntrials = 10, 3, 50
+    rng = np.random.default_rng(0)
+    true_params = rng.normal(size=(nsubjects, nparams))
+    X, Y = logit_sim(true_params, ntrials=ntrials)
+    all_data = [[X[i], Y[i]] for i in range(nsubjects)]
+    model = EMModel(all_data=all_data, fit_func=logit_fit, param_names=[f"b{i}" for i in range(nparams)])
+    res = model.fit(mstep_maxit=5, verbose=0, njobs=1)
+    assert res.m.shape == (nparams, nsubjects)
+    assert res.NPL.shape == (nsubjects,)
+
+def test_glm_ar_fit():
+    nsubjects, nparams, ntrials = 10, 3, 50
+    rng = np.random.default_rng(0)
+    true_params = rng.normal(size=(nsubjects, nparams - 1))
+    true_params = np.hstack([true_params, rng.uniform(-0.5, 0.5, size=(nsubjects, 1))])  # add phi
+    X, Y = glm_ar_sim(true_params, ntrials=ntrials)
+    all_data = [[X[i], Y[i]] for i in range(nsubjects)]
+    param_names = [f"b{i}" for i in range(nparams - 1)] + ["phi"]
+    model = EMModel(all_data=all_data, fit_func=glm_ar_fit, param_names=param_names)
+    res = model.fit(mstep_maxit=5, verbose=0, njobs=1)
+    assert res.m.shape == (nparams, nsubjects)
     assert res.NPL.shape == (nsubjects,)

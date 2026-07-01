@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from scipy.stats import norm
+from scipy.special import logsumexp
+import warnings
 
 def calc_LME(inv_h: np.ndarray, NPL: np.ndarray) -> tuple[np.ndarray, float, np.ndarray]:
     nparams = inv_h.shape[0]
@@ -28,16 +30,30 @@ def calc_LME(inv_h: np.ndarray, NPL: np.ndarray) -> tuple[np.ndarray, float, np.
     return Lap, lme, good
 
 def calc_BICint(
-    all_data, param_names, mu, sigma, fit_func, nsamples: int = 2000, func_output: str = "all", nll_key: str = "nll"
+    all_data, param_names, mu, sigma, fit_func, nsamples: int = 2000, func_output: str = "all",
+    nll_key: str = "nll", ntrials_total: int | None = None,
 ) -> float:
+    """Integrated BIC via Monte Carlo integration over the group posterior.
+
+    ``ntrials_total`` is the number of independent trials contributing to a
+    single subject's likelihood, used for the ``k*log(n)`` complexity
+    penalty. If not supplied, it is auto-detected from the first subject's
+    data, assuming every array-like field in that subject's data is
+    trial-aligned with identical shape (true for the RW/Bayes families,
+    e.g. ``[choices, rewards]`` both shaped ``(nblocks, ntrials)``). For
+    families with heterogeneous per-trial shapes (e.g. a GLM's ``[X, Y]``
+    where ``X`` has an extra feature-count dimension), pass
+    ``ntrials_total`` explicitly rather than relying on auto-detection.
+    """
     npar = len(param_names)
-    # count trials of the first subject
-    if isinstance(all_data[0], pd.DataFrame):
+    if ntrials_total is not None:
+        total_trials = ntrials_total
+    elif isinstance(all_data[0], pd.DataFrame):
         total_trials = len(all_data[0])
     else:
         first = all_data[0]
         if isinstance(first, (list, tuple)) and hasattr(first[0], "size"):
-            total_trials = int(np.sum([x.size for x in first if hasattr(x, "size")]))
+            total_trials = int(first[0].size)
         else:
             raise ValueError("Unrecognized data structure in all_data")
     sigmasqrt = np.sqrt(np.asarray(sigma).reshape(-1))
@@ -50,12 +66,21 @@ def calc_BICint(
             # fit_func expected to return dict when output="all"
             info = fit_func(pars, *beh, output=func_output)
             subnll.append(info[nll_key])
-        iLog = np.log(np.sum(np.exp(-np.asarray(subnll))) / nsamples)
+        # log(sum(exp(-subnll))/nsamples), computed via logsumexp for numerical
+        # stability: the naive form over/underflows when subnll (an unbounded
+        # NLL, e.g. from a Gaussian-likelihood GLM fit) is very negative or
+        # very positive, silently turning a valid subject into inf/-inf that
+        # then gets dropped below instead of contributing its real value.
+        iLog = logsumexp(-np.asarray(subnll)) - np.log(nsamples)
         return iLog
     iLogs = Parallel(n_jobs=-1)(delayed(subj_iLog)(beh) for beh in all_data)
     iLogs = np.asarray(iLogs)
     finite = np.isfinite(iLogs)
     if not np.all(finite):
+        warnings.warn(
+             f"calc_BICint: dropping {int((~finite).sum())}/{len(iLogs)} subject(s) with non-finite integrated log-likelihood",
+             RuntimeWarning,
+         )
         iLogs = iLogs[finite]
     bicint = -2*np.sum(iLogs) + npar*np.log(total_trials)
     return float(bicint)
@@ -70,37 +95,3 @@ def pseudo_r2_from_nll(nll: np.ndarray, ntrials_total: int, noptions: int, metri
         random_baseline = float(np.mean(-np.log(1.0 / noptions) * ntrials_total))
         return 1.0 - (mean_nll / random_baseline)
 
-def likelihood_r2(nll: np.ndarray, metric: str = 'median') -> float:
-    """
-    R^2-style score from per-subject summed negative log-likelihoods.
-
-    Steps:
-      1) Convert to per-subject joint likelihoods: L_i = exp(-nll_i)
-      2) Aggregate across subjects using either the median (default) or mean
-      3) Square the aggregate to get the final score
-
-    Parameters
-    ----------
-    nll : np.ndarray
-        1D array of shape (nsubjects,) with summed negative log-likelihoods.
-        NaNs are ignored in aggregation.
-    metric : {'median', 'mean'}, default 'median'
-        Aggregation across subjects.
-
-    Returns
-    -------
-    float
-        R^2-like scalar (NaN if all inputs are NaN).
-    """
-    if metric not in {'median', 'mean'}:
-        raise ValueError("metric must be 'median' or 'mean'")
-
-    nll = np.asarray(nll, dtype=float)
-    if nll.ndim != 1:
-        raise ValueError("nll must be a 1D array of shape (nsubjects,)")
-
-    with np.errstate(over='ignore', invalid='ignore'):
-        likelihoods = np.exp(-nll)  # per-subject joint likelihood in (0, 1], NaN-preserving
-
-    agg = np.nanmedian(likelihoods) if metric == 'median' else np.nanmean(likelihoods)
-    return float(agg ** 2)

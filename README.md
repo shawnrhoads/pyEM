@@ -17,13 +17,23 @@ This is a Python implementation of the Hierarchical Expectation Maximization alg
 
 ### Basic Usage
 
+Every model in `pyEM` ships as a pair of `_sim`/`_fit` functions, plus a `ModelSpec` object
+(`<name>_model`) that bundles those functions together with the model's identity and description.
+Either style works identically — `rw1a1b_model.sim` *is* `rw1a1b_sim`, just accessed through the
+bundle:
+
 ```python
 import numpy as np, matplotlib.pyplot as plt
 from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
-from pyem.models.rl import rw1a1b_sim, rw1a1b_fit
+from pyem.models.rl import rw1a1b_model  # bundles rw1a1b_sim, rw1a1b_fit, and metadata
+from pyem.core.posterior import parameter_recovery
+
+print(rw1a1b_model.id)      # 'rw1a1b'
+print(rw1a1b_model.desc)    # human-readable description
+print(rw1a1b_model.spec)    # {'rl': {'softmax': ['beta'], 'rw': ['alpha']}}
 
 # Settings
 nsubjects, nblocks, ntrials = 100, 4, 24
@@ -36,13 +46,13 @@ a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
 alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
 
 true_params = np.column_stack((beta_rv, alpha_rv))
-sim = rw1a1b_sim(true_params, nblocks=nblocks, ntrials=ntrials)
+sim = rw1a1b_model.sim(true_params, nblocks=nblocks, ntrials=ntrials)
 all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
 # Create and fit model
 model = EMModel(
     all_data=all_data,
-    fit_func=rw1a1b_fit,
+    fit_func=rw1a1b_model.fit,
     param_names=["beta", "alpha"],
     param_xform=[norm2beta, norm2alpha], # Parameter transformation functions
 )
@@ -57,7 +67,12 @@ estimated_params = output_dict['params']  # Shape: (n_subjects, n_params)
 print(f"Estimated parameters shape: {estimated_params.shape}")
 print(f"Available outputs: {list(output_dict.keys())}")
 
-# Plot recovery
+# Compare true vs. estimated (matrix)
+recovery = parameter_recovery(true_params, estimated_params)
+print(f"Correlation per parameter: {recovery.corr}")
+print(f"RMSE per parameter: {recovery.rmse}")
+
+# Plot recovery (scatterplot)
 for param_idx, param_label in enumerate(['beta','alpha']):
     simulated_param = sim['params'][:,param_idx]
     estimated_param = output_dict['params'][:,param_idx]
@@ -65,9 +80,42 @@ for param_idx, param_label in enumerate(['beta','alpha']):
                  estimated_param, f'Estimated {param_label}')
 ```
 
+### Using `ModelSpec` with the Parameter Registry
+
+`examples/params.py` (see [Creating Custom Models](#creating-custom-models)) provides a
+`build_params()` helper that replaces the hand-rolled `truncnorm`/`beta_dist` calls above with one
+call — it returns everything `EMModel` needs (`param_names`, `param_xform`, and natural-space
+`true_params`) in one shot, drawn from a shared registry of named, bounded parameters:
+
+```python
+import numpy as np
+from pyem import EMModel
+from pyem.models.rl import rw1a1b_model
+from params import build_params  # examples/params.py
+
+# Settings
+nsubjects, nblocks, ntrials = 100, 4, 24
+
+# Generate "true" parameters from the shared parameter registry
+param_names, param_xform, true_params = build_params(["beta", "alpha"], nsubjects)
+
+# Simulate and fit using the ModelSpec's .sim/.fit directly
+sim = rw1a1b_model.sim(true_params, nblocks=nblocks, ntrials=ntrials)
+all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
+
+model = EMModel(
+    all_data=all_data,
+    fit_func=rw1a1b_model.fit,
+    param_names=param_names,
+    param_xform=param_xform,
+)
+result = model.fit(verbose=0)
+print(f"Convergence: {result.convergence}")
+```
+
 ### Parameter Recovery Analysis
 
-We can also use the `EMModel.recover()` method to perform parameter recovery directly if you provide any custom simulation and model fitting functions that matchs [the heuristic below](###-Creating-Custom-Models)
+We can also use the `EMModel.recover()` method to package the simulate → fit → compare steps above into one call, if you provide any custom simulation and model fitting functions that match [the heuristic below](#creating-custom-models).
 
 ```python
 import numpy as np, matplotlib.pyplot as plt
@@ -75,7 +123,7 @@ from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
-from pyem.models.rl import rw1a1b_sim, rw1a1b_fit
+from pyem.models.rl import rw1a1b_model
 
 # Settings
 nsubjects, nblocks, ntrials = 100, 4, 24
@@ -88,16 +136,14 @@ a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
 alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
 
 true_params = np.column_stack((beta_rv, alpha_rv))
-sim = rw1a1b_sim(true_params, nblocks=nblocks, ntrials=ntrials)
-all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
 # Create model object
 model = EMModel(
-    all_data=all_data,
-    fit_func=rw1a1b_fit,
+    all_data=None,
+    fit_func=rw1a1b_model.fit,
     param_names=["beta", "alpha"],
     param_xform=[norm2beta, norm2alpha], # Parameter transformation functions
-    simulate_func=rw1a1b_sim
+    simulate_func=rw1a1b_model.sim,
 )
 
 # Perform parameter recovery
@@ -126,7 +172,7 @@ import numpy as np
 from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
-from pyem.models.rl import rw1a1b_fit, rw1a1b_sim, rw2a1b_fit, rw2a1b_sim
+from pyem.models.rl import rw1a1b_model, rw2a1b_model
 from pyem.utils.math import norm2alpha, norm2beta
 
 # Settings
@@ -140,19 +186,19 @@ a_lo, a_hi = beta_dist.cdf([alphamin, alphamax], 1.1, 1.1)
 alpha_rv = beta_dist.ppf(a_lo + np.random.rand(nsubjects)*(a_hi - a_lo), 1.1, 1.1)
 true_params = np.column_stack((beta_rv, alpha_rv))
 
-rw1a1b_sim = rw1a1b_sim(true_params, nblocks=nblocks, ntrials=ntrials)
-rw1a1b_data = [[c, r] for c, r in zip(rw1a1b_sim["choices"], rw1a1b_sim["rewards"])]
+sim = rw1a1b_model.sim(true_params, nblocks=nblocks, ntrials=ntrials)
+rw1a1b_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
 
 # Create multiple models for comparison
-model1 = EMModel(rw1a1b_data, rw1a1b_fit, 
+model1 = EMModel(rw1a1b_data, rw1a1b_model.fit, 
                  param_names=["beta", "alpha"],
                  param_xform=[norm2beta, norm2alpha],
-                 simulate_func=rw1a1b_sim)
+                 simulate_func=rw1a1b_model.sim)
 
-model2 = EMModel(rw1a1b_data, rw2a1b_fit,
+model2 = EMModel(rw1a1b_data, rw2a1b_model.fit,
                  param_names=["beta", "alpha_pos", "alpha_neg"],
                  param_xform=[norm2beta, norm2alpha, norm2alpha],
-                 simulate_func=rw2a1b_sim)
+                 simulate_func=rw2a1b_model.sim)
 
 # Fit both models
 res1 = model1.fit(verbose=0)
@@ -167,6 +213,10 @@ comparison_df = mc.compare(bicint_kwargs=bicint_kwargs, r2_kwargs=r2_kwargs)
 display(comparison_df)
 ```
 
+`compare()` returns a `pandas.DataFrame` indexed by model name, with columns `"LME (largest is
+best)"`, `"BICint (smallest is best)"`, and `"pseudoR^2 (largest is best)"` (columns with no
+computable values for any model are dropped).
+
 We can also compute these metrics individually using the `EMModel` class directly.
 
 ```python
@@ -176,6 +226,12 @@ bicint = model.compute_integrated_bic(nsamples=2000)
 # Compute Laplace approximation for Log Model Evidence
 lap, lme, good = model.compute_lme()
 ```
+
+`compute_integrated_bic()`/`calc_BICint()` need to know how many trials each subject contributed,
+for the complexity-penalty term. By default this is auto-detected from your data (correct for
+models like the RW/Bayes families, whose data fields are all trial-aligned with identical shape).
+If your data doesn't fit that assumption (e.g. a GLM's `[X, Y]`, where `X` has an extra
+feature-count dimension), pass it explicitly: `model.compute_integrated_bic(ntrials_total=ntrials*nblocks)`.
 
 ### Model Identifiability Analysis
 
@@ -195,24 +251,32 @@ The result is a `pandas.DataFrame` with per–Simulated/Estimated model entries 
 
 You can visualize these results with `plot_identifiability()`, which plots an **asymmetric matrix** (rows = Simulated models, cols = Estimated models) where cell values show the proportion of rounds each Estimated model best fit data from the Simulated model.
 
+> [!NOTE]
+> `identify()` draws each round's "true" parameters as raw Gaussian values and maps them into
+> natural space via each model's `param_xform` — construct every model with `param_xform` set (as
+> shown below), or models with strict natural-space bounds checks (every RW-family model) will
+> raise on the untransformed values. `identify()` also requires every model's `simulate_func` to
+> return a `dict` of named arrays (true for the RW and Bayes families) — it is **not** currently
+> compatible with the GLM family, whose `simulate_func` returns an `(X, Y)` tuple.
+
 #### Example
 
 ```python
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
-from pyem.models.rl import rw1a1b_fit, rw1a1b_sim, rw2a1b_fit, rw2a1b_sim
+from pyem.models.rl import rw1a1b_model, rw2a1b_model
 from pyem.utils.math import norm2alpha, norm2beta
 
 # Construct two candidate models
-model1 = EMModel(all_data, rw1a1b_fit, 
+model1 = EMModel(all_data, rw1a1b_model.fit, 
                  param_names=["beta", "alpha"],
                  param_xform=[norm2beta, norm2alpha],
-                 simulate_func=rw1a1b_sim)
+                 simulate_func=rw1a1b_model.sim)
 
-model2 = EMModel(all_data, rw2a1b_fit,
+model2 = EMModel(all_data, rw2a1b_model.fit,
                  param_names=["beta", "alpha_pos", "alpha_neg"],
                  param_xform=[norm2beta, norm2alpha, norm2alpha],
-                 simulate_func=rw2a1b_sim)
+                 simulate_func=rw2a1b_model.sim)
 
 # Run identifiability analysis
 mi_df = mc.identify(
@@ -264,18 +328,36 @@ transformed_alpha = alpha_transform(0.3)
 
 ## Available Models
 
-The package includes several pre-implemented models:
+The package includes several pre-implemented models, each described by both its `_sim`/`_fit`
+functions and a `ModelSpec` (`<name>_model`) carrying its `.id`/`.desc`/`.spec`.
 
 ### Reinforcement Learning Models (`pyem.models.rl`)
 
-* **`rw1a1b_sim/fit`**: Rescorla-Wagner model with single learning rate
-* **`rw2a1b_sim/fit`**: Rescorla-Wagner model with separate learning rates for positive/negative prediction errors
+* **`rw1a1b_sim/fit`** (id: `rw1a1b`): Rescorla-Wagner model with a single learning rate. Free parameters: `beta`, `alpha`.
+* **`rw2a1b_sim/fit`** (id: `rw2a1b`): Rescorla-Wagner model with separate learning rates for positive vs. negative prediction errors (valence bias). Free parameters: `beta`, `alpha_pos`, `alpha_neg`.
+* **`rw3a1b_sim/fit`** (id: `rw3a1b`): two-option task with three binary outcome channels (self/other/no one); combines self/other/no-one prediction errors into a single expected-value update ([Lockwood et al., 2016](https://doi.org/10.1073/pnas.1603198113)). Free parameters: `beta`, `alpha_self`, `alpha_other`, `alpha_noone`.
+* **`rw4a1b_sim/fit`** (id: `rw4a1b`): four-option task where each trial shows a pair of options; one shared inverse temperature and four learning rates split by outcome recipient (self/other) and valence (positive/negative) ([Rhoads et al., 2025](https://doi.org/10.1038/s41467-025-64424-9)). Free parameters: `beta`, `alpha_self_pos`, `alpha_self_neg`, `alpha_other_pos`, `alpha_other_neg`.
+
+### Linear Models (`pyem.models.glm`)
+
+* **`glm_sim/fit`** (id: `glm`): standard Gaussian linear regression. Free parameters: regression weights (intercept + covariates).
+* **`glm_decay_sim/fit`** (id: `glm_decay`): Gaussian linear regression with exponentially discounted predictors. Free parameters: regression weights, `gamma` (discount factor, in `[0,1]`).
+* **`logit_sim/fit`** (id: `logit`): standard logistic regression. Free parameters: regression weights (intercept + covariates).
+* **`logit_decay_sim/fit`** (id: `logit_decay`): logistic regression with exponentially discounted predictors. Free parameters: regression weights, `gamma`.
+* **`glm_ar_sim/fit`** (id: `glm_ar`): Gaussian linear regression with an AR(1) autoregressive term on the residuals. Free parameters: regression weights, `phi` (AR(1) coefficient, in `(-1,1)`).
+
+### Bayesian Inference (`pyem.models.bayes`)
+
+* **`bayes_sim/fit`** (id: `bayes`): Bayesian belief-updating over which of three sources (e.g. "ponds") an observation came from, given no feedback. Free parameter: `lambda1` (belief-update rate, in `[0,1]`).
 
 ### Creating Custom Models
 
-To create a custom model, implement two functions:
+Every model above follows the same template: a pair of `_sim`/`_fit` functions plus a `ModelSpec`
+that bundles them with a hand-authored id/description/spec. To create a custom model, follow the
+same shape:
 
 ```python
+from pyem.core.modelspec import ModelSpec
 from pyem.utils.math import norm2alpha, norm2beta, calc_fval
 
 
@@ -337,7 +419,30 @@ def my_model_sim(params, **kwargs):
     fval = calc_fval(nll, params, output="nll")
 
     return {"params": params, "choices": choices, "rewards": rewards}
+
+
+# Wrapper metadata, following the same shape as every model in pyem.models.*
+my_model_desc = "One-sentence description of what this model does and its free parameters."
+my_model_id = "my_model"
+my_model_spec = {"rl": {"softmax": ["beta"], "rw": ["alpha"]}}  # free-form, hand-authored — no fixed vocabulary to satisfy
+my_model = ModelSpec(
+    id=my_model_id, spec=my_model_spec, desc=my_model_desc,
+    params=None, sim=my_model_sim, fit=my_model_fit,
+)
 ```
+
+`ModelSpec` is deliberately a plain, unopinionated container (`id`, `spec`, `desc`, `params`,
+`sim`, `fit`) — it imposes no naming scheme on your parameters or spec taxonomy, and nothing in
+`EMModel`/`ModelComparison` requires you to build one at all; it exists purely so a model can
+describe itself.
+
+If you'd like a reusable pattern for generating named, bounded "true" parameters for simulation
+(rather than hand-rolling `truncnorm`/`beta_dist` calls every time, as the examples above do), see
+`examples/params.py`. It defines a `ParamDef`/`PARAM_REGISTRY` pattern
+(`build_params(["beta", "alpha"], nsubjects)` → `(param_names, param_xform, true_params)`) that the
+example notebooks use. This lives in `examples/`, not the installed package, by design — `pyem`
+itself stays agnostic about what parameters any given model uses, so this is a copyable starting
+point for your own model collection rather than a package dependency.
 
 ## Key Classes
 
@@ -350,11 +455,31 @@ class EMModel:
     def __init__(self, all_data, fit_func, param_names, param_xform=None, simulate_func=None)
     def fit(self, **kwargs) -> FitResult
     def simulate(self, *args, **kwargs)
-    def recover(self, true_params, **kwargs) -> dict
+    def recover(self, true_params, pr_inputs, **kwargs) -> dict
     def plot_recovery(self, recovery_dict, **kwargs) -> plt.Figure
+    def subject_params(self) -> np.ndarray
     def compute_integrated_bic(self, **kwargs) -> float
     def compute_lme(self) -> tuple
     def get_outfit(self) -> dict
+```
+
+`subject_params()` is the recommended way to get each subject's fitted parameters in natural
+space — it applies `param_xform` for you, the same way `get_outfit()['params']` does when your fit
+function's `output="all"` branch returns a `'params'` key.
+
+### ModelSpec Class
+
+A plain dataclass bundling a model's identity with its entry points (see "Creating Custom Models"
+above):
+
+```python
+class ModelSpec:
+    id: str
+    spec: dict
+    desc: str
+    params: Callable | None
+    sim: Callable
+    fit: Callable
 ```
 
 ### ModelComparison Class
@@ -363,10 +488,10 @@ Class for comparing the performance of different models:
 
 ```python
 class ModelComparison:
-    def __init__(self, models, names)
-    def compare(self) -> list
-    def identify(self) -> pd.DataFrame
-    def plot_identifiability(self) -> plt.Figure
+    def __init__(self, models, model_names=None)
+    def compare(self, **kwargs) -> pd.DataFrame
+    def identify(self, mi_inputs, nrounds=10, nsubjects=100, **kwargs) -> pd.DataFrame
+    def plot_identifiability(self, **kwargs) -> plt.Figure
 ```
 
 ### Utility Functions
@@ -374,13 +499,14 @@ class ModelComparison:
 * **Parameter transformations** (`pyem.utils.math`): `norm2alpha()`, `norm2beta()`, `alpha2norm()`, `beta2norm()`
 * **Statistics** (`pyem.utils.stats`): `calc_BICint()`, `calc_LME()`, `pseudo_r2_from_nll()`
 * **Plotting** (`pyem.utils.plotting`): `plot_scatter()`
+* **Parameter registry** (`examples/params.py`, not part of the installed package): `ParamDef`, `PARAM_REGISTRY`, `build_params()`, `validate_params()`
 
 ## Installation
 
 ### Using Anaconda (recommended)
 
 ```bash
-git clone git+https://github.com/shawnrhoads/pyEM.git
+git clone https://github.com/shawnrhoads/pyEM.git
 cd pyEM
 conda create env --file environment.yml
 ```
@@ -411,9 +537,9 @@ pip install -e .
 
 See the `examples/` directory for detailed tutorials:
 
-* `examples/rl.md`: Reinforcement Learning
-* `examples/bayes.md`: Bayesian Inference
-* `examples/glm.md`: Simple linear modeling
+* `examples/rl.ipynb`: Reinforcement Learning
+* `examples/bayes.ipynb`: Bayesian Inference
+* `examples/glm.ipynb`: Simple linear modeling
 
 ## Testing
 
