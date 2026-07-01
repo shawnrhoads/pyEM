@@ -2,6 +2,8 @@
 import numpy as np, random
 from itertools import permutations, chain
 from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
+from ..core.modelspec import ModelSpec
+from ._rw_common import _alloc_rw_sim, _alloc_rw_fit
 
 def rw1a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
                     outcomes: np.ndarray | None = None):
@@ -15,13 +17,11 @@ def rw1a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
     """
     nsubjects = params.shape[0]
     # preallocate arrays for speed
-    choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
-    rewards = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    EV = np.zeros((nsubjects, nblocks, ntrials + 1, 2), dtype=float)  # expected values
-    ch_prob = np.zeros((nsubjects, nblocks, ntrials, 2), dtype=float)  # choice probabilities
-    choices_A = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    PE = np.zeros((nsubjects, nblocks, ntrials), dtype=float)  # prediction errors
-    nll = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    dat = _alloc_rw_sim(nsubjects, nblocks, ntrials)
+    choices, rewards, EV, ch_prob, choices_A, PE, nll = (
+        dat["choices"], dat["rewards"], dat["EV"], dat["ch_prob"],
+        dat["choices_A"], dat["PE"], dat["nll"],
+    )
 
     rng = np.random.default_rng()
     this_block_probs = np.array([0.8, 0.2])  # reward probability for option A
@@ -86,9 +86,8 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
         return 1e7
 
     nblocks, ntrials = rewards.shape
-    EV = np.zeros((nblocks, ntrials + 1, 2))
-    PE = np.zeros((nblocks, ntrials))
-    nll = 0.0
+    dat = _alloc_rw_fit(nblocks, ntrials)
+    EV, PE, nll = dat["EV"], dat["PE"], dat["nll"]
     for b in range(nblocks):
         EV[b, 0, :] = 0.5
         for t in range(ntrials):
@@ -117,17 +116,26 @@ def rw1a1b_fit(params, choices, rewards, prior=None, output="npl"):
     return calc_fval(nll, params, prior=prior, output=output)
 
 
+rw1a1b_desc = """Rescorla-Wagner model with a single learning rate.
+Choices are generated via a softmax over learned expected values.
+Free parameters: inverse temperature (beta), learning rate (alpha)."""
+rw1a1b_id = "rw1a1b"
+rw1a1b_spec = {"rl": {"softmax": ["beta"], "rw": ["alpha"]}}
+rw1a1b_model = ModelSpec(
+    id=rw1a1b_id, spec=rw1a1b_spec, desc=rw1a1b_desc.strip(),
+    params=None, sim=rw1a1b_sim, fit=rw1a1b_fit,
+)
+
+
 def rw2a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
                outcomes: np.ndarray | None = None):
     """Simulate a Rescorla–Wagner model with separate learning rates for gains and losses."""
     nsubjects = params.shape[0]
-    choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
-    rewards = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    EV = np.zeros((nsubjects, nblocks, ntrials + 1, 2), dtype=float)
-    ch_prob = np.zeros((nsubjects, nblocks, ntrials, 2), dtype=float)
-    choices_A = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    PE = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
-    nll = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
+    dat = _alloc_rw_sim(nsubjects, nblocks, ntrials)
+    choices, rewards, EV, ch_prob, choices_A, PE, nll = (
+        dat["choices"], dat["rewards"], dat["EV"], dat["ch_prob"],
+        dat["choices_A"], dat["PE"], dat["nll"],
+    )
 
     rng = np.random.default_rng()
     this_block_probs = np.array([0.8, 0.2])
@@ -200,9 +208,8 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
         return 1e7
 
     nblocks, ntrials = rewards.shape
-    EV = np.zeros((nblocks, ntrials + 1, 2))
-    PE = np.zeros((nblocks, ntrials))
-    nll = 0.0
+    dat = _alloc_rw_fit(nblocks, ntrials)
+    EV, PE, nll = dat["EV"], dat["PE"], dat["nll"]
     for b in range(nblocks):
         EV[b, 0, :] = 0.5
         for t in range(ntrials):
@@ -211,7 +218,7 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
             r = rewards[b, t]
             PE[b, t] = r - EV[b, t, c]
             EV[b, t + 1, :] = EV[b, t, :]
-            if PE[b, t] > 0:
+            if PE[b, t] >= 0:
                 EV[b, t + 1, c] = EV[b, t, c] + alpha_pos * PE[b, t]
             else:
                 EV[b, t + 1, c] = EV[b, t, c] + alpha_neg * PE[b, t]
@@ -231,6 +238,18 @@ def rw2a1b_fit(params, choices, rewards, prior=None, output="npl"):
         return subj_dict
 
     return calc_fval(nll, params, prior=prior, output=output)
+
+
+rw2a1b_desc = """Rescorla-Wagner model with separate learning rates for
+positive vs negative prediction errors (valence bias).
+Choices are generated via a softmax over learned expected values.
+Free parameters: inverse temperature (beta), alpha_pos, alpha_neg."""
+rw2a1b_id = "rw2a1b"
+rw2a1b_spec = {"rl": {"softmax": ["beta"], "rw": ["alpha_pos", "alpha_neg"]}}
+rw2a1b_model = ModelSpec(
+    id=rw2a1b_id, spec=rw2a1b_spec, desc=rw2a1b_desc.strip(),
+    params=None, sim=rw2a1b_sim, fit=rw2a1b_fit,
+)
 
 # --------------------------------------
 # 3α-1β SIMULATE (Lockwood et al., 2016)
@@ -443,6 +462,18 @@ def rw3a1b_fit(params: np.ndarray,
         }
 
     return calc_fval(NLL, params, prior=prior, output=output)
+
+
+rw3a1b_desc = """Two-option task (A/B) with three binary outcome channels
+(self, other, noone). Rescorla-Wagner learning combines self/other/no-one
+prediction errors into a single expected-value update (Lockwood et al., 2016).
+Free parameters: inverse temperature (beta), alpha_self, alpha_other, alpha_noone."""
+rw3a1b_id = "rw3a1b"
+rw3a1b_spec = {"rl": {"softmax": ["beta"], "rw": ["alpha_self", "alpha_other", "alpha_noone"]}}
+rw3a1b_model = ModelSpec(
+    id=rw3a1b_id, spec=rw3a1b_spec, desc=rw3a1b_desc.strip(),
+    params=None, sim=rw3a1b_sim, fit=rw3a1b_fit,
+)
 
 # ----------------------------------------
 # 1Q–4α–1β  SIMULATE (Rhoads et al., 2025)
@@ -687,3 +718,20 @@ def rw4a1b_fit(params: np.ndarray,
         }
     else:
         return calc_fval(nll, params, prior=prior, output=output)
+
+
+rw4a1b_desc = """Four-option task where each trial shows a pair of options;
+one shared inverse temperature and four learning rates split by outcome
+recipient (self/other) and valence (positive/negative) (Rhoads et al., 2025).
+Free parameters: beta, alpha_self_pos, alpha_self_neg, alpha_other_pos, alpha_other_neg."""
+rw4a1b_id = "rw4a1b"
+rw4a1b_spec = {
+    "rl": {
+        "softmax": ["beta"],
+        "rw": ["alpha_self_pos", "alpha_self_neg", "alpha_other_pos", "alpha_other_neg"],
+    },
+}
+rw4a1b_model = ModelSpec(
+    id=rw4a1b_id, spec=rw4a1b_spec, desc=rw4a1b_desc.strip(),
+    params=None, sim=rw4a1b_sim, fit=rw4a1b_fit,
+)
