@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from scipy.stats import norm
+from scipy.special import logsumexp
 
 def calc_LME(inv_h: np.ndarray, NPL: np.ndarray) -> tuple[np.ndarray, float, np.ndarray]:
     nparams = inv_h.shape[0]
@@ -64,7 +65,12 @@ def calc_BICint(
             # fit_func expected to return dict when output="all"
             info = fit_func(pars, *beh, output=func_output)
             subnll.append(info[nll_key])
-        iLog = np.log(np.sum(np.exp(-np.asarray(subnll))) / nsamples)
+        # log(sum(exp(-subnll))/nsamples), computed via logsumexp for numerical
+        # stability: the naive form over/underflows when subnll (an unbounded
+        # NLL, e.g. from a Gaussian-likelihood GLM fit) is very negative or
+        # very positive, silently turning a valid subject into inf/-inf that
+        # then gets dropped below instead of contributing its real value.
+        iLog = logsumexp(-np.asarray(subnll)) - np.log(nsamples)
         return iLog
     iLogs = Parallel(n_jobs=-1)(delayed(subj_iLog)(beh) for beh in all_data)
     iLogs = np.asarray(iLogs)
