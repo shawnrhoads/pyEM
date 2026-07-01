@@ -115,7 +115,7 @@ print(f"Convergence: {result.convergence}")
 
 ### Parameter Recovery Analysis
 
-We can also use the `EMModel.recover()` method to package the simulate → fit → compare steps above into one call, if you provide any custom simulation and model fitting functions that matchs [the heuristic below](###-Creating-Custom-Models)
+We can also use the `EMModel.recover()` method to package the simulate → fit → compare steps above into one call, if you provide any custom simulation and model fitting functions that match [the heuristic below](#creating-custom-models).
 
 ```python
 import numpy as np, matplotlib.pyplot as plt
