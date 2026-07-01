@@ -30,12 +30,6 @@ def beta2norm(b: ArrayLike, max_val: float = 20.0) -> np.ndarray:
     b = np.clip(b, eps, max_val - eps)
     return np.log(b / (max_val - b))
 
-def check_bounds(val: float, lo: float, hi: float, penalty: float = 1e6) -> float | None:
-    if val < lo or val > hi:
-        return penalty
-    return None
-
-
 def calc_fval(negll: float, params: ArrayLike, prior=None, output: str = 'npl') -> float:
     """Return objective value given a negative log-likelihood.
 

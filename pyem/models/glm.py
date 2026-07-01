@@ -4,6 +4,8 @@ import numpy as np
 from scipy.stats import norm
 from ..utils.math import norm2alpha, calc_fval
 from scipy.special import expit
+from ..core.modelspec import ModelSpec
+from ._glm_common import _calc_bic
 
 def glm_sim(params: np.ndarray, ntrials: int = 100):
     """Generate data from a standard linear regression model."""
@@ -23,16 +25,28 @@ def glm_fit(params, X, Y, prior=None, output: str = 'npl'):
     """Negative log-likelihood for a Gaussian GLM."""
     pred = X.dot(params)
     resid_sigma = np.std(Y - pred)
-    negll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
+    nll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': params,
             'predicted_y': pred,
-            'negll': negll,
-            'BIC': len(params) * np.log(len(Y)) + 2 * negll,
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
         }
+
+
+glm_desc = """Standard Gaussian linear regression (GLM).
+Y is generated as a linear combination of predictors X plus Gaussian noise.
+Free parameters: regression weights (intercept + covariates)."""
+glm_id = "glm"
+glm_spec = {"glm": {"linear": ["b0..bn"]}}
+glm_model = ModelSpec(
+    id=glm_id, spec=glm_spec, desc=glm_desc.strip(),
+    params=None, sim=glm_sim, fit=glm_fit,
+)
+
 
 def glm_decay_sim(params, ntrials: int = 100):
     """Simulate GLM data with exponentially discounted predictors."""
@@ -77,16 +91,29 @@ def glm_decay_fit(params, X, Y, prior=None, output: str = 'npl', decay: str = 't
                 discounted += (gamma ** j) * X[t - j, :]
         predicted_y[t] = discounted.dot(pv)
     resid_sigma = np.std(Y - predicted_y)
-    negll = -np.sum(norm.logpdf(Y, loc=predicted_y, scale=resid_sigma))
+    nll = -np.sum(norm.logpdf(Y, loc=predicted_y, scale=resid_sigma))
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': params,
             'predicted_y': predicted_y,
-            'nll': negll,
-            'BIC': len(params) * np.log(len(Y)) + 2 * negll,
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
         }
+
+
+glm_decay_desc = """Gaussian linear regression with exponentially discounted
+predictors: the current prediction is a weighted sum of the current and
+`decay_j`-1 previous trials' predictors, discounted by gamma per step back.
+Free parameters: regression weights, gamma (discount factor, in [0,1])."""
+glm_decay_id = "glm_decay"
+glm_decay_spec = {"glm": {"linear": ["b0..bn"], "decay": ["gamma"]}}
+glm_decay_model = ModelSpec(
+    id=glm_decay_id, spec=glm_decay_spec, desc=glm_decay_desc.strip(),
+    params=None, sim=glm_decay_sim, fit=glm_decay_fit,
+)
+
 
 def logit_sim(params: np.ndarray, ntrials: int = 100):
     """Simulate data for a standard logistic regression.
@@ -126,16 +153,29 @@ def logit_fit(params, X, Y, prior=None, output: str = 'npl'):
     p = expit(logits)
     eps = 1e-12
     p = np.clip(p, eps, 1 - eps)
-    negll = -np.sum(Y * np.log(p) + (1 - Y) * np.log(1 - p))
+    nll = -np.sum(Y * np.log(p) + (1 - Y) * np.log(1 - p))
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': params,
             'predicted_p': p,
-            'negll': negll,
-            'BIC': len(params) * np.log(len(Y)) + 2 * negll,
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
         }
+
+
+logit_desc = """Standard logistic regression.
+Y (0/1) is generated from a Bernoulli distribution with probability given by
+the logistic (expit) link applied to a linear combination of predictors X.
+Free parameters: regression weights (intercept + covariates)."""
+logit_id = "logit"
+logit_spec = {"glm": {"linear": ["b0..bn"]}, "link": {"expit": []}}
+logit_model = ModelSpec(
+    id=logit_id, spec=logit_spec, desc=logit_desc.strip(),
+    params=None, sim=logit_sim, fit=logit_fit,
+)
+
 
 def logit_decay_sim(params: np.ndarray, ntrials: int = 100):
     """Simulate logistic-regression data with exponentially discounted predictors.
@@ -216,18 +256,31 @@ def logit_decay_fit(
     p = expit(logits)
     eps = 1e-12
     p = np.clip(p, eps, 1 - eps)
-    negll = -np.sum(Y * np.log(p) + (1 - Y) * np.log(1 - p))
+    nll = -np.sum(Y * np.log(p) + (1 - Y) * np.log(1 - p))
 
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': params,
             'predicted_p': p,
-            'negll': negll,
-            'BIC': len(params) * np.log(len(Y)) + 2 * negll,
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
             'gamma': gamma,
         }
+
+
+logit_decay_desc = """Logistic regression with exponentially discounted
+predictors, mirroring glm_decay's discounting scheme applied to a logistic
+link function instead of an identity link.
+Free parameters: regression weights, gamma (discount factor, in [0,1])."""
+logit_decay_id = "logit_decay"
+logit_decay_spec = {"glm": {"linear": ["b0..bn"], "decay": ["gamma"]}, "link": {"expit": []}}
+logit_decay_model = ModelSpec(
+    id=logit_decay_id, spec=logit_decay_spec, desc=logit_decay_desc.strip(),
+    params=None, sim=logit_decay_sim, fit=logit_decay_fit,
+)
+
 
 def glm_ar_sim(params: np.ndarray, ntrials: int = 100):
     """
@@ -273,6 +326,10 @@ def glm_ar_fit(params, X, Y, prior=None, output: str = 'npl'):
     beta = params[:-1]
     phi = params[-1]
 
+    # bounds: |phi| < 1 required for a stationary AR(1) process
+    if not (-0.999 <= phi <= 0.999):
+        return 1e7
+
     # linear predictor without AR part
     lin = X.dot(beta)
 
@@ -283,14 +340,25 @@ def glm_ar_fit(params, X, Y, prior=None, output: str = 'npl'):
         pred[t] = lin[t] + phi * Y[t-1]  # AR uses observed y_{t-1}
 
     resid_sigma = np.std(Y - pred)
-    negll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
+    nll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
 
     if output in ('npl', 'nll'):
-        return calc_fval(negll, params, prior=prior, output=output)
+        return calc_fval(nll, params, prior=prior, output=output)
     elif output == 'all':
         return {
             'params': np.hstack([beta, phi]),
             'predicted_y': pred,
-            'negll': negll,
-            'BIC': len(params) * np.log(len(Y)) + 2 * negll,
+            'nll': nll,
+            'BIC': _calc_bic(nll, len(params), len(Y)),
         }
+
+
+glm_ar_desc = """Gaussian linear regression with an AR(1) autoregressive term
+on the residuals: y_t = lin_t + phi * y_(t-1) + noise.
+Free parameters: regression weights, phi (AR(1) coefficient, in (-1,1))."""
+glm_ar_id = "glm_ar"
+glm_ar_spec = {"glm": {"linear": ["b0..bn"], "ar1": ["phi"]}}
+glm_ar_model = ModelSpec(
+    id=glm_ar_id, spec=glm_ar_spec, desc=glm_ar_desc.strip(),
+    params=None, sim=glm_ar_sim, fit=glm_ar_fit,
+)
