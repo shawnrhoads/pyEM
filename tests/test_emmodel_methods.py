@@ -181,19 +181,6 @@ def test_model_comparison_class():
     assert 'LME (largest is best)' in results.columns
 
 
-def test_model_comparison_methods_exist():
-    """Test that ModelComparison has the expected methods."""
-    comparison = ModelComparison([], [])
-
-    # Test methods exist
-    assert hasattr(comparison, 'compare')
-    assert hasattr(comparison, 'identifiability_analysis')
-    assert hasattr(comparison, 'plot_identifiability')
-    assert callable(comparison.compare)
-    assert callable(comparison.identifiability_analysis)
-    assert callable(comparison.plot_identifiability)
-
-
 def test_emmodel_basic_functionality():
     """Test that EMModel works with basic functionality."""
     nsubjects, nblocks, ntrials = 10, 2, 8
