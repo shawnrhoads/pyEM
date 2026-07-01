@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, List, Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize
@@ -176,31 +176,39 @@ class EMModel:
             raise RuntimeError("Call fit() first.")
         return self._out["posterior"]
 
-    def compute_integrated_bic(self, nsamples: int = 500, func_output: str = "all", nll_key: str = "nll") -> float:
+    def compute_integrated_bic(
+        self, nsamples: int = 500, func_output: str = "all", nll_key: str = "nll",
+        ntrials_total: int | None = None,
+    ) -> float:
         """
         Compute integrated Bayesian Information Criterion (BICint).
-        
+
         Args:
             nsamples: Number of samples for Monte Carlo integration
             func_output: Output type to request from fit function
             nll_key: Key to extract negative log-likelihood from fit function output
-            
+            ntrials_total: Number of trials per subject used for the BIC complexity
+                penalty. If omitted, auto-detected from ``all_data`` (see
+                :func:`pyem.utils.stats.calc_BICint`) — pass explicitly if your
+                model's data fields aren't all trial-aligned with identical shape.
+
         Returns:
             Integrated BIC value
         """
         if self._out is None:
             raise RuntimeError("Call fit() first.")
-        
+
         posterior = self._out["posterior"]
         return calc_BICint(
-            self.all_data, 
-            self.param_names, 
-            posterior["mu"], 
-            posterior["sigma"], 
+            self.all_data,
+            self.param_names,
+            posterior["mu"],
+            posterior["sigma"],
             self.fit_func,
             nsamples=nsamples,
             func_output=func_output,
-            nll_key=nll_key
+            nll_key=nll_key,
+            ntrials_total=ntrials_total,
         )
 
     def compute_lme(self) -> tuple[np.ndarray, float, np.ndarray]:
