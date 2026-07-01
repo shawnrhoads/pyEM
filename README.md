@@ -29,6 +29,7 @@ from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
 from pyem.models.rl import rw1a1b_model  # bundles rw1a1b_sim, rw1a1b_fit, and metadata
+from pyem.core.posterior import parameter_recovery
 
 print(rw1a1b_model.id)      # 'rw1a1b'
 print(rw1a1b_model.desc)    # human-readable description
@@ -66,7 +67,12 @@ estimated_params = output_dict['params']  # Shape: (n_subjects, n_params)
 print(f"Estimated parameters shape: {estimated_params.shape}")
 print(f"Available outputs: {list(output_dict.keys())}")
 
-# Plot recovery
+# Compare true vs. estimated (matrix)
+recovery = parameter_recovery(true_params, estimated_params)
+print(f"Correlation per parameter: {recovery.corr}")
+print(f"RMSE per parameter: {recovery.rmse}")
+
+# Plot recovery (scatterplot)
 for param_idx, param_label in enumerate(['beta','alpha']):
     simulated_param = sim['params'][:,param_idx]
     estimated_param = output_dict['params'][:,param_idx]
@@ -74,9 +80,42 @@ for param_idx, param_label in enumerate(['beta','alpha']):
                  estimated_param, f'Estimated {param_label}')
 ```
 
+### Using `ModelSpec` with the Parameter Registry
+
+`examples/params.py` (see [Creating Custom Models](#creating-custom-models)) provides a
+`build_params()` helper that replaces the hand-rolled `truncnorm`/`beta_dist` calls above with one
+call — it returns everything `EMModel` needs (`param_names`, `param_xform`, and natural-space
+`true_params`) in one shot, drawn from a shared registry of named, bounded parameters:
+
+```python
+import numpy as np
+from pyem import EMModel
+from pyem.models.rl import rw1a1b_model
+from params import build_params  # examples/params.py
+
+# Settings
+nsubjects, nblocks, ntrials = 100, 4, 24
+
+# Generate "true" parameters from the shared parameter registry
+param_names, param_xform, true_params = build_params(["beta", "alpha"], nsubjects)
+
+# Simulate and fit using the ModelSpec's .sim/.fit directly
+sim = rw1a1b_model.sim(true_params, nblocks=nblocks, ntrials=ntrials)
+all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
+
+model = EMModel(
+    all_data=all_data,
+    fit_func=rw1a1b_model.fit,
+    param_names=param_names,
+    param_xform=param_xform,
+)
+result = model.fit(verbose=0)
+print(f"Convergence: {result.convergence}")
+```
+
 ### Parameter Recovery Analysis
 
-We can also use the `EMModel.recover()` method to perform parameter recovery directly if you provide any custom simulation and model fitting functions that matchs [the heuristic below](###-Creating-Custom-Models)
+We can also use the `EMModel.recover()` method to package the simulate → fit → compare steps above into one call, if you provide any custom simulation and model fitting functions that matchs [the heuristic below](###-Creating-Custom-Models)
 
 ```python
 import numpy as np, matplotlib.pyplot as plt
@@ -120,54 +159,6 @@ fig = model.plot_recovery(recovery_dict, figsize=(10, 4))
 
 The returned dictionary includes `recovery_dict['correlation']`, an array of
 Pearson correlations for each parameter.
-
-### Manual Parameter Recovery
-
-`.recover()` is a convenience wrapper around a handful of building blocks that are all public on
-their own — useful to know if you want more control (e.g. custom plotting, a different recovery
-metric, or simulating/fitting on separate schedules). Here's the same recovery worked out by hand:
-
-```python
-import numpy as np
-from pyem import EMModel
-from pyem.utils.math import norm2beta, norm2alpha
-from pyem.utils.plotting import plot_scatter
-from pyem.core.posterior import parameter_recovery
-from pyem.models.rl import rw1a1b_model
-
-# 1. "True" parameters for a set of simulated subjects (natural space)
-nsubjects, nblocks, ntrials = 50, 4, 24
-true_params = np.column_stack([
-    np.random.uniform(0.75, 10, nsubjects),   # beta
-    np.random.uniform(0.05, 0.95, nsubjects), # alpha
-])
-
-# 2. Simulate behavior, then build the (choices, rewards) pairs EMModel expects
-sim = rw1a1b_model.sim(true_params, nblocks=nblocks, ntrials=ntrials)
-all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
-
-# 3. Fit every subject
-model = EMModel(
-    all_data=all_data,
-    fit_func=rw1a1b_model.fit,
-    param_names=["beta", "alpha"],
-    param_xform=[norm2beta, norm2alpha],
-)
-model.fit(verbose=0)
-
-# 4. Transformed (natural-space) per-subject estimates
-estimated_params = model.subject_params()  # shape: (n_subjects, n_params)
-
-# 5. Compare true vs. estimated by hand
-recovery = parameter_recovery(true_params, estimated_params)
-print(f"Correlation per parameter: {recovery.corr}")
-print(f"RMSE per parameter: {recovery.rmse}")
-
-# 6. Plot each parameter yourself
-for i, name in enumerate(["beta", "alpha"]):
-    plot_scatter(true_params[:, i], f"True {name}",
-                 estimated_params[:, i], f"Estimated {name}")
-```
 
 ### Model Comparison
 
@@ -464,7 +455,7 @@ class EMModel:
     def __init__(self, all_data, fit_func, param_names, param_xform=None, simulate_func=None)
     def fit(self, **kwargs) -> FitResult
     def simulate(self, *args, **kwargs)
-    def recover(self, true_params, **kwargs) -> dict
+    def recover(self, true_params, pr_inputs, **kwargs) -> dict
     def plot_recovery(self, recovery_dict, **kwargs) -> plt.Figure
     def subject_params(self) -> np.ndarray
     def compute_integrated_bic(self, **kwargs) -> float
@@ -497,9 +488,9 @@ Class for comparing the performance of different models:
 
 ```python
 class ModelComparison:
-    def __init__(self, models, names)
+    def __init__(self, models, model_names=None)
     def compare(self, **kwargs) -> pd.DataFrame
-    def identify(self, mi_inputs, **kwargs) -> pd.DataFrame
+    def identify(self, mi_inputs, nrounds=10, nsubjects=100, **kwargs) -> pd.DataFrame
     def plot_identifiability(self, **kwargs) -> plt.Figure
 ```
 
