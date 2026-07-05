@@ -1,13 +1,10 @@
-"""pyem model family: discounting over binary two-option choice tasks.
+"""discounting over binary two-option choice tasks.
 
 Each sub-family below models a different way that the subjective value of a
 reward gets discounted -- by social distance, delay, probability, or
 required effort -- using the same generative shape: a binary choice between
 a "baseline" option (undiscounted) and a "discounted" option whose value
-shrinks as a function of a block-level discounting variable. This mirrors
-the one-file-per-family convention used elsewhere in pyem (e.g. rl.py hosts
-rw1a1b/rw2a1b/rw3a1b/rw4a1b), except here each sub-family models a distinct
-discounting domain rather than a shared update rule:
+shrinks as a function of a block-level discounting variable:
 
     Social discounting            (sd_*)   -- distance to a social target
     Temporal (delay) discounting  (td_*)   -- delay until a larger reward
@@ -15,28 +12,17 @@ discounting domain rather than a shared update rule:
     Effort discounting            (ed_*)   -- physical/cognitive effort cost
     Prosocial effort discounting  (ped_*)  -- effort exerted for self vs other
 
-Every model's sim/fit pair is written out explicitly (no shared "core"
-dispatcher) so the trial-by-trial computation stays visible; only pure
-input-parsing/broadcasting boilerplate is factored into shared helpers.
-
-Common design across all sub-families -- and the thing that makes the single
-free parameter k *recoverable* -- is that the DISCOUNTED option carries the
-larger reward (a fixed large amount) while the BASELINE option carries a
-smaller, undiscounted reward that steps down a 9-rung ladder. As the
-block-level discounting variable grows, the discounted option's value falls
+As the block-level discounting variable grows, the discounted option's value falls
 and the indifference point sweeps down the ladder, so the trial at which the
 subject switches between options is informative about k at every block level.
 (If instead the discounted option were the *smaller* reward, it would almost
 never be chosen and the data would carry almost no information about k.)
 
-Common choice rule: the probability of choosing the "discounted" option is a
-logistic (sigmoid) function of the value difference, the standard choice
-function in the discounting literature:
+The probability of choosing the "discounted" option is a
+logistic (sigmoid) function of the value difference:
 
     p(discounted option) = sigmoid(V_discounted - V_baseline)
 
-There is no free inverse temperature anywhere in this module; delta_V is in
-dollar units.
 """
 from __future__ import annotations
 import numpy as np
@@ -46,11 +32,6 @@ from pyem.utils.math import norm2beta, calc_fval
 
 # =============================================================================
 # Shared helpers
-#
-# These are pure input-parsing/broadcasting boilerplate (shape and bounds
-# checks), not part of any model's discounting computation, so they are
-# factored out and reused across sub-families the same way pyem/models/rl.py
-# inlines one allocation helper for its rw1a1b/rw3a1b/rw4a1b siblings.
 # =============================================================================
 def _choices_to_idx(choices: np.ndarray, nblocks: int, ntrials: int, choice_map: dict | None = None) -> np.ndarray:
     """Map a (nblocks, ntrials) array of choice labels or 0/1 codes to indices."""
