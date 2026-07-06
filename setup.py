@@ -7,7 +7,7 @@ github_url = 'https://github.com/shawnrhoads/pyEM'
 authors = ["Shawn A. Rhoads"]
 
 # Get long description
-with open("README.md", "r") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     __long_description__ = fh.read()
 
 # Get requirements from requirements.txt, ignoring editable/local refs

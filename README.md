@@ -508,7 +508,7 @@ class ModelComparison:
 ```bash
 git clone https://github.com/shawnrhoads/pyEM.git
 cd pyEM
-conda create env --file environment.yml
+conda env reate --file environment.yml
 ```
 
 ### Using GitHub
