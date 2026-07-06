@@ -8,4 +8,4 @@ title: "pyEM: Expectation Maximization with MAP estimation in Python"
 version: 0.2.2
 doi: 10.5281/zenodo.10415396
 date-released: 2023-12-21
-url: "https://github.com/shawnrhoads/pyEMt"
+url: "https://github.com/shawnrhoads/pyEM"
