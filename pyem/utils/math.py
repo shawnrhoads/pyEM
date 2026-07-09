@@ -57,9 +57,9 @@ def calc_fval(negll: float, params: ArrayLike, prior=None, output: str = 'npl') 
     if output == 'npl' and prior is not None and hasattr(prior, 'logpdf'):
         # Want to minimise -log[ P(data|h) * P(h) ]
         fval = -(-negll + prior.logpdf(np.asarray(params)))
-        if np.isinf(fval):
+        if not np.isfinite(fval):
             # Return a very large value so gradient-based optimisers keep going
             fval = 1e7
         return fval
     else:
-        return negll
+        return float(negll) if np.isfinite(negll) else 1e7
