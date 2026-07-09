@@ -167,6 +167,11 @@ When we have two different models, we can use the `ModelComparison` class to com
 * **LME** (Log Model Evidence): Laplace approximation to marginal likelihood (formally: log probability of the observed data given a model)
 * **Integrated BIC** (Integrated Bayesian Information Criterion): Integrates over the distribution of parameters, which incorporates uncertainty about the parameter values into the model selection process while penalizing model complexity
 
+> [!NOTE]
+> The example below calls `display(comparison_df)`, a Jupyter/IPython convenience that is
+> injected automatically into the global namespace inside a notebook. If you run this as a plain
+> `.py` script (no IPython), replace it with `print(comparison_df)`.
+
 ```python
 import numpy as np
 from scipy.stats import truncnorm, beta as beta_dist
@@ -350,11 +355,49 @@ functions and a `ModelSpec` (`<name>_model`) carrying its `.id`/`.desc`/`.spec`.
 
 * **`bayes_sim/fit`** (id: `bayes`): Bayesian belief-updating over which of three sources (e.g. "ponds") an observation came from, given no feedback. Free parameter: `lambda1` (belief-update rate, in `[0,1]`).
 
+### Discounting Models (`pyem.models.discounting`)
+
+Five discounting domains, all sharing the same shape: a block-level discounting variable (social
+distance, delay, odds against, or effort level) discounts one option's utility, and choice follows
+a logistic rule on the resulting value difference (`sigmoid(delta_V)`).
+
+* **`sd_hyp_wk_sim/fit`** (id: `sd_hyp_wk`): hyperbolic social discounting with a free other-regarding weight, `U_other(N) = w_other*r_other / (1 + k*N)`. Free parameters: `w_other`, `k`.
+* **`sd_hyp_k_sim/fit`** (id: `sd_hyp_k`): hyperbolic social discounting with the weight fixed at 1, `U_other(N) = r_other / (1 + k*N)`. Free parameter: `k`.
+* **`sd_par_k_sim/fit`** (id: `sd_par_k`): parabolic social discounting, `U_other(N) = r_other - k*N**2`. Free parameter: `k`.
+* **`sd_lin_k_sim/fit`** (id: `sd_lin_k`): linear social discounting, `U_other(N) = r_other - k*N`. Free parameter: `k`.
+* **`td_hyp_k_sim/fit`** (id: `td_hyp_k`): hyperbolic temporal (delay) discounting ([Mazur, 1987](https://doi.org/10.4324/9781315798260)) in a smaller-sooner vs. larger-later choice. Free parameter: `k`.
+* **`prd_hyp_k_sim/fit`** (id: `prd_hyp_k`): hyperbolic probability discounting ([Rachlin, Raineri, & Cross, 1991](https://doi.org/10.1901/jeab.1991.55-233)). Free parameter: `k`.
+* **`ed_par_k_sim/fit`** (id: `ed_par_k`): parabolic effort discounting (accelerating effort cost). Free parameter: `k`.
+* **`ped_par_k_sim/fit`** (id: `ped_par_k`): parabolic prosocial effort discounting with a single discount rate shared across self/other. Free parameter: `k`.
+* **`ped_par_2k_sim/fit`** (id: `ped_par_2k`): parabolic prosocial effort discounting with separate self/other discount rates. Free parameters: `k_self`, `k_other`.
+
+See `examples/discounting.ipynb` for worked examples of all nine variants.
+
+### Drift-Diffusion Model (`pyem.models.ddm`)
+
+* **`ddm_sim/fit`** (id: `ddm`): drift-diffusion model of a safe-vs-risky economic choice; a two-boundary Wiener diffusion (upper = risky, lower = safe) jointly models choice and response time, with the Navarro & Fuss (2009) first-passage-time density as the likelihood. Free parameters: `v_coef` (drift scaling), `a` (boundary separation), `t0` (non-decision time), `z` (start-point bias).
+
+### Prospect Theory (`pyem.models.prospect_theory`)
+
+* **`pt_sim/fit`** (id: `pt`): Prospect Theory ([Tversky & Kahneman, 1992](https://doi.org/10.1007/BF00122574)) model of choices between a certain amount and a two-outcome gamble; a power value function with separate gain/loss curvature and a loss-aversion multiplier, combined with a one-parameter probability weighting function and a logistic choice rule. Free parameters: `alpha` (gain curvature), `beta` (loss curvature), `lambda` (loss aversion), `gamma` (probability weighting), `mu` (choice temperature).
+
+### Signal Detection Theory (`pyem.models.sdt`)
+
+* **`sdt_sim/fit`** (id: `sdt`): equal-variance Gaussian signal detection theory model of an old/new recognition memory task. Free parameters: `dprime` (sensitivity, `d' >= 0`), `criterion` (response bias, `c`).
+
 ### Creating Custom Models
 
 Every model above follows the same template: a pair of `_sim`/`_fit` functions plus a `ModelSpec`
 that bundles them with a hand-authored id/description/spec. To create a custom model, follow the
 same shape:
+
+> [!NOTE]
+> Both `EMModel.fit()`'s EM loop and `model.recover()` always call your `_fit` function with
+> `prior=...` passed as a **keyword** argument (never positionally). This works whether your
+> function lists its data arguments explicitly (`params, choices, rewards, *, prior=None,
+> output="npl"`, as below) or captures them variadically (`params, *data, prior=None,
+> output="npl"` — `*data` already forces everything after it to be keyword-only, so no extra `*`
+> is needed in that case). Either keyword-only style is safe to use with `EMModel.fit`.
 
 ```python
 from pyem.core.modelspec import ModelSpec
@@ -501,6 +544,56 @@ class ModelComparison:
 * **Plotting** (`pyem.utils.plotting`): `plot_scatter()`
 * **Parameter registry** (`examples/params.py`, not part of the installed package): `ParamDef`, `PARAM_REGISTRY`, `build_params()`, `validate_params()`
 
+## EM & Optimizer Configuration
+
+`EMModel.fit()` exposes two layers of configuration, matching the two nested loops that make up
+hierarchical EM:
+
+* **Outer EM loop** (`EMConfig`): alternates an E-step (fit each subject given the current
+  population-level prior) and an M-step (update the population-level prior from all subjects'
+  fits) until convergence.
+* **Inner per-subject optimizer** (`OptimConfig`): the `scipy.optimize.minimize` call used
+  *inside* each subject's E-step to find that subject's MAP parameter estimate.
+
+You never construct `EMConfig`/`OptimConfig` directly — `fit()` builds them for you from its
+keyword arguments:
+
+```python
+result = model.fit(
+    mstep_maxit=200,             # EMConfig: max outer EM iterations
+    convergence_method="sum",    # EMConfig: "sum" | "mean" | "median" aggregation of per-subject deltas
+    convergence_custom=None,     # EMConfig: None | "relative_npl" | "running_average"
+    convergence_crit=1e-3,       # EMConfig: convergence threshold
+    convergence_precision=6,     # EMConfig: decimal precision for convergence comparisons
+    njobs=-2,                    # EMConfig: parallel jobs (joblib) across subjects within an E-step
+    seed=None,                   # EMConfig: RNG seed for the EM loop / optimizer restarts
+    mstep="gaussian",            # EMConfig: population-distribution family fit by the M-step
+    optim_method="BFGS",         # OptimConfig: scipy.optimize.minimize method for each subject
+    optim_options=None,          # OptimConfig: extra options merged into {"gtol": 1e-4, "eps": 1e-4}
+    max_restarts=2,              # OptimConfig: extra random-restart attempts if not successful
+)
+```
+
+> [!NOTE]
+> `OptimConfig` also has an `x_scale` field (scale of the random initial guess drawn for each
+> optimizer attempt; default `0.1`), but `fit()` does not currently expose a matching keyword for
+> it — its default always applies when fitting through `EMModel`.
+
+### M-step distribution families (`mstep=...`)
+
+By default the M-step fits a Gaussian population distribution per parameter (`mstep="gaussian"`),
+matching the classic Huys/Daw hierarchical EM formulation. Heavier-tailed alternatives can improve
+robustness to outlier subjects:
+
+```python
+result = model.fit(mstep="laplace")
+```
+
+* `"gaussian"` (default): Normal population distribution.
+* `"laplace"`: Laplace (double-exponential) distribution — heavier tails than Gaussian.
+* `"student_t"`: Student's t distribution (default 8 degrees of freedom) — heavier tails still.
+* `"cauchy"`: Cauchy distribution (Student's t with 1 degree of freedom) — very heavy tails.
+
 ## Installation
 
 ### Using Anaconda (recommended)
@@ -526,20 +619,39 @@ pip install -e .
 
 ## Requirements
 
+Core (installed automatically with `pip install pyem` or `pip install -e .`):
+
 * Python >= 3.10
 * numpy >= 1.22
 * scipy >= 1.10
 * pandas >= 1.5
-* matplotlib >= 3.5
+* matplotlib
 * joblib >= 1.3
+* typing-extensions >= 4.6
+
+Optional extras (installed via `pip install`'s extras syntax):
+
+* `pyem[viz]`: `seaborn` — used by some plotting helpers (imported lazily; not required for core `EMModel`/`ModelComparison` usage).
+* `pyem[extras]`: `statsmodels`, `scikit-learn`, `tqdm` — used by some example notebooks.
+* `pyem[dev]`: `pytest` — for running the test suite.
+
+To install everything needed to run the example notebooks:
+
+```bash
+pip install 'pyem[viz,extras]'
+```
 
 ## Examples
 
 See the `examples/` directory for detailed tutorials:
 
-* `examples/rl.ipynb`: Reinforcement Learning
-* `examples/bayes.ipynb`: Bayesian Inference
-* `examples/glm.ipynb`: Simple linear modeling
+* `examples/rl.ipynb`: Reinforcement Learning — free params `beta`, `alpha` (and variants: `alpha_pos`/`alpha_neg`, `alpha_self`/`alpha_other`/`alpha_noone`, `alpha_self_pos`/`alpha_self_neg`/`alpha_other_pos`/`alpha_other_neg`)
+* `examples/bayes.ipynb`: Bayesian Inference — free param `lambda1`
+* `examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
+* `examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
+* `examples/ddm.ipynb`: Drift-Diffusion Model — free params `v_coef`, `a`, `t0`, `z`
+* `examples/prospect_theory.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
+* `examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
 
 ## Testing
 
