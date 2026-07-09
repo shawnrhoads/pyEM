@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+import warnings
 from dataclasses import dataclass
 from typing import Any, Callable, List, Sequence
 import matplotlib.pyplot as plt
@@ -49,7 +50,8 @@ class EMModel:
         self.param_names = list(param_names)
         self.simulate_func = simulate_func
         self._out: dict[str, Any] | None = None
-        
+        self._outfit: dict[str, np.ndarray] | None = None
+
         # Store parameter transformation functions
         if param_xform is not None:
             if len(param_xform) != len(param_names):
@@ -95,9 +97,7 @@ class EMModel:
         *,
         verbose: int = 1,
         mstep_maxit: int = 200,
-        estep_maxit: int | None = None,
         convergence_method: str = "sum",
-        convergence_type: str = "NPL",
         convergence_custom: str | None = None,
         convergence_crit: float = 1e-3,
         convergence_precision: int = 6,
@@ -109,19 +109,19 @@ class EMModel:
         prior_mu: np.ndarray | None = None,
         prior_sigma: np.ndarray | None = None,
         prior: Prior | None = None,
+        mstep: str = "gaussian",
     ) -> FitResult:
         if self.all_data is None:
             raise ValueError("all_data must be provided to fit the model.")
         config = EMConfig(
             mstep_maxit=mstep_maxit,
-            estep_maxit=estep_maxit,
             convergence_method=convergence_method,  # kept for compatibility
-            convergence_type="NPL",                 # LME path omitted in this high-level wrapper
             convergence_custom=convergence_custom,
             convergence_crit=convergence_crit,
             convergence_precision=convergence_precision,
             njobs=njobs,
             seed=seed,
+            mstep=mstep,
         )
         # configure optimizer
         config.optim = OptimConfig(method=optim_method, options=optim_options, max_restarts=max_restarts)
@@ -143,8 +143,8 @@ class EMModel:
                 prior=prior,
             )
         self._out = out
-        # compute final arrays and store for convenience
-        self.outfit = self.get_outfit()
+        # drop any cached outfit from a previous fit; recomputed lazily on access
+        self._outfit = None
         return FitResult(
             m=out["m"],
             inv_h=out["inv_h"],
@@ -155,6 +155,19 @@ class EMModel:
             NLL=out["NLL"],
             convergence=out["convergence"],
         )
+
+    @property
+    def outfit(self) -> dict[str, np.ndarray]:
+        """Lazily-computed, cached dict of ``fit_func`` outputs for each subject.
+
+        Computed on first access after a fit/recover and cached; the cache is
+        invalidated whenever a new ``fit()`` or ``recover()`` runs.
+        """
+        if self._out is None:
+            raise RuntimeError("Call fit() first.")
+        if self._outfit is None:
+            self._outfit = self.get_outfit()
+        return self._outfit
 
     def simulate(self, *args, **kwargs):
         if self.simulate_func is None:
@@ -262,8 +275,23 @@ class EMModel:
 
         return arrays_dict
 
-    def scipy_minimize(self) -> dict[str, Any]:
-        """Fit each subject independently using :func:`scipy.optimize.minimize`."""
+    def scipy_minimize(self, seed: int | None = None) -> dict[str, Any]:
+        """Fit each subject independently using :func:`scipy.optimize.minimize`.
+
+        This is a non-hierarchical baseline (no population-level prior/M-step;
+        each subject's initial guess and objective are independent of every
+        other subject) — useful for comparing against the full EM fit.
+
+        Args:
+            seed: Seed for the :func:`numpy.random.default_rng` instance used
+                to draw each subject's random initial guess (``x0``). Passing
+                the same seed reproduces the same sequence of initial guesses
+                across runs. Note that this method uses its own local
+                ``Generator`` and no longer reads/honors the global
+                ``np.random.seed()`` state — call with an explicit ``seed``
+                for reproducibility instead of relying on a prior global seed
+                call.
+        """
 
         if self.all_data is None:
             raise ValueError("all_data must be provided to fit the model.")
@@ -275,6 +303,8 @@ class EMModel:
         inv_h = np.zeros((nparams, nparams, nsubjects))
         NPL = np.zeros(nsubjects)
 
+        rng = np.random.default_rng(seed)
+
         for subj_idx, args in enumerate(self.all_data):
             if not isinstance(args, (list, tuple)):
                 args = (args,)
@@ -282,7 +312,7 @@ class EMModel:
             def obj_func(params: np.ndarray) -> float:
                 return self.fit_func(params, *args, output="npl")
 
-            x0 = np.random.randn(nparams)
+            x0 = rng.standard_normal(nparams)
             res = minimize(obj_func, x0=x0, method="BFGS")
             m[:, subj_idx] = res.x
             NPL[subj_idx] = res.fun
@@ -307,15 +337,28 @@ class EMModel:
         }
 
 
-    def recover(self, true_params: np.ndarray, pr_inputs: List[str], simulate_func: Callable = None,**sim_kwargs) -> dict[str, Any]:
+    def recover(self, true_params: np.ndarray, pr_inputs: List[str], simulate_func: Callable = None,
+                fit_kwargs: dict | None = None, **sim_kwargs) -> dict[str, Any]:
         """
         Parameter recovery analysis given true parameters and simulation function.
-        
+
         Args:
             true_params: True parameter values (nsubjects x nparams)
+            pr_inputs: Required. Names of the simulation output keys (from
+                ``simulate_func``'s returned dict) to pass positionally to
+                ``fit_func`` as subject data, in order, e.g. ``["choices",
+                "rewards"]``. Every named key must be present in the
+                simulation output and all requested series must have equal
+                length; a per-trial row is built by zipping across them
+                (``all_data[i] = [sim[k][i] for k in pr_inputs]``).
             simulate_func: Simulation function (uses self.simulate_func if None)
+            fit_kwargs: Additional keyword arguments forwarded to the recovery
+                model's ``fit(...)`` call (e.g. seed, mstep, prior); ``verbose``
+                defaults to 0 but may be overridden via fit_kwargs. Note that
+                end-to-end recovery reproducibility is additionally bounded by
+                the model's simulate function RNG (currently unseeded).
             **sim_kwargs: Additional arguments for simulation
-            
+
         Returns:
             Dictionary containing true params, estimated params, and recovery metrics.
             The ``correlation`` entry provides a Pearson correlation coefficient for
@@ -358,7 +401,8 @@ class EMModel:
         )
         
         # Fit the model
-        fit_result = recovery_model.fit(verbose=0)
+        merged = {"verbose": 0, **(fit_kwargs or {})}
+        fit_result = recovery_model.fit(**merged)
 
         # grab estimated params with transformations applied if applicable
         estimated_params = recovery_model.subject_params()
@@ -373,7 +417,23 @@ class EMModel:
             'recovery_model': recovery_model
         }
 
+        # Adopt the recovery fit onto THIS model so get_outfit()/.outfit are usable
+        # afterwards. The outer model is typically constructed with all_data=None for
+        # recovery workflows, so we overwrite all_data with the simulated dataset and
+        # populate outfit from the recovery fit. Warn loudly because this mutates the
+        # model's data in place.
+        warnings.warn(
+            "EMModel.recover() overwrites this model's `all_data` with the data "
+            "simulated from `true_params` and assigns `outfit` from the recovery fit, "
+            "so get_outfit()/.outfit reflect the recovered model. The recovered "
+            "estimates are also available via the returned dict's 'recovery_model'.",
+            stacklevel=2,
+        )
+        self.all_data = all_data
         self._out = recovery_model._out
+        # assign outfit from the fit() run (reuses the recovery model's computed outfit,
+        # which is built from the same all_data + fit)
+        self._outfit = recovery_model.outfit
         return recovery_dict
 
     def plot_recovery(
