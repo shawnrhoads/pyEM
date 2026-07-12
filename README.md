@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://shawnrhoads.github.io/pyEM/">
+  <a href="https://shawnrhoadsphd.com/pyEM/">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="assets/source/pyem-logo-horizontal-dark-editable.svg">
       <img alt="pyEM" src="assets/source/pyem-logo-horizontal-editable.svg" width="420">
@@ -20,7 +20,7 @@
 
 > Rhoads, S. A., Gan, L., Berluti, K., O'Connell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2025). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. In press at *Nature Communications*. https://doi.org/10.1038/s41467-025-64424-9
 
-This is a Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation for fitting models to behavioral data. [See below](#key-concepts) for more information on the algorithm.
+pyEM is a Python implementation of Expectation Maximization with MAP for fitting cognitive computational models to behavioral data. [See below](#key-concepts) for more information on the algorithm.
 
 ## Quick Start
 
@@ -392,10 +392,8 @@ See `docs/examples/discounting.ipynb` for worked examples of all nine variants.
 
 ### Drift-Diffusion Model (`pyem.models.ddm`)
 
-* **`ddm4_sim/fit`** (id: `ddm4`): four-parameter DDM of a HIGH-vs-LOW value choice (two certain amounts per trial, choose the higher); a two-boundary Wiener diffusion (upper = high/correct, lower = low/error) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(value_high - value_low). Free parameters: `v_coef`, `a`, `t0`, `z`.
-* **`ddm7_sim/fit`** (id: `ddm7`): seven-parameter high-vs-low value model — extends ddm4 with across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width), marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz`; weakly identified for recovery, retained for simulation/likelihood.
-* **`ddm4_lotto_sim/fit`** (id: `ddm4_lotto`): four-parameter DDM of a safe-vs-risky GAMBLE (risky gamble EV=p*payoff vs safe certain amount); a two-boundary Wiener diffusion (upper = risky, lower = safe) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(EV_risky - safe). Free parameters: `v_coef`, `a`, `t0`, `z`.
-* **`ddm7_lotto_sim/fit`** (id: `ddm7_lotto`): seven-parameter gamble model — extends ddm4_lotto with across-trial variability `sv`, `st`, `sz`, marginalized analytically for `sv` and by Gauss-Legendre quadrature for `st`, `sz`; weakly identified for recovery, retained for simulation/likelihood.
+* **`ddm4_sim/fit`** (id: `ddm4`): four-parameter DDM of a HIGH-vs-LOW value choice (two certain amounts per trial, choose the higher); a two-boundary Wiener diffusion (upper = high/correct, lower = low/error) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(value_high - value_low). Free parameters: `v_coef`, `a`, `t0`, `z`. Across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width) are set to 0, marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz.
+* **`ddm4_lotto_sim/fit`** (id: `ddm4_lotto`): four-parameter DDM of a safe-vs-risky GAMBLE (risky gamble EV=p*payoff vs safe certain amount); a two-boundary Wiener diffusion (upper = risky, lower = safe) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(EV_risky - safe). Free parameters: `v_coef`, `a`, `t0`, `z`. Across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width) are set to 0, marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz.
 
 ### Prospect Theory (`pyem.models.pt`)
 
@@ -670,7 +668,7 @@ See the `docs/examples/` directory for detailed tutorials:
 * `docs/examples/bayes.ipynb`: Bayesian Inference — free param `lambda1`
 * `docs/examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
 * `docs/examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
-* `docs/examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm7/ddm4_lotto/ddm7_lotto), parameter recovery + across-trial-variability visualizations
+* `docs/examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm4_lotto), parameter recovery + across-trial-variability visualizations
 * `docs/examples/pt.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
 * `docs/examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
 
@@ -679,7 +677,7 @@ See the `docs/examples/` directory for detailed tutorials:
 The full documentation site — API reference, guides, and the rendered example
 notebooks — is built with [MkDocs](https://www.mkdocs.org/) and the
 [Material](https://squidfunk.github.io/mkdocs-material/) theme, and is published at
-**https://shawnrhoads.github.io/pyEM/**.
+**https://shawnrhoadsphd.com/pyEM/**.
 
 ### Building and viewing the docs locally
 

@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyem"
-version = "0.2.0"
-description = "Hierarchical EM with MAP estimation for fitting models to behavior"
+version = "1.0.0"
+description = "Expectation Maximization with MAP in Python for fitting cognitive computational models to behavioral data"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name="Shawn A. Rhoads"}]
