@@ -125,7 +125,7 @@ def _make_pt_trials(ntrials: int, rng: np.random.Generator):
     return gamble, probs, certain
 
 
-def pt_sim(params: np.ndarray, ntrials: int = 150, **kwargs):
+def pt_sim(params: np.ndarray, ntrials: int = 150, seed: int | None = None, **kwargs):
     """Simulate certain-vs-gamble choices under prospect theory.
 
     ``params``: (nsubjects, 5) NATURAL-space values
@@ -155,7 +155,7 @@ def pt_sim(params: np.ndarray, ntrials: int = 150, **kwargs):
     if not ((all_mu >= 1e-5) & (all_mu <= 20.0)).all():
         raise ValueError("mu values out of bounds [1e-5,20]")
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     gamble = np.zeros((nsubjects, ntrials, 2), dtype=float)
     probs = np.zeros((nsubjects, ntrials, 2), dtype=float)

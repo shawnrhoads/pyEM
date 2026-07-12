@@ -17,7 +17,7 @@ from ..utils.math import norm2beta, calc_fval
 from ..core.modelspec import ModelSpec
 
 
-def sdt_sim(params: np.ndarray, ntrials: int = 200, **kwargs) -> dict:
+def sdt_sim(params: np.ndarray, ntrials: int = 200, seed: int | None = None, **kwargs) -> dict:
     """Simulate an equal-variance Gaussian signal-detection (old/new recognition) task.
 
     Each trial presents either a previously-studied ("old", ``is_old=1``) or
@@ -38,7 +38,7 @@ def sdt_sim(params: np.ndarray, ntrials: int = 200, **kwargs) -> dict:
     if not ((all_dprime >= 1e-5) & (all_dprime <= 20.0)).all():
         raise ValueError("dprime values out of bounds")
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     is_old = np.zeros((nsubjects, ntrials), dtype=float)
     resp_old = np.zeros((nsubjects, ntrials), dtype=float)
