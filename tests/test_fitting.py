@@ -1,6 +1,6 @@
 import numpy as np
 from pyem.api import EMModel
-from pyem.models.rl import (
+from pyem.models.rl_mf import (
     rw1a1b_sim, rw1a1b_fit,
     rw2a1b_sim, rw2a1b_fit,
 )
@@ -107,7 +107,7 @@ def test_uniform_prior_convergent_fit():
 
 
 def test_recover_fit_kwargs_passthrough_mstep():
-    from pyem.models.rl import rw1a1b_model
+    from pyem.models.rl_mf import rw1a1b_model
     true_params = _simulate_rw_params(12)
     model = EMModel(all_data=None, fit_func=rw1a1b_model.fit, param_names=["beta", "alpha"],
                     simulate_func=rw1a1b_model.sim)
@@ -119,7 +119,7 @@ def test_recover_fit_kwargs_passthrough_mstep():
 def test_recover_fit_kwargs_forwarded_to_fit():
     # An invalid fit kwarg must reach EMModel.fit and raise -> proves fit_kwargs is forwarded.
     import pytest
-    from pyem.models.rl import rw1a1b_model
+    from pyem.models.rl_mf import rw1a1b_model
     true_params = _simulate_rw_params(8)
     model = EMModel(all_data=None, fit_func=rw1a1b_model.fit, param_names=["beta", "alpha"],
                     simulate_func=rw1a1b_model.sim)
@@ -169,7 +169,7 @@ def test_recover_populates_outfit_and_all_data():
     import warnings
     import numpy as np
     from pyem.api import EMModel
-    from pyem.models.rl import rw1a1b_model
+    from pyem.models.rl_mf import rw1a1b_model
     from test_helpers import _simulate_rw_params
     true_params = _simulate_rw_params(10)
     model = EMModel(all_data=None, fit_func=rw1a1b_model.fit, param_names=["beta", "alpha"],

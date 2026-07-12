@@ -42,3 +42,14 @@ def test_sdt_sim_shapes():
     rng_params = np.array([[1.0, 0.0], [2.0, 0.5]])  # natural [dprime, criterion]
     sim = sdt_sim(rng_params, ntrials=50)
     assert sim["is_old"].shape == (2, 50) and sim["resp_old"].shape == (2, 50)
+
+
+def test_sdt_sim_seed_reproducible():
+    import numpy as np
+    from pyem.models.sdt import sdt_sim
+    true = np.array([[1.5, 0.0]])
+    a = sdt_sim(true, ntrials=40, seed=2)
+    b = sdt_sim(true, ntrials=40, seed=2)
+    assert np.array_equal(a["resp_old"], b["resp_old"])
+    c = sdt_sim(true, ntrials=40, seed=3)
+    assert not np.array_equal(a["resp_old"], c["resp_old"])

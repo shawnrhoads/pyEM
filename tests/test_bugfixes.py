@@ -1,6 +1,6 @@
 import numpy as np
 from pyem.api import EMModel
-from pyem.models.rl import rw1a1b_sim, rw1a1b_fit
+from pyem.models.rl_mf import rw1a1b_sim, rw1a1b_fit
 from test_helpers import _simulate_rw_params
 
 
@@ -51,7 +51,7 @@ def test_dead_kwargs_removed():
 def test_compute_lme_method_still_works():
     import numpy as np
     from pyem.api import EMModel
-    from pyem.models.rl import rw1a1b_fit, rw1a1b_sim
+    from pyem.models.rl_mf import rw1a1b_fit, rw1a1b_sim
     from test_helpers import _simulate_rw_params
     params = _simulate_rw_params(6)
     sim = rw1a1b_sim(params, nblocks=1, ntrials=6)

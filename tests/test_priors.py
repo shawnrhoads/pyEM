@@ -1,7 +1,7 @@
 import numpy as np
 from pyem.api import EMModel
 from pyem.core.priors import UniformPrior
-from pyem.models.rl import rw1a1b_fit as rw_fit, rw1a1b_sim as rw_sim
+from pyem.models.rl_mf import rw1a1b_fit as rw_fit, rw1a1b_sim as rw_sim
 from test_helpers import _simulate_rw_params
 
 def test_uniform_prior_and_fit():

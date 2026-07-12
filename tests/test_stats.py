@@ -91,3 +91,14 @@ def test_calc_bicint_ntrials_total_override():
     )
     expected = -2 * (-fixed_nll) + npar * np.log(100)
     assert np.isclose(bicint, expected)
+
+
+def test_calc_bicint_njobs_serial():
+    from pyem.models.rl_mf import rw1a1b_sim, rw1a1b_fit
+    sim = rw1a1b_sim(np.array([[3.0, 0.5], [2.0, 0.4]]), nblocks=2, ntrials=10, seed=0)
+    all_data = [[sim["choices"][s], sim["rewards"][s]] for s in range(2)]
+    mu = np.array([0.0, 0.0])
+    sigma = np.array([1.0, 1.0])
+    v = calc_BICint(all_data, ["beta", "alpha"], mu, sigma, rw1a1b_fit,
+                    nsamples=40, njobs=1)
+    assert np.isfinite(v)

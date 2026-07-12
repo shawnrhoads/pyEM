@@ -5,7 +5,7 @@ Tests for enhanced EMModel methods and ModelComparison class.
 import numpy as np, matplotlib.pyplot as plt
 import pytest
 from pyem.api import EMModel
-from pyem.models.rl import rw1a1b_sim as rw_simulate, rw1a1b_fit as rw_fit
+from pyem.models.rl_mf import rw1a1b_sim as rw_simulate, rw1a1b_fit as rw_fit
 from pyem.core.compare import ModelComparison
 from pyem.utils.math import norm2alpha, alpha2norm, norm2beta, beta2norm
 from test_helpers import _simulate_rw_params
@@ -199,3 +199,15 @@ def test_emmodel_basic_functionality():
     # Parameters should be different across subjects (individual estimation)
     params_vary = np.var(res.m, axis=1) > 1e-6
     assert np.any(params_vary)  # At least some parameters should vary across subjects
+
+
+def test_recover_rejects_non_dict_sim():
+    import numpy as np, pytest
+    from pyem.api import EMModel
+    from pyem.models.rl_mf import rw1a1b_fit
+    def bad_sim(true_params, **kw):
+        return (np.zeros((2, 3)), np.zeros((2, 3)))  # (X, Y) tuple, like GLM
+    m = EMModel(all_data=None, fit_func=rw1a1b_fit,
+                param_names=["beta", "alpha"], simulate_func=bad_sim)
+    with pytest.raises(TypeError):
+        m.recover(np.zeros((2, 2)), pr_inputs=["choices", "rewards"])

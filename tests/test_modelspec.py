@@ -1,10 +1,10 @@
 """
 Tests for the ModelSpec wrapper objects (<name>_model) defined alongside each
-model's <name>_sim/<name>_fit functions in pyem.models.rl/glm/bayes.
+model's <name>_sim/<name>_fit functions in pyem.models.rl_mf/glm/bayes.
 """
 import pytest
 from pyem.core.modelspec import ModelSpec
-from pyem.models.rl import (
+from pyem.models.rl_mf import (
     rw1a1b_sim, rw1a1b_fit, rw1a1b_model,
     rw2a1b_sim, rw2a1b_fit, rw2a1b_model,
     rw3a1b_sim, rw3a1b_fit, rw3a1b_model,
