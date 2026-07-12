@@ -1,5 +1,5 @@
 
-import numpy as np, random
+import numpy as np
 from itertools import permutations, chain
 from typing import Dict
 from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
@@ -34,7 +34,7 @@ def _alloc_rw_fit(nblocks: int, ntrials: int) -> Dict[str, np.ndarray | float]:
     )
 
 def rw1a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
-                    outcomes: np.ndarray | None = None):
+                    outcomes: np.ndarray | None = None, seed: int | None = None):
     """Simulate a simple Rescorla–Wagner model with one learning rate.
 
     Each subject repeatedly chooses between two options (A/B).  Rewards are
@@ -42,6 +42,8 @@ def rw1a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
     blocks.  Parameters are expected in **Gaussian** space and are transformed
     to their natural ranges via :func:`norm2beta` (for inverse temperature) and
     :func:`norm2alpha` (for learning rate).
+
+    ``seed`` seeds the RNG for reproducibility.
     """
     nsubjects = params.shape[0]
     # preallocate arrays for speed
@@ -51,7 +53,7 @@ def rw1a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
         dat["choices_A"], dat["PE"], dat["nll"],
     )
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
     this_block_probs = np.array([0.8, 0.2])  # reward probability for option A
 
     # all params (assuming raw params)
@@ -156,8 +158,11 @@ rw1a1b_model = ModelSpec(
 
 
 def rw2a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
-               outcomes: np.ndarray | None = None):
-    """Simulate a Rescorla–Wagner model with separate learning rates for gains and losses."""
+               outcomes: np.ndarray | None = None, seed: int | None = None):
+    """Simulate a Rescorla–Wagner model with separate learning rates for gains and losses.
+
+    ``seed`` seeds the RNG for reproducibility.
+    """
     nsubjects = params.shape[0]
     dat = _alloc_rw_sim(nsubjects, nblocks, ntrials)
     choices, rewards, EV, ch_prob, choices_A, PE, nll = (
@@ -165,7 +170,7 @@ def rw2a1b_sim(params: np.ndarray, nblocks: int = 3, ntrials: int = 24,
         dat["choices_A"], dat["PE"], dat["nll"],
     )
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
     this_block_probs = np.array([0.8, 0.2])
 
     # all params (assuming raw params)
@@ -285,7 +290,8 @@ rw2a1b_model = ModelSpec(
 def rw3a1b_sim(params: np.ndarray,
                nblocks: int = 9,
                ntrials: int = 16,
-               outcomes: np.ndarray | None = None):
+               outcomes: np.ndarray | None = None,
+               seed: int | None = None):
     """
     Two-option task (A/B each trial) with three binary outcome channels:
     self, other, noone. NATURAL-SPACE params.
@@ -303,6 +309,8 @@ def rw3a1b_sim(params: np.ndarray,
       - PE_self/other/noone: (S,B,T)
       - rewards: list of length S with the 3 reward arrays (for EMModel.recover)
       - params: (S,4) = np.array([beta, a_self, a_other, a_noone]).T
+
+    ``seed`` seeds the RNG for reproducibility.
     """
     if params.ndim != 2 or params.shape[1] != 4:
         raise ValueError("params must be (nsubjects, 4) = [beta, a_self, a_other, a_noone]")
@@ -322,7 +330,7 @@ def rw3a1b_sim(params: np.ndarray,
     if not ((a_noone_all >= 0.0) & (a_noone_all <= 1.0)).all():
         raise ValueError("a_noone must be in [0,1]")
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
     choice_labels = np.array(['A','B'], dtype=object)
 
     # outcomes
@@ -506,17 +514,21 @@ rw3a1b_model = ModelSpec(
 # ----------------------------------------
 # 1Q–4α–1β  SIMULATE (Rhoads et al., 2025)
 # ----------------------------------------
-def gen_rnd_blocks(items, nblocks=2, nsubjects=100):
+def gen_rnd_blocks(items, nblocks=2, nsubjects=100, rng=None):
+    if rng is None:
+        rng = np.random.default_rng()
     perms = list(permutations(items))
     for _ in range(nsubjects):
         # Randomly pick nblocks permutations with replacement
-        blocks = random.choices(perms, k=nblocks)
+        idx = rng.integers(0, len(perms), size=nblocks)
+        blocks = [perms[i] for i in idx]
         combined = tuple(chain.from_iterable(blocks))
         yield combined
 
 def rw4a1b_sim(params: np.ndarray,
                     nblocks: int = 12,
-                    ntrials: int = 20):
+                    ntrials: int = 20,
+                    seed: int | None = None):
     """
     Simulate a 4-option 1Q RW with one beta and four learning rates:
       a_self_pos, a_self_neg, a_other_pos, a_other_neg
@@ -537,6 +549,8 @@ def rw4a1b_sim(params: np.ndarray,
       - outcomes_other   : (S,B,T) int  in {-1,0,+1}
       - option_pairs     : (S,B,T,2) int indices for the two shown options on each trial
       - also EV, ch_prob (over 4), and PE components
+
+    ``seed`` seeds the RNG for reproducibility.
     """
     assert nblocks % 6 == 0, "nblocks should be multiple of 6 for full counterbalancing"
     
@@ -549,7 +563,7 @@ def rw4a1b_sim(params: np.ndarray,
         if not ((0.0 <= arr) & (arr <= 1.0)).all():
             raise ValueError(f"{name} out of bounds")
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
     nsubjects = params.shape[0]
 
     # Outputs 
@@ -571,15 +585,15 @@ def rw4a1b_sim(params: np.ndarray,
     # create task structure
     all_pairs = ['AB', 'AC', 'AD', 'BC', 'BD', 'CD']
     letter_to_idx = {'A':0, 'B':1, 'C':2, 'D':3}
-    block_orders = list(gen_rnd_blocks(['AB', 'AC', 'AD', 'BC', 'BD', 'CD'], 
-                        nblocks=nblocks, nsubjects=nsubjects))
+    block_orders = list(gen_rnd_blocks(['AB', 'AC', 'AD', 'BC', 'BD', 'CD'],
+                        nblocks=nblocks, nsubjects=nsubjects, rng=rng))
     if ntrials == 20:
         # high 75%, mid 15%, low 10%
         opt_templates = {'+': [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 0, 0, 0, -1, -1],
                          '-': [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0,  1,  1]}
     else: # get proportion of good (1,0,-1) and bad (-1,0,1) at high 75%, mid 15%, low 10%
-        opt_templates = {'+': np.random.choice([1, 0, -1], size=ntrials, p=[0.75, 0.15, 0.10]),
-                         '-': np.random.choice([-1, 0, 1], size=ntrials, p=[0.75, 0.15, 0.10])}
+        opt_templates = {'+': rng.choice([1, 0, -1], size=ntrials, p=[0.75, 0.15, 0.10]),
+                         '-': rng.choice([-1, 0, 1], size=ntrials, p=[0.75, 0.15, 0.10])}
     opt_types = {'A': ('+','+'), 'B': ('+','-'),'C': ('-','+'), 'D': ('-','-')}
 
     for s in range(nsubjects):
@@ -709,7 +723,7 @@ def rw4a1b_fit(params: np.ndarray,
             probs_two  = softmax(shown_vals, beta)  # len=2
             ch_prob[b, t, o1] = probs_two[0]
             ch_prob[b, t, o2] = probs_two[1]
-            nll += -np.log(probs_two[0] if c == o1 else probs_two[1] + 1e-12)
+            nll += -np.log(ch_prob[b, t, c] + 1e-12)
 
             # compute prediction errors
             pe_self[b, t]  = outcomes_self[b, t]  - EV[b, t, c]

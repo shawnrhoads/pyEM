@@ -28,7 +28,7 @@ from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
-from pyem.models.rl import rw1a1b_model  # bundles rw1a1b_sim, rw1a1b_fit, and metadata
+from pyem.models.rl_mf import rw1a1b_model  # bundles rw1a1b_sim, rw1a1b_fit, and metadata
 from pyem.core.posterior import parameter_recovery
 
 print(rw1a1b_model.id)      # 'rw1a1b'
@@ -90,7 +90,7 @@ call — it returns everything `EMModel` needs (`param_names`, `param_xform`, an
 ```python
 import numpy as np
 from pyem import EMModel
-from pyem.models.rl import rw1a1b_model
+from pyem.models.rl_mf import rw1a1b_model
 from params import build_params  # examples/params.py
 
 # Settings
@@ -123,7 +123,7 @@ from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
-from pyem.models.rl import rw1a1b_model
+from pyem.models.rl_mf import rw1a1b_model
 
 # Settings
 nsubjects, nblocks, ntrials = 100, 4, 24
@@ -177,7 +177,7 @@ import numpy as np
 from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
-from pyem.models.rl import rw1a1b_model, rw2a1b_model
+from pyem.models.rl_mf import rw1a1b_model, rw2a1b_model
 from pyem.utils.math import norm2alpha, norm2beta
 
 # Settings
@@ -269,7 +269,7 @@ You can visualize these results with `plot_identifiability()`, which plots an **
 ```python
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
-from pyem.models.rl import rw1a1b_model, rw2a1b_model
+from pyem.models.rl_mf import rw1a1b_model, rw2a1b_model
 from pyem.utils.math import norm2alpha, norm2beta
 
 # Construct two candidate models
@@ -336,12 +336,20 @@ transformed_alpha = alpha_transform(0.3)
 The package includes several pre-implemented models, each described by both its `_sim`/`_fit`
 functions and a `ModelSpec` (`<name>_model`) carrying its `.id`/`.desc`/`.spec`.
 
-### Reinforcement Learning Models (`pyem.models.rl`)
+### Model-Free Reinforcement Learning Models (`pyem.models.rl_mf`)
 
 * **`rw1a1b_sim/fit`** (id: `rw1a1b`): Rescorla-Wagner model with a single learning rate. Free parameters: `beta`, `alpha`.
 * **`rw2a1b_sim/fit`** (id: `rw2a1b`): Rescorla-Wagner model with separate learning rates for positive vs. negative prediction errors (valence bias). Free parameters: `beta`, `alpha_pos`, `alpha_neg`.
 * **`rw3a1b_sim/fit`** (id: `rw3a1b`): two-option task with three binary outcome channels (self/other/no one); combines self/other/no-one prediction errors into a single expected-value update ([Lockwood et al., 2016](https://doi.org/10.1073/pnas.1603198113)). Free parameters: `beta`, `alpha_self`, `alpha_other`, `alpha_noone`.
 * **`rw4a1b_sim/fit`** (id: `rw4a1b`): four-option task where each trial shows a pair of options; one shared inverse temperature and four learning rates split by outcome recipient (self/other) and valence (positive/negative) ([Rhoads et al., 2025](https://doi.org/10.1038/s41467-025-64424-9)). Free parameters: `beta`, `alpha_self_pos`, `alpha_self_neg`, `alpha_other_pos`, `alpha_other_neg`.
+
+### Model-Based Reinforcement Learning Models (`pyem.models.rl_mb`)
+
+Three learners for the Daw et al. (2011) two-step task ([Daw et al., 2011](https://doi.org/10.1016/j.neuron.2011.02.027)). All fit `beta1`/`beta2` in `(0, inf)` via `exp(x)`, the learning rates / trace / weight in `[0,1]`, and the first-stage stickiness `r` in `(-inf, inf)`.
+
+* **`sarsa_lambda_sim/fit`** (id: `sarsa_lambda`): model-free SARSA(&lambda;) learner (`omega = 0`). Free parameters: `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `r`.
+* **`model_based_sim/fit`** (id: `model_based`): model-based Bellman learner (`omega = 1`; `alpha1` and `lambda` drop out). Free parameters: `beta1`, `beta2`, `alpha2`, `r`.
+* **`hybrid_mbmf_sim/fit`** (id: `hybrid_mbmf`): hybrid that mixes model-based and model-free first-stage values with weight `omega` (Daw's `w`). Free parameters: `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `omega`, `r`.
 
 ### Linear Models (`pyem.models.glm`)
 
@@ -648,7 +656,8 @@ pip install 'pyem[viz,extras]'
 
 See the `examples/` directory for detailed tutorials:
 
-* `examples/rl.ipynb`: Reinforcement Learning — free params `beta`, `alpha` (and variants: `alpha_pos`/`alpha_neg`, `alpha_self`/`alpha_other`/`alpha_noone`, `alpha_self_pos`/`alpha_self_neg`/`alpha_other_pos`/`alpha_other_neg`)
+* `examples/rl_mf.ipynb`: Model-Free Reinforcement Learning — free params `beta`, `alpha` (and variants: `alpha_pos`/`alpha_neg`, `alpha_self`/`alpha_other`/`alpha_noone`, `alpha_self_pos`/`alpha_self_neg`/`alpha_other_pos`/`alpha_other_neg`)
+* `examples/rl_mb.ipynb`: Model-Based Reinforcement Learning — Daw two-step task, three models (`sarsa_lambda`, `model_based`, `hybrid_mbmf`), free params `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `omega`, `r`
 * `examples/bayes.ipynb`: Bayesian Inference — free param `lambda1`
 * `examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
 * `examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
