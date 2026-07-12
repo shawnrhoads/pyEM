@@ -57,40 +57,29 @@ print(bayes_fit(np.array([0.0]), sim["choices"][0], sim["observations"][0], outp
 ## Drift-diffusion models (pyem.models.ddm)
 
 `pyem.models.ddm` implements drift-diffusion models (DDMs) for two
-value-based choice tasks, each with a four-parameter and a
-seven-parameter ("full DDM") form — four models in total, sharing a single
+value-based choice tasks, each a four-parameter model, sharing a single
 Wiener first-passage-time (WFPT) likelihood (Navarro & Fuss, 2009):
 
-- **High-vs-low value** (`ddm4` / `ddm7`) — each trial offers two certain
+- **High-vs-low value** (`ddm4`) — each trial offers two certain
   amounts and the agent should choose the higher-valued one. Drift is
   driven by the value gap and points toward the upper (correct/high)
   boundary: `v = v_coef * (value_high - value_low) >= 0`. Upper = chose
   high (correct), lower = chose low (error).
-- **Safe-vs-risky gamble** (`ddm4_lotto` / `ddm7_lotto`) — a risky gamble
+- **Safe-vs-risky gamble** (`ddm4_lotto`) — a risky gamble
   (win probability `p`, payoff `payoff`, so `EV_risky = p * payoff`) is
   pitted against a safe certain amount. Drift is the risky-minus-safe value
   difference, `v = v_coef * (EV_risky - safe)`, and can point either way.
   Upper = risky (`choice = 1`), lower = safe (`choice = 0`).
 
-Each task has two parameterizations. The **four-parameter** models
-(`ddm4` / `ddm4_lotto`) use `[v_coef, a, t0, z]` (drift scaling, boundary
-separation, non-decision time, relative start-point bias). The
-**seven-parameter** models (`ddm7` / `ddm7_lotto`) add the three
-across-trial variability parameters of the "full" diffusion model
-(Ratcliff & Rouder, 1998; Ratcliff & Tuerlinckx, 2002): `sv` (SD of a
-Normal on the trial drift), `st` (full width of a Uniform on the
-non-decision time), and `sz` (full width of a Uniform on the relative
-start point). Setting `sv = st = sz = 0` reduces each seven-parameter
-model exactly to its four-parameter sibling. Drift variability `sv` is
-marginalized analytically in closed form (Ratcliff & Tuerlinckx, 2002);
-`st` and `sz` are integrated numerically by Gauss-Legendre quadrature.
+Each task uses the **four-parameter** DDM (`ddm4` / `ddm4_lotto`):
+`[v_coef, a, t0, z]` (drift scaling, boundary separation, non-decision
+time, relative start-point bias).
 
-Because the seven-parameter variability parameters are only weakly
-identified for recovery in these value-based designs (see the module
-docstring's Recoverability note for a worked example), **`ddm4` and
-`ddm4_lotto` are recommended for parameter recovery**; the
-seven-parameter models are retained for likelihood evaluation and for
-simulating richer generative designs.
+!!! note
+    The seven-parameter full DDM (`ddm7`, `ddm7_lotto`) — which would add
+    the three across-trial variability parameters `sv`, `st`, `sz` of the
+    "full" diffusion model (Ratcliff & Rouder, 1998; Ratcliff & Tuerlinckx,
+    2002) — is not supported in this release.
 
 ```python
 import numpy as np
@@ -113,18 +102,11 @@ print(ddm4_fit(np.array([2.0, 0.0, 0.0, 0.0]), sim["rt"][0], sim["choice"][0], s
 
 ::: pyem.models.ddm.ddm4_sim
 ::: pyem.models.ddm.ddm4_fit
+::: pyem.models.ddm.ddm4_sim_paths
 ::: pyem.models.ddm.ddm4_model
-::: pyem.models.ddm.ddm7_sim
-::: pyem.models.ddm.ddm7_fit
-::: pyem.models.ddm.ddm7_sim_paths
-::: pyem.models.ddm.ddm7_model
 
 ### Safe-vs-risky gamble task
 
 ::: pyem.models.ddm.ddm4_lotto_sim
 ::: pyem.models.ddm.ddm4_lotto_fit
 ::: pyem.models.ddm.ddm4_lotto_model
-::: pyem.models.ddm.ddm7_lotto_sim
-::: pyem.models.ddm.ddm7_lotto_fit
-::: pyem.models.ddm.ddm7_lotto_sim_paths
-::: pyem.models.ddm.ddm7_lotto_model

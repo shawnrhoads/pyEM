@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+<title id="title">pyEM avatar light</title>
+<desc id="desc">Expectation Maximization with MAP in Python for fitting computational models to behavioral data</desc>
+
+<rect width="320" height="320" rx="64" fill="#FFFFFF"></rect><g id="avatar-light" transform="translate(0 50) scale(1)">
+  <path id="avatar-light-outer-distribution" d="M20 190 C68 190 76 24 160 24 C244 24 252 190 300 190" fill="none" stroke="#0F5B63" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"></path>
+  <path id="avatar-light-inner-fill" d="M87 190 C112 190 116 92 160 92 C204 92 208 190 233 190 Z M144 190 A16 16 0 0 1 176 190 Z" fill-rule="evenodd" fill="#7EC8BC" fill-opacity="0.24"></path>
+  <path id="avatar-light-inner-distribution" d="M87 190 C112 190 116 92 160 92 C204 92 208 190 233 190" fill="none" stroke="#7EC8BC" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"></path>
+  <line id="avatar-light-estimate-line" x1="160" y1="52" x2="160" y2="168" stroke="#0F5B63" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 10"></line>
+  <circle id="avatar-light-dot-ring" cx="160" cy="190" r="16" fill="none"></circle>
+  <circle id="avatar-light-point-estimate" cx="160" cy="190" r="12" fill="#1F252B"></circle>
+</g>
+</svg>

@@ -1,6 +1,6 @@
 site_name: pyEM
-site_description: Hierarchical Expectation–Maximization with MAP estimation for fitting behavioral and cognitive models
-site_url: https://shawnrhoads.github.io/pyEM/
+site_description: Expectation Maximization with MAP in Python for fitting cognitive computational models to behavioral data
+site_url: https://shawnrhoadsphd.com/pyEM/
 repo_url: https://github.com/shawnrhoads/pyEM
 repo_name: shawnrhoads/pyEM
 edit_uri: edit/main/docs/
@@ -11,12 +11,12 @@ exclude_docs: |
 
 theme:
   name: material
-  logo: assets/pyem-symbol-master-editable.svg
+  logo: assets/pyem-avatar-dark-editable.svg
   favicon: assets/favicon.svg
   icon:
     repo: fontawesome/brands/github
   features:
-    - navigation.sections
+    - navigation.expand
     - navigation.top
     - navigation.tracking
     - toc.follow
@@ -73,6 +73,16 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.highlight:
       anchor_linenums: true
+      linenums: true
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md

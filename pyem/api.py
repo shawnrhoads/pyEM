@@ -1,6 +1,5 @@
 
 from __future__ import annotations
-import warnings
 from dataclasses import dataclass
 from typing import Any, Callable, List, Sequence
 import matplotlib.pyplot as plt
@@ -429,16 +428,11 @@ class EMModel:
         }
 
         # Adopt the recovery fit onto THIS model so get_outfit()/.outfit are usable
-        # afterwards. The outer model is typically constructed with all_data=None for
-        # recovery workflows, so we overwrite all_data with the simulated dataset and
-        # populate outfit from the recovery fit. Warn loudly because this mutates the
-        # model's data in place.
-        warnings.warn(
-            "EMModel.recover() overwrites this model's `all_data` with the data "
-            "simulated from `true_params` and assigns `outfit` from the recovery fit, "
-            "so get_outfit()/.outfit reflect the recovered model. The recovered "
-            "estimates are also available via the returned dict's 'recovery_model'.",
-            stacklevel=2,
+        # afterwards (the outer model is typically constructed with all_data=None for
+        # recovery workflows, so we point all_data + outfit at the recovery fit).
+        print(
+            "recover(): this model's data and outfit now reflect the recovery fit; "
+            "the recovered estimates are also in the returned dict['recovery_model']."
         )
         self.all_data = all_data
         self._out = recovery_model._out
