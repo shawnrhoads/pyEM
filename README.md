@@ -375,7 +375,10 @@ See `examples/discounting.ipynb` for worked examples of all nine variants.
 
 ### Drift-Diffusion Model (`pyem.models.ddm`)
 
-* **`ddm_sim/fit`** (id: `ddm`): drift-diffusion model of a safe-vs-risky economic choice; a two-boundary Wiener diffusion (upper = risky, lower = safe) jointly models choice and response time, with the Navarro & Fuss (2009) first-passage-time density as the likelihood. Free parameters: `v_coef` (drift scaling), `a` (boundary separation), `t0` (non-decision time), `z` (start-point bias).
+* **`ddm4_sim/fit`** (id: `ddm4`): four-parameter DDM of a HIGH-vs-LOW value choice (two certain amounts per trial, choose the higher); a two-boundary Wiener diffusion (upper = high/correct, lower = low/error) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(value_high - value_low). Free parameters: `v_coef`, `a`, `t0`, `z`.
+* **`ddm7_sim/fit`** (id: `ddm7`): seven-parameter high-vs-low value model — extends ddm4 with across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width), marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz`; weakly identified for recovery, retained for simulation/likelihood.
+* **`ddm4_lotto_sim/fit`** (id: `ddm4_lotto`): four-parameter DDM of a safe-vs-risky GAMBLE (risky gamble EV=p*payoff vs safe certain amount); a two-boundary Wiener diffusion (upper = risky, lower = safe) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(EV_risky - safe). Free parameters: `v_coef`, `a`, `t0`, `z`.
+* **`ddm7_lotto_sim/fit`** (id: `ddm7_lotto`): seven-parameter gamble model — extends ddm4_lotto with across-trial variability `sv`, `st`, `sz`, marginalized analytically for `sv` and by Gauss-Legendre quadrature for `st`, `sz`; weakly identified for recovery, retained for simulation/likelihood.
 
 ### Prospect Theory (`pyem.models.prospect_theory`)
 
@@ -649,7 +652,7 @@ See the `examples/` directory for detailed tutorials:
 * `examples/bayes.ipynb`: Bayesian Inference — free param `lambda1`
 * `examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
 * `examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
-* `examples/ddm.ipynb`: Drift-Diffusion Model — free params `v_coef`, `a`, `t0`, `z`
+* `examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm7/ddm4_lotto/ddm7_lotto), parameter recovery + across-trial-variability visualizations
 * `examples/prospect_theory.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
 * `examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
 
