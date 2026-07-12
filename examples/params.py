@@ -50,7 +50,7 @@ def _uniform_sampler(lo: float, hi: float) -> Callable[[np.random.Generator, int
 
 
 PARAM_REGISTRY: dict[str, ParamDef] = {
-    ### REINFORCEMENT LEARNING (pyem.models.rl) ###
+    ### REINFORCEMENT LEARNING (pyem.models.rl_mf) ###
     "beta":            ParamDef("beta", norm2beta, _uniform_sampler(0.9, 8.5), bounds=(1e-5, 20.0)),
     "alpha":           ParamDef("alpha", norm2alpha, _uniform_sampler(0.05, 0.95), bounds=(0.0, 1.0)),
     "alpha_pos":       ParamDef("alpha_pos", norm2alpha, _uniform_sampler(0.05, 0.95), bounds=(0.0, 1.0)),
@@ -74,7 +74,7 @@ PARAM_REGISTRY: dict[str, ParamDef] = {
     "dprime":          ParamDef("dprime", norm2beta, _uniform_sampler(0.5, 3.0), bounds=(1e-5, 20.0)),
     "criterion":       ParamDef("criterion", _identity, _uniform_sampler(-1.0, 1.0), bounds=(-5.0, 5.0)),
 
-    ### PROSPECT THEORY (pyem.models.prospect_theory) ###
+    ### PROSPECT THEORY (pyem.models.pt) ###
     "pt_alpha":  ParamDef("pt_alpha", norm2alpha, _uniform_sampler(0.4, 0.95), bounds=(0.0, 1.0)),
     "pt_beta":   ParamDef("pt_beta", norm2alpha, _uniform_sampler(0.4, 0.95), bounds=(0.0, 1.0)),
     "pt_lambda": ParamDef("pt_lambda", norm2beta, _uniform_sampler(1.0, 3.0), bounds=(1e-5, 20.0)),
