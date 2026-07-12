@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<svg width="604.0" height="201.5" viewBox="-4.5 -1.0 604.0 201.5" role="img" aria-labelledby="title desc" version="1.1" id="svg1" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+  <defs id="defs1"></defs>
+  <title id="title">pyEM horizontal logo dark</title>
+  <desc id="desc">Expectation Maximization with MAP in Python for fitting computational models to behavioral data</desc>
+  <g id="pyem-symbol" transform="translate(0 0) scale(0.82)">
+    <path id="pyem-symbol-outer-distribution" d="M20 190 C68 190 76 24 160 24 C244 24 252 190 300 190" fill="none" stroke="#7EC8BC" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path id="pyem-symbol-inner-fill" d="M87 190 C112 190 116 92 160 92 C204 92 208 190 233 190 Z M144 190 A16 16 0 0 1 176 190 Z" fill-rule="evenodd" fill="#7EC8BC" fill-opacity="0.24"></path>
+    <path id="pyem-symbol-inner-distribution" d="M87 190 C112 190 116 92 160 92 C204 92 208 190 233 190" fill="none" stroke="#7EC8BC" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"></path>
+    <line id="pyem-symbol-estimate-line" x1="160" y1="52" x2="160" y2="168" stroke="#7EC8BC" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 10"></line>
+    <circle id="pyem-symbol-dot-ring" cx="160" cy="190" r="16" fill="none"></circle>
+    <circle id="pyem-symbol-point-estimate" cx="160" cy="190" r="12" fill="#FFFFFF"></circle>
+  </g>
+  <g id="wordmark" transform="translate(282 160)">
+    <path d="M 7.9511719,24.083984 H 22.931641 v -34.282226 h 0.633789 c 2.304687,4.666992 7.317382,11.3505857 18.379882,11.3505857 15.268555,0 26.619141,-12.0996097 26.619141,-33.2451167 0,-21.433594 -11.696289,-33.129883 -26.561523,-33.129883 -11.465821,0 -16.19043,6.914062 -18.4375,11.46582 h -0.979493 v -10.65918 H 7.9511719 Z M 37.912109,-11.177734 c -9.794922,0 -15.268554,-8.41211 -15.268554,-20.972657 0,-12.560546 5.358398,-20.742187 15.268554,-20.742187 10.140625,0 15.268555,8.757812 15.268555,20.742187 0,12.09961 -5.243164,20.972657 -15.268555,20.972657 z m 36.850586,34.166992 c 2.016602,0.80664 5.761719,1.555664 10.025391,1.555664 11.638672,0 18.264644,-5.93457 22.182614,-16.248047 l 27.65625,-72.712891 h -15.84472 l -12.15723,35.03125 c -1.90137,5.53125 -3.3418,11.120118 -4.78223,16.766602 -1.26757,-5.646484 -2.535153,-11.177734 -4.378903,-16.766602 L 85.709961,-64.416016 H 69.692383 L 94.006836,0.23046875 93.084961,4.3212891 C 91.529297,11.696289 86.804687,13.540039 80.063477,11.753906 l -1.786133,-0.460937 z" id="wordmark-py" style="font-weight:600;font-size:118px;font-family:Inter;letter-spacing:-4;fill:#FFFFFF" aria-label="py"></path>
+    <path d="m 108.94258,0 h 56.00391 v -12.963867 h -40.62012 v -23.96875 h 37.39355 v -12.791016 h -37.39355 v -23.162109 h 40.38965 v -12.963867 h -55.77344 z m 68.44531,0 h 15.09571 v -43.328125 c 0,-6.510742 -0.34571,-18.379883 -0.57618,-28.117187 3.16895,11.0625 6.62598,22.52832 8.64258,28.117187 L 216.6252,0 h 13.0791 l 15.84473,-43.328125 c 2.0166,-5.761719 5.64648,-17.573242 8.58496,-28.578125 -0.17285,10.198242 -0.51856,22.182617 -0.51856,28.578125 V 0 h 15.32617 v -85.849609 h -23.21972 l -16.13281,44.307617 c -1.6709,5.12793 -4.32129,15.729492 -6.3379,24.199219 -1.95898,-8.584961 -4.66699,-19.128907 -6.3955,-24.199219 L 200.55,-85.849609 h -23.16211 z" id="wordmark-em" transform="translate(32.6,0)" style="font-weight:600;font-size:118px;font-family:Inter;letter-spacing:-3;fill:#7EC8BC" aria-label="EM"></path>
+  </g>
+</svg>
