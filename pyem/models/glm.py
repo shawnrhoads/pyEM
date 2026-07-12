@@ -10,12 +10,12 @@ def _calc_bic(nll: float, nparams: int, nobs: int) -> float:
     """BIC = k*log(n) + 2*NLL, the line every ``*_fit`` in this family repeated by hand."""
     return nparams * np.log(nobs) + 2.0 * nll
 
-def glm_sim(params: np.ndarray, ntrials: int = 100):
+def glm_sim(params: np.ndarray, ntrials: int = 100, seed: int | None = None):
     """Generate data from a standard linear regression model."""
     n_obs, nparams = params.shape
     Y = np.zeros((n_obs, ntrials))
     X = np.zeros((n_obs, ntrials, nparams))
-    rng = np.random.default_rng(2021)
+    rng = np.random.default_rng(2021 if seed is None else seed)
     for s in range(n_obs):
         # First column is intercept; remaining columns are random predictors
         X[s, :, :] = np.concatenate(
@@ -27,7 +27,7 @@ def glm_sim(params: np.ndarray, ntrials: int = 100):
 def glm_fit(params, X, Y, prior=None, output: str = 'npl'):
     """Negative log-likelihood for a Gaussian GLM."""
     pred = X.dot(params)
-    resid_sigma = np.std(Y - pred)
+    resid_sigma = max(float(np.std(Y - pred)), 1e-8)
     nll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
     if output in ('npl', 'nll'):
         return calc_fval(nll, params, prior=prior, output=output)
@@ -38,6 +38,7 @@ def glm_fit(params, X, Y, prior=None, output: str = 'npl'):
             'nll': nll,
             'BIC': _calc_bic(nll, len(params), len(Y)),
         }
+    raise ValueError(f"Unknown output {output!r}; expected 'npl', 'nll', or 'all'")
 
 
 glm_desc = """Standard Gaussian linear regression (GLM).
@@ -51,13 +52,14 @@ glm_model = ModelSpec(
 )
 
 
-def glm_decay_sim(params, ntrials: int = 100):
+def glm_decay_sim(params, ntrials: int = 100, decay: str = 'twostep', seed: int | None = None):
     """Simulate GLM data with exponentially discounted predictors."""
+    decay_j = 3 if decay == 'twostep' else 2
     n_obs, nparams_with_gamma = params.shape
     nparams = nparams_with_gamma - 1
     Y = np.zeros((n_obs, ntrials))
     X = np.zeros((n_obs, ntrials, nparams))
-    rng = np.random.default_rng(2021)
+    rng = np.random.default_rng(2021 if seed is None else seed)
     for s in range(n_obs):
         gamma = params[s, -1]
         pv = params[s, :-1]
@@ -66,7 +68,7 @@ def glm_decay_sim(params, ntrials: int = 100):
         )
         for t in range(ntrials):
             discounted = np.zeros(nparams)
-            for j in range(3):
+            for j in range(decay_j):
                 if t - j >= 0:
                     discounted += (gamma ** j) * X[s, t - j, :]
             Y[s, t] = discounted.dot(pv) + rng.normal()
@@ -93,7 +95,7 @@ def glm_decay_fit(params, X, Y, prior=None, output: str = 'npl', decay: str = 't
             if t - j >= 0:
                 discounted += (gamma ** j) * X[t - j, :]
         predicted_y[t] = discounted.dot(pv)
-    resid_sigma = np.std(Y - predicted_y)
+    resid_sigma = max(float(np.std(Y - predicted_y)), 1e-8)
     nll = -np.sum(norm.logpdf(Y, loc=predicted_y, scale=resid_sigma))
     if output in ('npl', 'nll'):
         return calc_fval(nll, params, prior=prior, output=output)
@@ -104,6 +106,7 @@ def glm_decay_fit(params, X, Y, prior=None, output: str = 'npl', decay: str = 't
             'nll': nll,
             'BIC': _calc_bic(nll, len(params), len(Y)),
         }
+    raise ValueError(f"Unknown output {output!r}; expected 'npl', 'nll', or 'all'")
 
 
 glm_decay_desc = """Gaussian linear regression with exponentially discounted
@@ -118,7 +121,7 @@ glm_decay_model = ModelSpec(
 )
 
 
-def logit_sim(params: np.ndarray, ntrials: int = 100):
+def logit_sim(params: np.ndarray, ntrials: int = 100, seed: int | None = None):
     """Simulate data for a standard logistic regression.
 
     Args:
@@ -132,7 +135,7 @@ def logit_sim(params: np.ndarray, ntrials: int = 100):
     n_obs, nparams = params.shape
     Y = np.zeros((n_obs, ntrials), dtype=int)
     X = np.zeros((n_obs, ntrials, nparams))
-    rng = np.random.default_rng(2021)
+    rng = np.random.default_rng(2021 if seed is None else seed)
     for s in range(n_obs):
         X[s, :, :] = np.concatenate(
             [np.ones((ntrials, 1)), rng.normal(size=(ntrials, nparams - 1))],
@@ -166,6 +169,7 @@ def logit_fit(params, X, Y, prior=None, output: str = 'npl'):
             'nll': nll,
             'BIC': _calc_bic(nll, len(params), len(Y)),
         }
+    raise ValueError(f"Unknown output {output!r}; expected 'npl', 'nll', or 'all'")
 
 
 logit_desc = """Standard logistic regression.
@@ -180,7 +184,7 @@ logit_model = ModelSpec(
 )
 
 
-def logit_decay_sim(params: np.ndarray, ntrials: int = 100):
+def logit_decay_sim(params: np.ndarray, ntrials: int = 100, decay: str = 'twostep', seed: int | None = None):
     """Simulate logistic-regression data with exponentially discounted predictors.
 
     Args:
@@ -192,11 +196,12 @@ def logit_decay_sim(params: np.ndarray, ntrials: int = 100):
         X: (n_obs, ntrials, nparams) base predictors (not discounted)
         Y: (n_obs, ntrials) of 0/1 draws
     """
+    decay_j = 3 if decay == 'twostep' else 2
     n_obs, nparams_with_gamma = params.shape
     nparams = nparams_with_gamma - 1
     Y = np.zeros((n_obs, ntrials), dtype=int)
     X = np.zeros((n_obs, ntrials, nparams))
-    rng = np.random.default_rng(2021)
+    rng = np.random.default_rng(2021 if seed is None else seed)
     for s in range(n_obs):
         gamma = params[s, -1]            # assume already in [0,1] for simulation
         pv = params[s, :-1]              # includes intercept weight
@@ -206,7 +211,7 @@ def logit_decay_sim(params: np.ndarray, ntrials: int = 100):
         )
         for t in range(ntrials):
             discounted = np.zeros(nparams)
-            for j in range(3):
+            for j in range(decay_j):
                 if t - j >= 0:
                     discounted += (gamma ** j) * X[s, t - j, :]
             p = expit(discounted.dot(pv))
@@ -271,6 +276,7 @@ def logit_decay_fit(
             'BIC': _calc_bic(nll, len(params), len(Y)),
             'gamma': gamma,
         }
+    raise ValueError(f"Unknown output {output!r}; expected 'npl', 'nll', or 'all'")
 
 
 logit_decay_desc = """Logistic regression with exponentially discounted
@@ -285,7 +291,7 @@ logit_decay_model = ModelSpec(
 )
 
 
-def glm_ar_sim(params: np.ndarray, ntrials: int = 100):
+def glm_ar_sim(params: np.ndarray, ntrials: int = 100, seed: int | None = None):
     """
     Generate data from a linear regression model with an AR(1) term.
     params: shape (n_obs, nparams). Last column is AR(1) coefficient phi.
@@ -296,7 +302,7 @@ def glm_ar_sim(params: np.ndarray, ntrials: int = 100):
 
     Y = np.zeros((n_obs, ntrials))
     X = np.zeros((n_obs, ntrials, nparams - 1))
-    rng = np.random.default_rng(2021)
+    rng = np.random.default_rng(2021 if seed is None else seed)
 
     for s in range(n_obs):
         # predictors: intercept + random covariates (exclude AR param)
@@ -342,7 +348,7 @@ def glm_ar_fit(params, X, Y, prior=None, output: str = 'npl'):
     for t in range(1, len(Y)):
         pred[t] = lin[t] + phi * Y[t-1]  # AR uses observed y_{t-1}
 
-    resid_sigma = np.std(Y - pred)
+    resid_sigma = max(float(np.std(Y - pred)), 1e-8)
     nll = -np.sum(norm.logpdf(Y, loc=pred, scale=resid_sigma))
 
     if output in ('npl', 'nll'):
@@ -354,6 +360,7 @@ def glm_ar_fit(params, X, Y, prior=None, output: str = 'npl'):
             'nll': nll,
             'BIC': _calc_bic(nll, len(params), len(Y)),
         }
+    raise ValueError(f"Unknown output {output!r}; expected 'npl', 'nll', or 'all'")
 
 
 glm_ar_desc = """Gaussian linear regression with an AR(1) autoregressive term

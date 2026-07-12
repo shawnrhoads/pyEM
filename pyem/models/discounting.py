@@ -27,8 +27,8 @@ logistic (sigmoid) function of the value difference:
 from __future__ import annotations
 import numpy as np
 from scipy.special import expit
-from pyem.core.modelspec import ModelSpec
-from pyem.utils.math import norm2beta, calc_fval
+from ..core.modelspec import ModelSpec
+from ..utils.math import norm2beta, calc_fval
 
 # =============================================================================
 # Shared helpers
@@ -259,7 +259,7 @@ CHOICE_MAP = {
 # sd_hyp_wk -- hyperbolic discounting, 2 free parameters (w_other, k)
 #   U_other(N) = w_other * r_other / (1 + k*N)
 # =============================================================================
-def sd_hyp_wk_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT_SOCIAL_DISTS) -> dict:
+def sd_hyp_wk_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT_SOCIAL_DISTS, seed: int | None = None) -> dict:
     """Simulate the 2-parameter hyperbolic social discounting model (w_other, k free)."""
     payouts_bt, social_dists = _prepare_target_inputs(payouts, social_dists, TASK1_PAYOUTS, DEFAULT_SOCIAL_DISTS, "social_dists")
     params = np.asarray(params, dtype=float)
@@ -269,7 +269,7 @@ def sd_hyp_wk_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAUL
     nsubjects = params.shape[0]
     nblocks, ntrials = payouts_bt.shape[:2]
     payouts_subj, social_dists_subj = _expand_target_for_subjects(payouts_bt, social_dists, nsubjects)
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_prosocial = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -405,7 +405,7 @@ sd_hyp_wk_model = ModelSpec(
 # sd_hyp_k -- hyperbolic discounting, 1 free parameter (k; w_other fixed at 1)
 #   U_other(N) = r_other / (1 + k*N)
 # =============================================================================
-def sd_hyp_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT_SOCIAL_DISTS) -> dict:
+def sd_hyp_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT_SOCIAL_DISTS, seed: int | None = None) -> dict:
     """Simulate the 1-parameter hyperbolic social discounting model (k free)."""
     payouts_bt, social_dists = _prepare_target_inputs(payouts, social_dists, TASK1_PAYOUTS, DEFAULT_SOCIAL_DISTS, "social_dists")
     params = np.asarray(params, dtype=float)
@@ -415,7 +415,7 @@ def sd_hyp_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT
     nsubjects = params.shape[0]
     nblocks, ntrials = payouts_bt.shape[:2]
     payouts_subj, social_dists_subj = _expand_target_for_subjects(payouts_bt, social_dists, nsubjects)
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_prosocial = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -543,7 +543,7 @@ sd_hyp_k_model = ModelSpec(
 # sd_par_k -- parabolic discounting, 1 free parameter (k; w_other fixed at 1)
 #   U_other(N) = r_other - k*N**2   (only where r_other > 0)
 # =============================================================================
-def sd_par_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT_SOCIAL_DISTS) -> dict:
+def sd_par_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT_SOCIAL_DISTS, seed: int | None = None) -> dict:
     """Simulate the 1-parameter parabolic social discounting model (k free)."""
     payouts_bt, social_dists = _prepare_target_inputs(payouts, social_dists, TASK1_PAYOUTS, DEFAULT_SOCIAL_DISTS, "social_dists")
     params = np.asarray(params, dtype=float)
@@ -553,7 +553,7 @@ def sd_par_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT
     nsubjects = params.shape[0]
     nblocks, ntrials = payouts_bt.shape[:2]
     payouts_subj, social_dists_subj = _expand_target_for_subjects(payouts_bt, social_dists, nsubjects)
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_prosocial = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -683,7 +683,7 @@ sd_par_k_model = ModelSpec(
 # sd_lin_k -- linear discounting, 1 free parameter (k; w_other fixed at 1)
 #   U_other(N) = r_other - k*N   (only where r_other > 0)
 # =============================================================================
-def sd_lin_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT_SOCIAL_DISTS) -> dict:
+def sd_lin_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT_SOCIAL_DISTS, seed: int | None = None) -> dict:
     """Simulate the 1-parameter linear social discounting model (k free)."""
     payouts_bt, social_dists = _prepare_target_inputs(payouts, social_dists, TASK1_PAYOUTS, DEFAULT_SOCIAL_DISTS, "social_dists")
     params = np.asarray(params, dtype=float)
@@ -693,7 +693,7 @@ def sd_lin_k_sim(params: np.ndarray, payouts=TASK1_PAYOUTS, social_dists=DEFAULT
     nsubjects = params.shape[0]
     nblocks, ntrials = payouts_bt.shape[:2]
     payouts_subj, social_dists_subj = _expand_target_for_subjects(payouts_bt, social_dists, nsubjects)
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_prosocial = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -858,7 +858,7 @@ CHOICE_MAP_TD = {
 }
 
 
-def td_hyp_k_sim(params: np.ndarray, payouts=TD_PAYOUTS, delays=DEFAULT_DELAYS) -> dict:
+def td_hyp_k_sim(params: np.ndarray, payouts=TD_PAYOUTS, delays=DEFAULT_DELAYS, seed: int | None = None) -> dict:
     """Simulate the 1-parameter hyperbolic temporal discounting model (k free)."""
     payouts_bt, delays = _prepare_2opt_inputs(payouts, delays, TD_PAYOUTS, DEFAULT_DELAYS, "delays")
     params = np.asarray(params, dtype=float)
@@ -868,7 +868,7 @@ def td_hyp_k_sim(params: np.ndarray, payouts=TD_PAYOUTS, delays=DEFAULT_DELAYS) 
     nsubjects = params.shape[0]
     nblocks, ntrials = payouts_bt.shape[:2]
     payouts_subj, delays_subj = _expand_2opt_for_subjects(payouts_bt, delays, nsubjects)
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_later = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -1055,7 +1055,7 @@ CHOICE_MAP_PRD = {
 }
 
 
-def prd_hyp_k_sim(params: np.ndarray, payouts=PRD_PAYOUTS, probs=DEFAULT_PROBS) -> dict:
+def prd_hyp_k_sim(params: np.ndarray, payouts=PRD_PAYOUTS, probs=DEFAULT_PROBS, seed: int | None = None) -> dict:
     """Simulate the 1-parameter hyperbolic probability discounting model (k free)."""
     payouts_bt, probs = _prepare_2opt_inputs(payouts, probs, PRD_PAYOUTS, DEFAULT_PROBS, "probs")
     if np.any(probs > 1.0):
@@ -1067,7 +1067,7 @@ def prd_hyp_k_sim(params: np.ndarray, payouts=PRD_PAYOUTS, probs=DEFAULT_PROBS) 
     nsubjects = params.shape[0]
     nblocks, ntrials = payouts_bt.shape[:2]
     payouts_subj, probs_subj = _expand_2opt_for_subjects(payouts_bt, probs, nsubjects)
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_risky = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -1260,7 +1260,7 @@ CHOICE_MAP_ED = {
 }
 
 
-def ed_par_k_sim(params: np.ndarray, payouts=ED_PAYOUTS, effort_levels=DEFAULT_EFFORT_LEVELS) -> dict:
+def ed_par_k_sim(params: np.ndarray, payouts=ED_PAYOUTS, effort_levels=DEFAULT_EFFORT_LEVELS, seed: int | None = None) -> dict:
     """Simulate the 1-parameter parabolic effort discounting model (k free)."""
     payouts_bt, effort_levels = _prepare_2opt_inputs(payouts, effort_levels, ED_PAYOUTS, DEFAULT_EFFORT_LEVELS, "effort_levels")
     params = np.asarray(params, dtype=float)
@@ -1270,7 +1270,7 @@ def ed_par_k_sim(params: np.ndarray, payouts=ED_PAYOUTS, effort_levels=DEFAULT_E
     nsubjects = params.shape[0]
     nblocks, ntrials = payouts_bt.shape[:2]
     payouts_subj, effort_subj = _expand_2opt_for_subjects(payouts_bt, effort_levels, nsubjects)
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_high = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -1481,7 +1481,7 @@ def _prepare_beneficiary(beneficiary, nblocks):
 #   V_high(E) = r_high - k*E**2   (single k for both self and other blocks)
 # =============================================================================
 def ped_par_k_sim(params: np.ndarray, payouts=PED_PAYOUTS, effort_levels=PED_EFFORT_LEVELS,
-                  beneficiary=PED_BENEFICIARY) -> dict:
+                  beneficiary=PED_BENEFICIARY, seed: int | None = None) -> dict:
     """Simulate the 1-parameter parabolic prosocial effort discounting model (single k)."""
     payouts_bt, effort_levels = _prepare_2opt_inputs(payouts, effort_levels, PED_PAYOUTS, PED_EFFORT_LEVELS, "effort_levels")
     params = np.asarray(params, dtype=float)
@@ -1493,7 +1493,7 @@ def ped_par_k_sim(params: np.ndarray, payouts=PED_PAYOUTS, effort_levels=PED_EFF
     ben = _prepare_beneficiary(beneficiary, nblocks)
     payouts_subj, effort_subj = _expand_2opt_for_subjects(payouts_bt, effort_levels, nsubjects)
     beneficiary_subj = np.broadcast_to(ben[None, :], (nsubjects, nblocks)).copy()
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_high = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
@@ -1651,7 +1651,7 @@ ped_par_k_model = ModelSpec(
 #   k_other on other blocks. params order: [k_self, k_other].
 # =============================================================================
 def ped_par_2k_sim(params: np.ndarray, payouts=PED_PAYOUTS, effort_levels=PED_EFFORT_LEVELS,
-                   beneficiary=PED_BENEFICIARY) -> dict:
+                   beneficiary=PED_BENEFICIARY, seed: int | None = None) -> dict:
     """Simulate the 2-parameter parabolic prosocial effort discounting model (k_self, k_other)."""
     payouts_bt, effort_levels = _prepare_2opt_inputs(payouts, effort_levels, PED_PAYOUTS, PED_EFFORT_LEVELS, "effort_levels")
     params = np.asarray(params, dtype=float)
@@ -1663,7 +1663,7 @@ def ped_par_2k_sim(params: np.ndarray, payouts=PED_PAYOUTS, effort_levels=PED_EF
     ben = _prepare_beneficiary(beneficiary, nblocks)
     payouts_subj, effort_subj = _expand_2opt_for_subjects(payouts_bt, effort_levels, nsubjects)
     beneficiary_subj = np.broadcast_to(ben[None, :], (nsubjects, nblocks)).copy()
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     choices = np.empty((nsubjects, nblocks, ntrials), dtype=object)
     choices_high = np.zeros((nsubjects, nblocks, ntrials), dtype=float)
