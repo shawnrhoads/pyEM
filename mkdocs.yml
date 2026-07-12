@@ -1,0 +1,101 @@
+site_name: pyEM
+site_description: Hierarchical Expectation–Maximization with MAP estimation for fitting behavioral and cognitive models
+site_url: https://shawnrhoads.github.io/pyEM/
+repo_url: https://github.com/shawnrhoads/pyEM
+repo_name: shawnrhoads/pyEM
+edit_uri: edit/main/docs/
+
+exclude_docs: |
+  CODE_REVIEW.md
+  examples/params.py
+
+theme:
+  name: material
+  logo: assets/pyem-symbol-master-editable.svg
+  favicon: assets/favicon.svg
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocs-jupyter:
+      execute: false
+      include_source: true
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["."]
+          options:
+            docstring_style: google
+            docstring_options:
+              warnings: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_source: true
+            heading_level: 3
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+            merge_init_into_class: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick Start: quickstart.md
+  - Examples:
+      - Model-Free Reinforcement Learning: examples/rl_mf.ipynb
+      - Model-Based Reinforcement Learning: examples/rl_mb.ipynb
+      - General Linear Model: examples/glm.ipynb
+      - Prospect Theory: examples/pt.ipynb
+      - Discounting Models: examples/discounting.ipynb
+      - Signal Detection Theory: examples/sdt.ipynb
+      - Bayesian Inference (Fish Task): examples/bayes.ipynb
+      - Drift-Diffusion Models: examples/ddm.ipynb
+  - API Reference:
+      - Overview: api/index.md
+      - EMModel & FitResult: api/emmodel.md
+      - Core (EM, optimizer, comparison, priors): api/core.md
+      - Utilities (math, stats, plotting): api/utils.md
+      - Models — Reinforcement Learning: api/models/rl.md
+      - Models — GLM / regression: api/models/glm.md
+      - Models — Prospect Theory & Discounting: api/models/choice.md
+      - Models — SDT, Bayes, DDM: api/models/other.md
+  - FAQ: faq.md
+  - Troubleshooting: troubleshooting.md
+  - References: references.md

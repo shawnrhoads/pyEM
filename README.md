@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://shawnrhoads.github.io/pyEM/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/source/pyem-logo-horizontal-dark-editable.svg">
+      <img alt="pyEM" src="assets/source/pyem-logo-horizontal-editable.svg" width="420">
+    </picture>
+  </a>
+</p>
+
 <div align="center">
 
 <a target="_blank" rel="noopener noreferrer" href="https://doi.org/10.5281/zenodo.10415396">![DOI:10.5281/zenodo.10415396](https://zenodo.org/badge/DOI/10.5281/zenodo.10415396.svg)</a> <a target="_blank" rel="noopener noreferrer" href="https://github.com/shawnrhoads/pyEM">![GitHub last update](https://img.shields.io/github/last-commit/shawnrhoads/pyEM?color=blue&label=last%20update)</a> [![PyTest](https://github.com/shawnrhoads/pyEM/actions/workflows/pytest.yml/badge.svg)](https://github.com/shawnrhoads/pyEM/actions/workflows/pytest.yml) <a target="_blank" rel="noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/LICENSE-CC%20BY--NC--SA%204.0-teal.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)</a> <a target="_blank" rel="noopener noreferrer" href="https://www.buymeacoffee.com/shawnrhoads">![BuyMeACoffee](https://img.shields.io/static/v1?message=support%20development&label=%20&style=square&logo=Buy%20Me%20A%20Coffee&labelColor=5c5c5c&color=lightgrey)</a>
@@ -82,7 +91,7 @@ for param_idx, param_label in enumerate(['beta','alpha']):
 
 ### Using `ModelSpec` with the Parameter Registry
 
-`examples/params.py` (see [Creating Custom Models](#creating-custom-models)) provides a
+`docs/examples/params.py` (see [Creating Custom Models](#creating-custom-models)) provides a
 `build_params()` helper that replaces the hand-rolled `truncnorm`/`beta_dist` calls above with one
 call — it returns everything `EMModel` needs (`param_names`, `param_xform`, and natural-space
 `true_params`) in one shot, drawn from a shared registry of named, bounded parameters:
@@ -91,7 +100,7 @@ call — it returns everything `EMModel` needs (`param_names`, `param_xform`, an
 import numpy as np
 from pyem import EMModel
 from pyem.models.rl_mf import rw1a1b_model
-from params import build_params  # examples/params.py
+from params import build_params  # docs/examples/params.py
 
 # Settings
 nsubjects, nblocks, ntrials = 100, 4, 24
@@ -379,7 +388,7 @@ a logistic rule on the resulting value difference (`sigmoid(delta_V)`).
 * **`ped_par_k_sim/fit`** (id: `ped_par_k`): parabolic prosocial effort discounting with a single discount rate shared across self/other. Free parameter: `k`.
 * **`ped_par_2k_sim/fit`** (id: `ped_par_2k`): parabolic prosocial effort discounting with separate self/other discount rates. Free parameters: `k_self`, `k_other`.
 
-See `examples/discounting.ipynb` for worked examples of all nine variants.
+See `docs/examples/discounting.ipynb` for worked examples of all nine variants.
 
 ### Drift-Diffusion Model (`pyem.models.ddm`)
 
@@ -492,9 +501,9 @@ describe itself.
 
 If you'd like a reusable pattern for generating named, bounded "true" parameters for simulation
 (rather than hand-rolling `truncnorm`/`beta_dist` calls every time, as the examples above do), see
-`examples/params.py`. It defines a `ParamDef`/`PARAM_REGISTRY` pattern
+`docs/examples/params.py`. It defines a `ParamDef`/`PARAM_REGISTRY` pattern
 (`build_params(["beta", "alpha"], nsubjects)` → `(param_names, param_xform, true_params)`) that the
-example notebooks use. This lives in `examples/`, not the installed package, by design — `pyem`
+example notebooks use. This lives in `docs/examples/`, not the installed package, by design — `pyem`
 itself stays agnostic about what parameters any given model uses, so this is a copyable starting
 point for your own model collection rather than a package dependency.
 
@@ -553,7 +562,7 @@ class ModelComparison:
 * **Parameter transformations** (`pyem.utils.math`): `norm2alpha()`, `norm2beta()`, `alpha2norm()`, `beta2norm()`
 * **Statistics** (`pyem.utils.stats`): `calc_BICint()`, `calc_LME()`, `pseudo_r2_from_nll()`
 * **Plotting** (`pyem.utils.plotting`): `plot_scatter()`
-* **Parameter registry** (`examples/params.py`, not part of the installed package): `ParamDef`, `PARAM_REGISTRY`, `build_params()`, `validate_params()`
+* **Parameter registry** (`docs/examples/params.py`, not part of the installed package): `ParamDef`, `PARAM_REGISTRY`, `build_params()`, `validate_params()`
 
 ## EM & Optimizer Configuration
 
@@ -654,16 +663,16 @@ pip install 'pyem[viz,extras]'
 
 ## Examples
 
-See the `examples/` directory for detailed tutorials:
+See the `docs/examples/` directory for detailed tutorials:
 
-* `examples/rl_mf.ipynb`: Model-Free Reinforcement Learning — free params `beta`, `alpha` (and variants: `alpha_pos`/`alpha_neg`, `alpha_self`/`alpha_other`/`alpha_noone`, `alpha_self_pos`/`alpha_self_neg`/`alpha_other_pos`/`alpha_other_neg`)
-* `examples/rl_mb.ipynb`: Model-Based Reinforcement Learning — Daw two-step task, three models (`sarsa_lambda`, `model_based`, `hybrid_mbmf`), free params `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `omega`, `r`
-* `examples/bayes.ipynb`: Bayesian Inference — free param `lambda1`
-* `examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
-* `examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
-* `examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm7/ddm4_lotto/ddm7_lotto), parameter recovery + across-trial-variability visualizations
-* `examples/pt.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
-* `examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
+* `docs/examples/rl_mf.ipynb`: Model-Free Reinforcement Learning — free params `beta`, `alpha` (and variants: `alpha_pos`/`alpha_neg`, `alpha_self`/`alpha_other`/`alpha_noone`, `alpha_self_pos`/`alpha_self_neg`/`alpha_other_pos`/`alpha_other_neg`)
+* `docs/examples/rl_mb.ipynb`: Model-Based Reinforcement Learning — Daw two-step task, three models (`sarsa_lambda`, `model_based`, `hybrid_mbmf`), free params `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `omega`, `r`
+* `docs/examples/bayes.ipynb`: Bayesian Inference — free param `lambda1`
+* `docs/examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
+* `docs/examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
+* `docs/examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm7/ddm4_lotto/ddm7_lotto), parameter recovery + across-trial-variability visualizations
+* `docs/examples/pt.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
+* `docs/examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
 
 ## Testing
 
