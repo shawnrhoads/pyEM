@@ -22,7 +22,7 @@ dependencies = [
 [project.optional-dependencies]
 viz = ["seaborn"]
 extras = ["statsmodels", "scikit-learn", "tqdm"]
-dev = ["pytest"]
+dev = ["pytest", "seaborn"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
