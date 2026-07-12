@@ -81,6 +81,8 @@ def EMfit(
                 options=kwargs.get('optim_options', config.optim.options),
                 max_restarts=kwargs.get('max_restarts', config.optim.max_restarts)
             )
+    if config.mstep_maxit < 1:
+        raise ValueError("mstep_maxit must be >= 1")
     if prior is None:
         prior = default_prior(nparams, seed=config.seed)
 
