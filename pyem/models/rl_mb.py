@@ -2,11 +2,7 @@
 Model-based / model-free reinforcement learning for the Daw et al. (2011)
 two-step task.
 
-This family file implements the three learners described in the Supplemental
-Experimental Procedures of Daw, Gershman, Seymour, Dayan & Dolan (2011),
-"Model-based influences on humans' choices and striatal prediction errors"
-(Neuron 69, 1204-1215), and the joint likelihood coded in the authors'
-``llm2b2alr.m``:
+This family file implements three learners:
 
 * ``sarsa_lambda``  - pure model-free SARSA(lambda) learner (w = 0)
 * ``model_based``   - pure model-based Bellman learner (w = 1)
@@ -16,27 +12,22 @@ All three are nested versions of the same trial-by-trial equations, so the
 per-trial update/choice logic lives once in the private ``_twostep_*`` helpers
 and each public ``*_sim`` / ``*_fit`` pair is a thin wrapper that unpacks its
 own parameter subset, applies the Gaussian->natural transforms, and bounds-
-checks.  This mirrors the multi-model layout of ``pyem/models/rl.py``.
+checks.
 
 Parameters are fit in **Gaussian (unbounded)** space and transformed to their
 natural ranges inside ``*_fit`` (and supplied directly in natural space to
-``*_sim``).  Following ``llm2b2alr.m`` the transforms are::
+``*_sim``). The transforms are::
 
-    beta1, beta2            exp(x)              (0, inf)    softmax inverse temps
-    alpha1, alpha2, lambda  1/(1+exp(-x))       (0, 1)      learning rates / trace
-    omega (= w)             1/(1+exp(-x))       (0, 1)      model-based weight
-    r     (= p)             x                   (-inf, inf) first-stage stickiness
+    beta1, beta2            20/(1+exp(-x))       (0, 20)     softmax inverse temps
+    alpha1, alpha2, lambda   1/(1+exp(-x))       (0, 1)      learning rates / trace
+    omega (= w)              1/(1+exp(-x))       (0, 1)      model-based weight
+    r     (= p)              x                   (-inf, inf) first-stage stickiness
 
 Note two deliberate deviations from generic pyEM helpers / conventions, both
 required to match the source material:
 
-* ``beta1``/``beta2`` use a plain ``exp(x)`` transform rather than
-  :func:`pyem.utils.math.norm2beta` (which saturates at 20); Daw's model puts
-  no finite ceiling on the inverse temperatures.
 * The model-based back-up uses the hard ``max`` over second-stage actions, as
-  written in the supplement's Bellman equation.  ``llm2b2alr.m`` instead uses a
-  softmax with a fixed inverse temperature of 20 as a smooth surrogate for that
-  max; the two agree closely but the supplement equation is authoritative here.
+  written in the supplement's Bellman equation. 
 """
 
 import numpy as np
@@ -133,7 +124,7 @@ def _twostep_negll(beta1, beta2, alpha1, alpha2, lam, omega, rep,
         p2 = softmax(Q2[:, s2], beta2)
         nll += -np.log(p2[a2] + 1e-12)
 
-        r = float(rewards[t])
+        r = rewards[t]
         # SARSA(lambda) prediction errors
         de1 = Q2[a2, s2] - Q1[a1]
         de2 = r - Q2[a2, s2]
