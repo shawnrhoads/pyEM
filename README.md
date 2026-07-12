@@ -674,6 +674,34 @@ See the `docs/examples/` directory for detailed tutorials:
 * `docs/examples/pt.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
 * `docs/examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
 
+## Documentation
+
+The full documentation site — API reference, guides, and the rendered example
+notebooks — is built with [MkDocs](https://www.mkdocs.org/) and the
+[Material](https://squidfunk.github.io/mkdocs-material/) theme, and is published at
+**https://shawnrhoads.github.io/pyEM/**.
+
+### Building and viewing the docs locally
+
+From the repository root:
+
+```bash
+# 1) Install the package (so the API reference can import pyem) + the doc toolchain
+pip install -e .
+pip install -r requirements-docs.txt
+
+# 2) Live preview with auto-reload — open the URL it prints (default http://127.0.0.1:8000/)
+mkdocs serve
+
+# 3) …or build the static site into ./site/ (this is what CI runs;
+#    --strict turns any warning into an error)
+mkdocs build --strict
+```
+
+The doc dependencies are version-pinned in `requirements-docs.txt` for reproducible
+builds, and the notebooks under `docs/examples/` are rendered directly by
+`mkdocs-jupyter`.
+
 ## Testing
 
 Run the test suite:
