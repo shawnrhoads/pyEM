@@ -42,18 +42,8 @@ required to match the source material:
 import numpy as np
 from typing import Dict
 
-from ..utils.math import softmax, norm2alpha, calc_fval
+from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
 from ..core.modelspec import ModelSpec
-
-# ---------------------------------------------------------------------------
-# Gaussian -> natural transforms that pyem.utils.math does not provide.
-# norm2alpha (logistic) covers the (0, 1) parameters; these two cover the
-# positive-unbounded betas and the real-valued stickiness term.
-# ---------------------------------------------------------------------------
-
-def _exp(x):
-    """Gaussian -> (0, inf); matches ``b = exp(x)`` in llm2b2alr.m."""
-    return np.exp(x)
 
 def _identity(x):
     """Gaussian -> (-inf, inf); matches ``rep = x*eye(2)`` in llm2b2alr.m."""
@@ -283,8 +273,8 @@ def sarsa_lambda_fit(params, choices1, states2, choices2, rewards,
 
     ``params``: (6,) in Gaussian space = [beta1, beta2, alpha1, alpha2, lambda, r].
     """
-    beta1 = _exp(params[0])
-    beta2 = _exp(params[1])
+    beta1 = norm2beta(params[0])
+    beta2 = norm2beta(params[1])
     alpha1 = norm2alpha(params[2])
     alpha2 = norm2alpha(params[3])
     lam = norm2alpha(params[4])
@@ -397,8 +387,8 @@ def model_based_fit(params, choices1, states2, choices2, rewards,
 
     ``params``: (4,) in Gaussian space = [beta1, beta2, alpha2, r].
     """
-    beta1 = _exp(params[0])
-    beta2 = _exp(params[1])
+    beta1 = norm2beta(params[0])
+    beta2 = norm2beta(params[1])
     alpha2 = norm2alpha(params[2])
     rep = _identity(params[3])
 
@@ -505,8 +495,8 @@ def hybrid_mbmf_fit(params, choices1, states2, choices2, rewards,
     ``params``: (7,) in Gaussian space =
     [beta1, beta2, alpha1, alpha2, lambda, omega, r].
     """
-    beta1 = _exp(params[0])
-    beta2 = _exp(params[1])
+    beta1 = norm2beta(params[0])
+    beta2 = norm2beta(params[1])
     alpha1 = norm2alpha(params[2])
     alpha2 = norm2alpha(params[3])
     lam = norm2alpha(params[4])
