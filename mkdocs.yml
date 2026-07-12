@@ -8,6 +8,7 @@ edit_uri: edit/main/docs/
 exclude_docs: |
   CODE_REVIEW.md
   examples/params.py
+  __pycache__/
 
 theme:
   name: material
@@ -88,15 +89,12 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Quick Start: quickstart.md
+  - Customization: customization.md
   - API Reference:
       - Overview: api/index.md
       - EMModel & FitResult: api/emmodel.md
       - Core (EM, optimizer, comparison, priors): api/core.md
       - Utilities (math, stats, plotting): api/utils.md
-      - Models — Reinforcement Learning: api/models/rl.md
-      - Models — GLM / regression: api/models/glm.md
-      - Models — Prospect Theory & Discounting: api/models/choice.md
-      - Models — SDT, Bayes, DDM: api/models/other.md
   - FAQ: faq.md
   - Troubleshooting: troubleshooting.md
   - Examples:

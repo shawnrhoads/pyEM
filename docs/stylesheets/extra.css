@@ -15,6 +15,11 @@
   letter-spacing: 0.03em;
 }
 
+/* Hides the site title link at the top of the left navigation menu */
+.md-nav--primary > .md-nav__title {
+  display: none;
+}
+
 /* Wrap long lines in code blocks (Markdown pages AND rendered notebooks)
    instead of scrolling horizontally. Line numbers (pymdownx linenums) mark the
    start of each logical line; wrapped continuations share that line's number. */
@@ -54,4 +59,3 @@
    follows the theme switch. Light logo on the light page, dark logo on dark. */
 [data-md-color-scheme="default"] .pyem-logo--dark { display: none; }
 [data-md-color-scheme="slate"] .pyem-logo--light { display: none; }
-
