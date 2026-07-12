@@ -26,7 +26,6 @@ def _alloc_rw_sim(nsubj: int, nblocks: int, ntrials: int) -> Dict[str, np.ndarra
         nll       = np.zeros((nsubj, nblocks, ntrials), dtype=float),         # negative log-likelihood
     )
 
-
 def _alloc_rw_fit(nblocks: int, ntrials: int) -> Dict[str, np.ndarray | float]:
     return dict(
         EV  = np.zeros((nblocks, ntrials + 1, 2), dtype=float),  # expected values
