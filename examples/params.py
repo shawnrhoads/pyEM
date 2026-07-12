@@ -22,6 +22,7 @@ from typing import Callable
 import numpy as np
 from pyem.utils.math import norm2alpha, norm2beta
 from pyem.models.ddm import t0_xform, a_xform
+from pyem.models.ddm import sv_xform, st_xform, sz_xform
 
 
 @dataclass(frozen=True)
@@ -80,16 +81,28 @@ PARAM_REGISTRY: dict[str, ParamDef] = {
     "pt_gamma":  ParamDef("pt_gamma", norm2alpha, _uniform_sampler(0.4, 0.95), bounds=(0.0, 1.0)),
     "pt_mu":     ParamDef("pt_mu", norm2beta, _uniform_sampler(0.5, 3.0), bounds=(1e-5, 20.0)),
 
-    ### DRIFT-DIFFUSION MODEL (pyem.models.ddm) ###
-    # v_coef: real-valued drift scaling (identity xform, reuses _identity above).
+    ### DRIFT-DIFFUSION MODELS (pyem.models.ddm) — shared parameters for ddm4, ddm7, ddm4_lotto, ddm7_lotto ###
+    # v_coef: real-valued drift scaling (identity xform, reuses _identity above); shared across all four models.
     "v_coef":    ParamDef("v_coef", _identity, _uniform_sampler(0.5, 3.0), bounds=(-20.0, 20.0)),
     # a: boundary separation via a_xform (norm2beta with a reduced cap of 4;
-    # see pyem.models.ddm.A_CAP for why the cap is 4, not 20) -> (0, 4).
+    # see pyem.models.ddm.A_CAP for why the cap is 4, not 20) -> (0, 4); shared across all four models.
     "a":         ParamDef("a", a_xform, _uniform_sampler(0.8, 2.0), bounds=(1e-5, 4.0)),
-    # t0: non-decision time via bounded logistic t0_xform -> (0, T0_CAP=0.5); see ddm.t0_xform.
+    # t0: non-decision time via bounded logistic t0_xform -> (0, T0_CAP=0.5); see ddm.t0_xform; shared across all four models.
     "t0":        ParamDef("t0", t0_xform, _uniform_sampler(0.1, 0.3), bounds=(0.0, 5.0)),
-    # z: relative start-point bias via norm2alpha -> (0, 1).
+    # z: relative start-point bias via norm2alpha -> (0, 1); shared across all four models.
     "z":         ParamDef("z", norm2alpha, _uniform_sampler(0.35, 0.65), bounds=(0.0, 1.0)),
+
+    ### EXTENDED DDM VARIABILITY (pyem.models.ddm) — shared variability parameters for ddm7, ddm7_lotto ###
+    # Sample ranges follow the regime where Henrich et al. (2024, Behav. Res.
+    # Methods 56:3102-3116, Table 2/3) demonstrate recovery of the variability
+    # parameters; narrower ranges (e.g., sv capped at 0.5) are statistically
+    # invisible at feasible trial counts. Bounds = the ddm transform caps.
+    # sv: drift SD via sv_xform (norm2beta with cap 2.5) -> (0, 2.5); shared by ddm7 and ddm7_lotto.
+    "sv":        ParamDef("sv", sv_xform, _uniform_sampler(0.3, 1.5), bounds=(0.0, 2.5)),
+    # st: non-decision-time uniform full width via st_xform -> (0, 0.4); shared by ddm7 and ddm7_lotto.
+    "st":        ParamDef("st", st_xform, _uniform_sampler(0.05, 0.25), bounds=(0.0, 0.4)),
+    # sz: relative-start uniform full width via sz_xform -> (0, 0.9); shared by ddm7 and ddm7_lotto.
+    "sz":        ParamDef("sz", sz_xform, _uniform_sampler(0.1, 0.5), bounds=(0.0, 0.9)),
 }
 
 
