@@ -11,7 +11,14 @@ class Prior(Protocol):
 
 @dataclass
 class GaussianPrior:
-    """Independent Gaussian prior."""
+    """Independent Gaussian prior.
+
+    IMPORTANT: ``sigma`` holds the per-parameter VARIANCE (sigma^2), not the
+    standard deviation — ``logpdf`` divides ``(x-mu)**2`` by ``sigma`` directly.
+    This matches the empirical-Bayes group M-step, which reports variances, and
+    the values in ``EMModel.fit(prior_sigma=...)`` are likewise variances. Use
+    the ``variance`` alias when you want the intent to be explicit.
+    """
 
     mu: np.ndarray
     sigma: np.ndarray
@@ -20,7 +27,12 @@ class GaussianPrior:
         self.mu = np.asarray(self.mu, dtype=float).reshape(-1)
         self.sigma = np.asarray(self.sigma, dtype=float).reshape(-1)
         if np.any(self.sigma <= 0):
-            raise ValueError("sigma must be positive")
+            raise ValueError("sigma (variance) must be positive")
+
+    @property
+    def variance(self) -> np.ndarray:
+        """Alias for ``sigma`` (which is the per-parameter variance)."""
+        return self.sigma
 
     def logpdf(self, x: np.ndarray) -> float:
         x = np.asarray(x).reshape(-1)
