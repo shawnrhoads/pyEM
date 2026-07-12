@@ -5,7 +5,10 @@ from scipy.stats import norm
 from ..utils.math import norm2alpha, calc_fval
 from scipy.special import expit
 from ..core.modelspec import ModelSpec
-from ._glm_common import _calc_bic
+
+def _calc_bic(nll: float, nparams: int, nobs: int) -> float:
+    """BIC = k*log(n) + 2*NLL, the line every ``*_fit`` in this family repeated by hand."""
+    return nparams * np.log(nobs) + 2.0 * nll
 
 def glm_sim(params: np.ndarray, ntrials: int = 100):
     """Generate data from a standard linear regression model."""
