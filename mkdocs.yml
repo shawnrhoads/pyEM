@@ -88,15 +88,6 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Quick Start: quickstart.md
-  - Examples:
-      - Model-Free Reinforcement Learning: examples/rl_mf.ipynb
-      - Model-Based Reinforcement Learning: examples/rl_mb.ipynb
-      - General Linear Model: examples/glm.ipynb
-      - Prospect Theory: examples/pt.ipynb
-      - Discounting Models: examples/discounting.ipynb
-      - Signal Detection Theory: examples/sdt.ipynb
-      - Bayesian Inference (Fish Task): examples/bayes.ipynb
-      - Drift-Diffusion Models: examples/ddm.ipynb
   - API Reference:
       - Overview: api/index.md
       - EMModel & FitResult: api/emmodel.md
@@ -108,4 +99,13 @@ nav:
       - Models — SDT, Bayes, DDM: api/models/other.md
   - FAQ: faq.md
   - Troubleshooting: troubleshooting.md
+  - Examples:
+      - General Linear Model: examples/glm.ipynb
+      - Prospect Theory: examples/pt.ipynb
+      - Discounting Models: examples/discounting.ipynb
+      - Signal Detection Theory: examples/sdt.ipynb
+      - Model-Free Reinforcement Learning: examples/rl_mf.ipynb
+      - Model-Based Reinforcement Learning: examples/rl_mb.ipynb
+      - Bayesian Inference: examples/bayes.ipynb
+      - Drift-Diffusion Models: examples/ddm.ipynb
   - References: references.md
