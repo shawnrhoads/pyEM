@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable, Any, Optional
 import numpy as np
 from scipy.optimize import minimize, OptimizeResult
+from .priors import Prior
 
 ObjectiveFn = Callable[..., float]
 
@@ -17,7 +18,7 @@ def single_subject_minimize(
     objfunc: ObjectiveFn,
     obj_args: Iterable[Any],
     nparams: int,
-    prior: Any,
+    prior: Prior,
     config: OptimConfig,
     rng: np.random.Generator
 ) -> tuple[np.ndarray, np.ndarray, float, float, bool, OptimizeResult]:

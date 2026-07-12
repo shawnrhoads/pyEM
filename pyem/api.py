@@ -90,6 +90,8 @@ class EMModel:
 
     # alias to preserve legacy name
     def EMfit(self, **kwargs) -> dict[str, Any]:
+        """Deprecated legacy alias for :meth:`fit`; returns ``fit(**kwargs).__dict__``
+        (a plain dict view of the :class:`FitResult`). Prefer :meth:`fit`."""
         return self.fit(**kwargs).__dict__
 
     def fit(
@@ -132,6 +134,7 @@ class EMModel:
         if prior_mu is not None or prior_sigma is not None:
             if prior_mu is None or prior_sigma is None:
                 raise ValueError("Provide both prior_mu and prior_sigma to override the prior.")
+            # NOTE: prior_sigma is interpreted as VARIANCE (see GaussianPrior).
             prior = GaussianPrior(mu=np.asarray(prior_mu).reshape(-1), sigma=np.asarray(prior_sigma).reshape(-1))
         
         out = EMfit(
@@ -371,7 +374,15 @@ class EMModel:
         
         # Simulate data with true parameters
         sim = simulate_func(true_params, **sim_kwargs)
-        
+
+        if not isinstance(sim, dict):
+            raise TypeError(
+                "recover() requires simulate_func to return a dict of named arrays "
+                "The included GLM family's *_sim returns an (X, Y) tuple and is not compatible with "
+                "the pr_inputs mechanism; wrap it to return {'X': X, 'Y': Y} or fit "
+                "GLMs directly with EMModel.fit()."
+            )
+
         # Prepare data for fitting
         missing = [k for k in pr_inputs if k not in sim]
         if missing:
