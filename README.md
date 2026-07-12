@@ -380,7 +380,7 @@ See `examples/discounting.ipynb` for worked examples of all nine variants.
 * **`ddm4_lotto_sim/fit`** (id: `ddm4_lotto`): four-parameter DDM of a safe-vs-risky GAMBLE (risky gamble EV=p*payoff vs safe certain amount); a two-boundary Wiener diffusion (upper = risky, lower = safe) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(EV_risky - safe). Free parameters: `v_coef`, `a`, `t0`, `z`.
 * **`ddm7_lotto_sim/fit`** (id: `ddm7_lotto`): seven-parameter gamble model — extends ddm4_lotto with across-trial variability `sv`, `st`, `sz`, marginalized analytically for `sv` and by Gauss-Legendre quadrature for `st`, `sz`; weakly identified for recovery, retained for simulation/likelihood.
 
-### Prospect Theory (`pyem.models.prospect_theory`)
+### Prospect Theory (`pyem.models.pt`)
 
 * **`pt_sim/fit`** (id: `pt`): Prospect Theory ([Tversky & Kahneman, 1992](https://doi.org/10.1007/BF00122574)) model of choices between a certain amount and a two-outcome gamble; a power value function with separate gain/loss curvature and a loss-aversion multiplier, combined with a one-parameter probability weighting function and a logistic choice rule. Free parameters: `alpha` (gain curvature), `beta` (loss curvature), `lambda` (loss aversion), `gamma` (probability weighting), `mu` (choice temperature).
 
@@ -653,7 +653,7 @@ See the `examples/` directory for detailed tutorials:
 * `examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
 * `examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
 * `examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm7/ddm4_lotto/ddm7_lotto), parameter recovery + across-trial-variability visualizations
-* `examples/prospect_theory.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
+* `examples/pt.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
 * `examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
 
 ## Testing
