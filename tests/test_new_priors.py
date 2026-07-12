@@ -71,3 +71,12 @@ def test_prior_construction_guards():
         LaplacePrior(loc=[0.0], scale=[0.0])   # scale<=0
     with pytest.raises(ValueError):
         StudentTPrior(loc=[0.0], scale=[1.0], df=[0.0])  # df<=0
+
+
+def test_gaussian_prior_variance_semantics():
+    import numpy as np
+    from pyem.core.priors import GaussianPrior
+    g = GaussianPrior(mu=[0.0], sigma=[4.0])  # sigma is VARIANCE (=4 -> sd 2)
+    expected = -0.5 * (np.log(2 * np.pi * 4.0) + 0.0)
+    assert np.isclose(g.logpdf([0.0]), expected)
+    assert np.allclose(g.variance, g.sigma)

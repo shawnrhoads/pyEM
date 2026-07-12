@@ -1,7 +1,7 @@
 import numpy as np
 from pyem.utils.math import calc_fval
 from pyem.api import EMModel
-from pyem.models.rl import rw1a1b_fit, rw1a1b_sim
+from pyem.models.rl_mf import rw1a1b_fit, rw1a1b_sim
 from test_helpers import _simulate_rw_params
 
 
@@ -75,3 +75,12 @@ def test_empty_param_names_raises():
     all_data = [[c, r] for c, r in zip(sim["choices"], sim["rewards"])]
     with pytest.raises(ValueError):
         EMModel(all_data, rw1a1b_fit, []).fit(verbose=0, njobs=1)
+
+
+def test_emfit_rejects_zero_maxit():
+    import pytest
+    from pyem.core.em import EMfit
+    sim = rw1a1b_sim(np.array([[3.0, 0.5]]), nblocks=1, ntrials=5, seed=0)
+    all_data = [[sim["choices"][0], sim["rewards"][0]]]
+    with pytest.raises(ValueError):
+        EMfit(all_data, rw1a1b_fit, ["beta", "alpha"], verbose=0, mstep_maxit=0)

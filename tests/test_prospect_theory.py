@@ -1,5 +1,5 @@
 import numpy as np
-from pyem.models.prospect_theory import pt_weight, pt_value, pt_fit, pt_sim
+from pyem.models.pt import pt_weight, pt_value, pt_fit, pt_sim
 
 
 def test_weighting_known_point():
@@ -63,3 +63,14 @@ def test_pt_fit_mixed_gamble_nll_value():
     expected_nll = -np.log(p_gamble)   # choice == 1
     val = pt_fit(params, gamble, probs, certain, choice, output="nll")
     assert np.isclose(val, expected_nll, atol=1e-6)
+
+
+def test_pt_sim_seed_reproducible():
+    import numpy as np
+    from pyem.models.pt import pt_sim
+    true = np.array([[0.8, 0.8, 1.5, 0.7, 2.0]])
+    a = pt_sim(true, ntrials=30, seed=4)
+    b = pt_sim(true, ntrials=30, seed=4)
+    assert np.array_equal(a["choice"], b["choice"])
+    c = pt_sim(true, ntrials=30, seed=5)
+    assert not np.array_equal(a["choice"], c["choice"])
