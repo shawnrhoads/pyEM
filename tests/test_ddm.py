@@ -4,7 +4,7 @@ from scipy.special import logit
 
 from pyem.models.ddm import (
     _wfpt_logf, wfpt_sv_logpdf, wfpt_logpdf, _marginal_logpdf,
-    ddm4_sim, ddm4_fit, ddm4_model,
+    ddm4_sim, ddm4_fit, ddm4_model, ddm4_sim_paths,
     ddm7_sim, ddm7_fit, ddm7_model, ddm7_sim_paths,
     ddm4_lotto_sim, ddm4_lotto_fit, ddm4_lotto_model,
     ddm7_lotto_sim, ddm7_lotto_fit, ddm7_lotto_model, ddm7_lotto_sim_paths,
@@ -129,6 +129,7 @@ def _p4_normalized(v_coef, a, t0, z):
     ], dtype=float)
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 @pytest.mark.parametrize(
     "sim4,fit4,fit7,cols",
     [
@@ -185,6 +186,7 @@ def _profile_nll(data, name, grid, true_p):
     return np.asarray(out)
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_profile_minima_at_truth():
     true_p = {"v_coef": 1.5, "a": 1.3, "t0": 0.20, "z": 0.5,
               "sv": 1.0, "st": 0.15, "sz": 0.4}
@@ -222,6 +224,7 @@ def _p7_normalized(v_coef, a, t0, z, sv, st, sz):
     ], dtype=float)
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_ddm7_lotto_fit_finite_on_valid_data():
     true7 = np.array([[1.5, 1.2, 0.15, 0.5, 1.0, 0.10, 0.20]])
     sim = ddm7_lotto_sim(true7, ntrials=60, rng=np.random.default_rng(3))
@@ -238,6 +241,7 @@ def test_ddm7_lotto_fit_finite_on_valid_data():
     assert np.isfinite(out["nll"])
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_ddm7_lotto_fit_penalty_on_sz_out_of_bounds():
     rng = np.random.default_rng(2)
     n = 30
@@ -250,6 +254,7 @@ def test_ddm7_lotto_fit_penalty_on_sz_out_of_bounds():
     assert ddm7_lotto_fit(p7, rt, choice, ev_risky, safe, output="nll") == 1e7
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_ddm7_lotto_sim_shapes():
     true7 = np.array([
         [1.5, 1.2, 0.15, 0.5, 0.8, 0.10, 0.20],
@@ -266,6 +271,7 @@ def test_ddm7_lotto_sim_shapes():
     assert (sim["rt"] > 0).all()
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_ddm7_lotto_sim_rejects_bad_params():
     with pytest.raises(ValueError):
         ddm7_lotto_sim(np.array([[1.5, 1.2, 0.15, 0.5]]))                    # wrong ncols
@@ -362,6 +368,7 @@ def test_ddm4_highlow_fit_finite_and_t0_penalty():
                     sim["value_high"][0], sim["value_low"][0], output="nll") == 1e7
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_ddm7_highlow_sim_shapes_and_rejects():
     true7 = np.array([
         [1.5, 1.2, 0.15, 0.5, 0.8, 0.10, 0.20],
@@ -380,6 +387,7 @@ def test_ddm7_highlow_sim_shapes_and_rejects():
         ddm7_sim(np.array([[1.5, 1.2, 0.15, 0.9, 0.5, 0.1, 0.5]]))         # z+sz/2 >= 1
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_ddm7_highlow_reduces_and_fit_all_keys():
     # ddm7 fit output="all" carries the high/low task columns
     sim = ddm7_sim(np.array([[1.5, 1.2, 0.15, 0.5, 1.0, 0.10, 0.20]]), ntrials=60,
@@ -411,6 +419,7 @@ def _check_paths(out, a, choice_ok=(0, 1), n=15):
             assert ch == (1 if x[-1] == a else 0)
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_ddm7_sim_paths_highlow():
     p = np.array([1.5, 1.3, 0.25, 0.5, 1.0, 0.10, 0.20])
     out = ddm7_sim_paths(p, ntrials=15, dt=1e-3, rng=np.random.default_rng(5))
@@ -421,6 +430,7 @@ def test_ddm7_sim_paths_highlow():
     assert all(np.allclose(x1, x2) for x1, x2 in zip(out["x"], out2["x"]))
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_ddm7_lotto_sim_paths_consistency():
     p = np.array([1.5, 1.3, 0.25, 0.5, 1.0, 0.10, 0.20])
     out = ddm7_lotto_sim_paths(p, ntrials=15, dt=1e-3, rng=np.random.default_rng(5))
@@ -431,10 +441,50 @@ def test_ddm7_lotto_sim_paths_consistency():
     assert all(np.allclose(x1, x2) for x1, x2 in zip(out["x"], out2["x"]))
 
 
+@pytest.mark.skip(reason="ddm7/ddm7_lotto not supported in this release")
 def test_sim_paths_reject_bad_params():
     for paths_fn in (ddm7_sim_paths, ddm7_lotto_sim_paths):
         with pytest.raises(ValueError):
             paths_fn(np.array([1.5, 1.3, 0.25, 0.5]))                       # wrong length
         with pytest.raises(ValueError):
             paths_fn(np.array([1.5, 1.3, 0.25, 0.9, 0.0, 0.0, 0.5]))        # z+sz/2 >= 1
+
+
+# ----------------------------------------------------------------------------
+# 10. ddm7 / ddm7_lotto are disabled in this release: they must raise
+#     NotImplementedError rather than run.
+# ----------------------------------------------------------------------------
+def test_ddm7_functions_raise_not_implemented():
+    with pytest.raises(NotImplementedError):
+        ddm7_sim(np.zeros((1, 7)))
+    with pytest.raises(NotImplementedError):
+        ddm7_fit(np.zeros(7), np.array([1.0]), np.array([1]),
+                 np.array([1.0]), np.array([1.0]))
+    with pytest.raises(NotImplementedError):
+        ddm7_sim_paths(np.zeros(7))
+    with pytest.raises(NotImplementedError):
+        ddm7_lotto_sim(np.zeros((1, 7)))
+    with pytest.raises(NotImplementedError):
+        ddm7_lotto_fit(np.zeros(7), np.array([1.0]), np.array([1]),
+                       np.array([1.0]), np.array([1.0]))
+    with pytest.raises(NotImplementedError):
+        ddm7_lotto_sim_paths(np.zeros(7))
+
+
+# ----------------------------------------------------------------------------
+# 11. ddm4_sim_paths: the four-parameter (no-variability) trajectory recorder
+# ----------------------------------------------------------------------------
+def test_ddm4_sim_paths_highlow():
+    p = np.array([1.5, 1.3, 0.25, 0.5])
+    out = ddm4_sim_paths(p, ntrials=15, dt=1e-3, rng=np.random.default_rng(5))
+    _check_paths(out, a=p[1])
+    assert set(["value_high", "value_low", "v_draw"]).issubset(out.keys())
+    out2 = ddm4_sim_paths(p, ntrials=15, dt=1e-3, rng=np.random.default_rng(5))
+    assert np.allclose(out["rt"], out2["rt"])
+    assert all(np.allclose(x1, x2) for x1, x2 in zip(out["x"], out2["x"]))
+
+
+def test_ddm4_sim_paths_rejects_bad_params():
+    with pytest.raises(ValueError):
+        ddm4_sim_paths(np.array([1.5, 1.3, 0.25]))                # wrong length
 

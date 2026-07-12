@@ -101,6 +101,11 @@ from scipy.special import expit, logsumexp, roots_legendre
 from ..utils.math import norm2alpha, norm2beta, calc_fval
 from ..core.modelspec import ModelSpec
 
+_DDM7_NOT_SUPPORTED = (
+    "The seven-parameter DDM (ddm7 / ddm7_lotto) is not supported in this "
+    "release yet. Use ddm4 / ddm4_lotto."
+)
+
 # --- Core-parameter transforms shared by all four models ---
 T0_CAP = 0.5
 T0_SHIFT = 2.2
@@ -569,6 +574,51 @@ def ddm4_fit(params, rt, choice, value_high, value_low, prior=None,
     return calc_fval(nll, params, prior=prior, output=output)
 
 
+def ddm4_sim_paths(params, ntrials: int = 25, dt: float = 1e-3,
+                   max_time: float = 4.0, rng=None) -> dict:
+    """Simulate a SMALL number of trials of the **four-parameter** high-vs-low
+    VALUE model while recording the full evidence trajectory of every trial, for
+    visualization.
+
+    ``params`` is a single subject's natural-space vector ``[v_coef, a, t0, z]``
+    (shape ``(4,)`` or ``(1, 4)``). There is no across-trial variability, so each
+    trial's drift is the value gap ``v_coef * (value_high - value_low)`` and the
+    start point (``z``) and non-decision time (``t0``) are constant across trials.
+    The default ``dt = 1e-3`` is coarser than ``ddm4_sim``'s ``1e-4`` because the
+    purpose is drawing legible paths, not unbiased RT distributions. Returns, per
+    trial: ``t`` (time arrays offset by ``t0``), ``x`` (evidence arrays), plus
+    ``choice`` (1 = HIGH/upper, 0 = LOW/lower), ``crossed``, ``rt``, ``v`` (mean
+    drift), ``v_draw``, ``value_high``, ``value_low``, ``t0_draw``, ``z_draw`` and
+    ``params``.
+    """
+    params = np.asarray(params, dtype=float).reshape(-1)
+    if params.shape[0] != 4:
+        raise ValueError(
+            "params must be a single subject's 4-vector: [v_coef, a, t0, z]")
+    v_coef, a, t0, z = (float(p) for p in params)
+    _validate_core(np.array([a]), np.array([t0]), np.array([z]), max_time)
+    if rng is None:
+        rng = np.random.default_rng()
+
+    value_high, value_low = _draw_highlow_task(ntrials, rng)
+    v_mean = v_coef * (value_high - value_low)
+    v_draw = v_mean                       # no drift variability (sv = 0)
+    z_draw = np.full(ntrials, z)          # no start-point variability (sz = 0)
+    t0_draw = np.full(ntrials, t0)        # no non-decision variability (st = 0)
+
+    ts, xs, choice, crossed, rt = _simulate_paths(
+        v_draw, a, z_draw, t0_draw, dt, max_time, rng)
+
+    return {
+        "params": params.copy(),
+        "t": ts, "x": xs,
+        "choice": choice, "crossed": crossed, "rt": rt,
+        "v": v_mean, "v_draw": v_draw,
+        "value_high": value_high, "value_low": value_low,
+        "t0_draw": t0_draw, "z_draw": z_draw,
+    }
+
+
 def ddm7_sim(params: np.ndarray, ntrials: int = 150, dt: float = 1e-4,
              max_time: float = 8.0, rng=None, **kwargs) -> dict:
     """Simulate the **seven-parameter** high-vs-low VALUE task.
@@ -582,48 +632,50 @@ def ddm7_sim(params: np.ndarray, ntrials: int = 150, dt: float = 1e-4,
     :func:`ddm4_sim` plus ``sv``, ``st``, ``sz`` broadcast to
     ``(nsubjects, ntrials)``.
     """
-    params = np.asarray(params, dtype=float)
-    if params.ndim != 2 or params.shape[1] != 7:
-        raise ValueError(
-            "params must have shape (nsubjects, 7): [v_coef, a, t0, z, sv, st, sz]")
-    nsubjects = params.shape[0]
-    all_v_coef, all_a, all_t0, all_z, all_sv, all_st, all_sz = (
-        params[:, i] for i in range(7))
-    _validate_core(all_a, all_t0, all_z, max_time)
-    _validate_variability(all_sv, all_st, all_sz, all_z)
-    if rng is None:
-        rng = np.random.default_rng()
-
-    n = nsubjects * ntrials
-    v_coef = np.repeat(all_v_coef, ntrials)
-    a = np.repeat(all_a, ntrials)
-    z = np.repeat(all_z, ntrials)
-    t0 = np.repeat(all_t0, ntrials)
-    sv = np.repeat(all_sv, ntrials)
-    st = np.repeat(all_st, ntrials)
-    sz = np.repeat(all_sz, ntrials)
-
-    value_high, value_low = _draw_highlow_task(n, rng)
-    v_mean = v_coef * (value_high - value_low)    # >= 0, drift toward HIGH (upper)
-    v_draw = v_mean + sv * rng.standard_normal(n)
-    z_draw = z + sz * (rng.random(n) - 0.5)
-    t0_draw = t0 + st * (rng.random(n) - 0.5)
-
-    rt, choice, _ = _simulate_diffusion(v_draw, a, z_draw, t0_draw, dt, max_time, rng)
-
-    shape = (nsubjects, ntrials)
-    return {
-        "params": np.column_stack(
-            [all_v_coef, all_a, all_t0, all_z, all_sv, all_st, all_sz]),
-        "rt": rt.reshape(shape),
-        "choice": choice.reshape(shape),
-        "value_high": value_high.reshape(shape),
-        "value_low": value_low.reshape(shape),
-        "v": v_mean.reshape(shape),
-        "sv": sv.reshape(shape).copy(),
-        "st": st.reshape(shape).copy(),
-        "sz": sz.reshape(shape).copy(),
-    }
+    raise NotImplementedError(_DDM7_NOT_SUPPORTED)
+    # --- disabled in this release; preserved for future support ---
+    # params = np.asarray(params, dtype=float)
+    # if params.ndim != 2 or params.shape[1] != 7:
+    #     raise ValueError(
+    #         "params must have shape (nsubjects, 7): [v_coef, a, t0, z, sv, st, sz]")
+    # nsubjects = params.shape[0]
+    # all_v_coef, all_a, all_t0, all_z, all_sv, all_st, all_sz = (
+    #     params[:, i] for i in range(7))
+    # _validate_core(all_a, all_t0, all_z, max_time)
+    # _validate_variability(all_sv, all_st, all_sz, all_z)
+    # if rng is None:
+    #     rng = np.random.default_rng()
+    #
+    # n = nsubjects * ntrials
+    # v_coef = np.repeat(all_v_coef, ntrials)
+    # a = np.repeat(all_a, ntrials)
+    # z = np.repeat(all_z, ntrials)
+    # t0 = np.repeat(all_t0, ntrials)
+    # sv = np.repeat(all_sv, ntrials)
+    # st = np.repeat(all_st, ntrials)
+    # sz = np.repeat(all_sz, ntrials)
+    #
+    # value_high, value_low = _draw_highlow_task(n, rng)
+    # v_mean = v_coef * (value_high - value_low)    # >= 0, drift toward HIGH (upper)
+    # v_draw = v_mean + sv * rng.standard_normal(n)
+    # z_draw = z + sz * (rng.random(n) - 0.5)
+    # t0_draw = t0 + st * (rng.random(n) - 0.5)
+    #
+    # rt, choice, _ = _simulate_diffusion(v_draw, a, z_draw, t0_draw, dt, max_time, rng)
+    #
+    # shape = (nsubjects, ntrials)
+    # return {
+    #     "params": np.column_stack(
+    #         [all_v_coef, all_a, all_t0, all_z, all_sv, all_st, all_sz]),
+    #     "rt": rt.reshape(shape),
+    #     "choice": choice.reshape(shape),
+    #     "value_high": value_high.reshape(shape),
+    #     "value_low": value_low.reshape(shape),
+    #     "v": v_mean.reshape(shape),
+    #     "sv": sv.reshape(shape).copy(),
+    #     "st": st.reshape(shape).copy(),
+    #     "sz": sz.reshape(shape).copy(),
+    # }
 
 
 def ddm7_fit(params, rt, choice, value_high, value_low, prior=None,
@@ -640,46 +692,48 @@ def ddm7_fit(params, rt, choice, value_high, value_low, prior=None,
     parameters (or ``z +/- sz/2`` leaving ``(0, 1)``) still return ``1e7`` on the
     optimization path.
     """
-    v_coef = float(params[0])
-    a = float(a_xform(params[1]))
-    t0 = float(t0_xform(params[2]))
-    z = float(norm2alpha(params[3]))
-    sv = float(sv_xform(params[4]))
-    st = float(st_xform(params[5]))
-    sz = float(sz_xform(params[6]))
-
-    infeasible = (
-        not (-20.0 <= v_coef <= 20.0)
-        or not (1e-5 <= a <= A_CAP)
-        or not (0.0 < t0 < T0_CAP)
-        or not (0.0 < z < 1.0)
-        or sv < 0.0
-        or not (0.0 <= st < ST_CAP)
-        or not (0.0 <= sz < SZ_CAP)
-        or (z - sz / 2.0) <= 0.0
-        or (z + sz / 2.0) >= 1.0
-    )
-    if infeasible and output != "all":
-        return 1e7
-
-    rt = np.asarray(rt, dtype=float).ravel()
-    choice = np.asarray(choice).ravel().astype(int)
-    value_high = np.asarray(value_high, dtype=float).ravel()
-    value_low = np.asarray(value_low, dtype=float).ravel()
-
-    v_mean = v_coef * (value_high - value_low)   # drift toward HIGH (upper)
-    nll, logdens = _wfpt_nll(rt, choice, v_mean, a, t0, z, sv, st, sz,
-                             n_st=n_st, n_sz=n_sz)
-
-    if output == "all":
-        return {
-            "params": [v_coef, a, t0, z, sv, st, sz],
-            "rt": rt, "choice": choice,
-            "value_high": value_high, "value_low": value_low,
-            "v": v_mean, "sv": sv, "st": st, "sz": sz,
-            "logdens": logdens, "nll": nll,
-        }
-    return calc_fval(nll, params, prior=prior, output=output)
+    raise NotImplementedError(_DDM7_NOT_SUPPORTED)
+    # --- disabled in this release; preserved for future support ---
+    # v_coef = float(params[0])
+    # a = float(a_xform(params[1]))
+    # t0 = float(t0_xform(params[2]))
+    # z = float(norm2alpha(params[3]))
+    # sv = float(sv_xform(params[4]))
+    # st = float(st_xform(params[5]))
+    # sz = float(sz_xform(params[6]))
+    #
+    # infeasible = (
+    #     not (-20.0 <= v_coef <= 20.0)
+    #     or not (1e-5 <= a <= A_CAP)
+    #     or not (0.0 < t0 < T0_CAP)
+    #     or not (0.0 < z < 1.0)
+    #     or sv < 0.0
+    #     or not (0.0 <= st < ST_CAP)
+    #     or not (0.0 <= sz < SZ_CAP)
+    #     or (z - sz / 2.0) <= 0.0
+    #     or (z + sz / 2.0) >= 1.0
+    # )
+    # if infeasible and output != "all":
+    #     return 1e7
+    #
+    # rt = np.asarray(rt, dtype=float).ravel()
+    # choice = np.asarray(choice).ravel().astype(int)
+    # value_high = np.asarray(value_high, dtype=float).ravel()
+    # value_low = np.asarray(value_low, dtype=float).ravel()
+    #
+    # v_mean = v_coef * (value_high - value_low)   # drift toward HIGH (upper)
+    # nll, logdens = _wfpt_nll(rt, choice, v_mean, a, t0, z, sv, st, sz,
+    #                          n_st=n_st, n_sz=n_sz)
+    #
+    # if output == "all":
+    #     return {
+    #         "params": [v_coef, a, t0, z, sv, st, sz],
+    #         "rt": rt, "choice": choice,
+    #         "value_high": value_high, "value_low": value_low,
+    #         "v": v_mean, "sv": sv, "st": st, "sz": sz,
+    #         "logdens": logdens, "nll": nll,
+    #     }
+    # return calc_fval(nll, params, prior=prior, output=output)
 
 
 def ddm7_sim_paths(params, ntrials: int = 25, dt: float = 1e-3,
@@ -698,33 +752,35 @@ def ddm7_sim_paths(params, ntrials: int = 25, dt: float = 1e-3,
     (mean drift), ``v_draw``, ``value_high``, ``value_low``, ``t0_draw``,
     ``z_draw`` and ``params``.
     """
-    params = np.asarray(params, dtype=float).reshape(-1)
-    if params.shape[0] != 7:
-        raise ValueError(
-            "params must be a single subject's 7-vector: [v_coef, a, t0, z, sv, st, sz]")
-    v_coef, a, t0, z, sv, st, sz = (float(p) for p in params)
-    _validate_core(np.array([a]), np.array([t0]), np.array([z]), max_time)
-    _validate_variability(np.array([sv]), np.array([st]), np.array([sz]), np.array([z]))
-    if rng is None:
-        rng = np.random.default_rng()
-
-    value_high, value_low = _draw_highlow_task(ntrials, rng)
-    v_mean = v_coef * (value_high - value_low)
-    v_draw = v_mean + sv * rng.standard_normal(ntrials)
-    z_draw = z + sz * (rng.random(ntrials) - 0.5)
-    t0_draw = t0 + st * (rng.random(ntrials) - 0.5)
-
-    ts, xs, choice, crossed, rt = _simulate_paths(
-        v_draw, a, z_draw, t0_draw, dt, max_time, rng)
-
-    return {
-        "params": params.copy(),
-        "t": ts, "x": xs,
-        "choice": choice, "crossed": crossed, "rt": rt,
-        "v": v_mean, "v_draw": v_draw,
-        "value_high": value_high, "value_low": value_low,
-        "t0_draw": t0_draw, "z_draw": z_draw,
-    }
+    raise NotImplementedError(_DDM7_NOT_SUPPORTED)
+    # --- disabled in this release; preserved for future support ---
+    # params = np.asarray(params, dtype=float).reshape(-1)
+    # if params.shape[0] != 7:
+    #     raise ValueError(
+    #         "params must be a single subject's 7-vector: [v_coef, a, t0, z, sv, st, sz]")
+    # v_coef, a, t0, z, sv, st, sz = (float(p) for p in params)
+    # _validate_core(np.array([a]), np.array([t0]), np.array([z]), max_time)
+    # _validate_variability(np.array([sv]), np.array([st]), np.array([sz]), np.array([z]))
+    # if rng is None:
+    #     rng = np.random.default_rng()
+    #
+    # value_high, value_low = _draw_highlow_task(ntrials, rng)
+    # v_mean = v_coef * (value_high - value_low)
+    # v_draw = v_mean + sv * rng.standard_normal(ntrials)
+    # z_draw = z + sz * (rng.random(ntrials) - 0.5)
+    # t0_draw = t0 + st * (rng.random(ntrials) - 0.5)
+    #
+    # ts, xs, choice, crossed, rt = _simulate_paths(
+    #     v_draw, a, z_draw, t0_draw, dt, max_time, rng)
+    #
+    # return {
+    #     "params": params.copy(),
+    #     "t": ts, "x": xs,
+    #     "choice": choice, "crossed": crossed, "rt": rt,
+    #     "v": v_mean, "v_draw": v_draw,
+    #     "value_high": value_high, "value_low": value_low,
+    #     "t0_draw": t0_draw, "z_draw": z_draw,
+    # }
 
 
 ddm4_desc = """Four-parameter drift-diffusion model (DDM) of a HIGH-vs-LOW
@@ -766,6 +822,7 @@ Recoverability note); ddm4 is recommended for recovery.
 Free parameters: v_coef (drift scaling), a (boundary separation),
 t0 (non-decision time), z (start-point bias), sv (drift SD),
 st (non-decision-time width), sz (start-point width)."""
+# NOTE: ddm7/ddm7_lotto are disabled in this release (functions raise NotImplementedError).
 ddm7_id = "ddm7"
 ddm7_spec = {
     "task": "high_vs_low_value",
@@ -884,48 +941,50 @@ def ddm7_lotto_sim(params: np.ndarray, ntrials: int = 150, dt: float = 1e-4,
     Returns the same keys as :func:`ddm4_lotto_sim` plus ``sv``, ``st``, ``sz``
     broadcast to ``(nsubjects, ntrials)``.
     """
-    params = np.asarray(params, dtype=float)
-    if params.ndim != 2 or params.shape[1] != 7:
-        raise ValueError(
-            "params must have shape (nsubjects, 7): [v_coef, a, t0, z, sv, st, sz]")
-    nsubjects = params.shape[0]
-    all_v_coef, all_a, all_t0, all_z, all_sv, all_st, all_sz = (
-        params[:, i] for i in range(7))
-    _validate_core(all_a, all_t0, all_z, max_time)
-    _validate_variability(all_sv, all_st, all_sz, all_z)
-    if rng is None:
-        rng = np.random.default_rng()
-
-    n = nsubjects * ntrials
-    v_coef = np.repeat(all_v_coef, ntrials)
-    a = np.repeat(all_a, ntrials)
-    z = np.repeat(all_z, ntrials)
-    t0 = np.repeat(all_t0, ntrials)
-    sv = np.repeat(all_sv, ntrials)
-    st = np.repeat(all_st, ntrials)
-    sz = np.repeat(all_sz, ntrials)
-
-    ev_risky, safe = _draw_lotto_task(n, rng)
-    v_mean = v_coef * (ev_risky - safe)
-    v_draw = v_mean + sv * rng.standard_normal(n)
-    z_draw = z + sz * (rng.random(n) - 0.5)
-    t0_draw = t0 + st * (rng.random(n) - 0.5)
-
-    rt, choice, _ = _simulate_diffusion(v_draw, a, z_draw, t0_draw, dt, max_time, rng)
-
-    shape = (nsubjects, ntrials)
-    return {
-        "params": np.column_stack(
-            [all_v_coef, all_a, all_t0, all_z, all_sv, all_st, all_sz]),
-        "rt": rt.reshape(shape),
-        "choice": choice.reshape(shape),
-        "ev_risky": ev_risky.reshape(shape),
-        "safe": safe.reshape(shape),
-        "v": v_mean.reshape(shape),
-        "sv": sv.reshape(shape).copy(),
-        "st": st.reshape(shape).copy(),
-        "sz": sz.reshape(shape).copy(),
-    }
+    raise NotImplementedError(_DDM7_NOT_SUPPORTED)
+    # --- disabled in this release; preserved for future support ---
+    # params = np.asarray(params, dtype=float)
+    # if params.ndim != 2 or params.shape[1] != 7:
+    #     raise ValueError(
+    #         "params must have shape (nsubjects, 7): [v_coef, a, t0, z, sv, st, sz]")
+    # nsubjects = params.shape[0]
+    # all_v_coef, all_a, all_t0, all_z, all_sv, all_st, all_sz = (
+    #     params[:, i] for i in range(7))
+    # _validate_core(all_a, all_t0, all_z, max_time)
+    # _validate_variability(all_sv, all_st, all_sz, all_z)
+    # if rng is None:
+    #     rng = np.random.default_rng()
+    #
+    # n = nsubjects * ntrials
+    # v_coef = np.repeat(all_v_coef, ntrials)
+    # a = np.repeat(all_a, ntrials)
+    # z = np.repeat(all_z, ntrials)
+    # t0 = np.repeat(all_t0, ntrials)
+    # sv = np.repeat(all_sv, ntrials)
+    # st = np.repeat(all_st, ntrials)
+    # sz = np.repeat(all_sz, ntrials)
+    #
+    # ev_risky, safe = _draw_lotto_task(n, rng)
+    # v_mean = v_coef * (ev_risky - safe)
+    # v_draw = v_mean + sv * rng.standard_normal(n)
+    # z_draw = z + sz * (rng.random(n) - 0.5)
+    # t0_draw = t0 + st * (rng.random(n) - 0.5)
+    #
+    # rt, choice, _ = _simulate_diffusion(v_draw, a, z_draw, t0_draw, dt, max_time, rng)
+    #
+    # shape = (nsubjects, ntrials)
+    # return {
+    #     "params": np.column_stack(
+    #         [all_v_coef, all_a, all_t0, all_z, all_sv, all_st, all_sz]),
+    #     "rt": rt.reshape(shape),
+    #     "choice": choice.reshape(shape),
+    #     "ev_risky": ev_risky.reshape(shape),
+    #     "safe": safe.reshape(shape),
+    #     "v": v_mean.reshape(shape),
+    #     "sv": sv.reshape(shape).copy(),
+    #     "st": st.reshape(shape).copy(),
+    #     "sz": sz.reshape(shape).copy(),
+    # }
 
 
 def ddm7_lotto_fit(params, rt, choice, ev_risky, safe, prior=None,
@@ -940,46 +999,48 @@ def ddm7_lotto_fit(params, rt, choice, ev_risky, safe, prior=None,
     rejection); out-of-bounds parameters (or ``z +/- sz/2`` leaving ``(0, 1)``)
     return ``1e7`` on the optimization path.
     """
-    v_coef = float(params[0])
-    a = float(a_xform(params[1]))
-    t0 = float(t0_xform(params[2]))
-    z = float(norm2alpha(params[3]))
-    sv = float(sv_xform(params[4]))
-    st = float(st_xform(params[5]))
-    sz = float(sz_xform(params[6]))
-
-    infeasible = (
-        not (-20.0 <= v_coef <= 20.0)
-        or not (1e-5 <= a <= A_CAP)
-        or not (0.0 < t0 < T0_CAP)
-        or not (0.0 < z < 1.0)
-        or sv < 0.0
-        or not (0.0 <= st < ST_CAP)
-        or not (0.0 <= sz < SZ_CAP)
-        or (z - sz / 2.0) <= 0.0
-        or (z + sz / 2.0) >= 1.0
-    )
-    if infeasible and output != "all":
-        return 1e7
-
-    rt = np.asarray(rt, dtype=float).ravel()
-    choice = np.asarray(choice).ravel().astype(int)
-    ev_risky = np.asarray(ev_risky, dtype=float).ravel()
-    safe = np.asarray(safe, dtype=float).ravel()
-
-    v_mean = v_coef * (ev_risky - safe)          # per-trial mean drift
-    nll, logdens = _wfpt_nll(rt, choice, v_mean, a, t0, z, sv, st, sz,
-                             n_st=n_st, n_sz=n_sz)
-
-    if output == "all":
-        return {
-            "params": [v_coef, a, t0, z, sv, st, sz],
-            "rt": rt, "choice": choice,
-            "ev_risky": ev_risky, "safe": safe,
-            "v": v_mean, "sv": sv, "st": st, "sz": sz,
-            "logdens": logdens, "nll": nll,
-        }
-    return calc_fval(nll, params, prior=prior, output=output)
+    raise NotImplementedError(_DDM7_NOT_SUPPORTED)
+    # --- disabled in this release; preserved for future support ---
+    # v_coef = float(params[0])
+    # a = float(a_xform(params[1]))
+    # t0 = float(t0_xform(params[2]))
+    # z = float(norm2alpha(params[3]))
+    # sv = float(sv_xform(params[4]))
+    # st = float(st_xform(params[5]))
+    # sz = float(sz_xform(params[6]))
+    #
+    # infeasible = (
+    #     not (-20.0 <= v_coef <= 20.0)
+    #     or not (1e-5 <= a <= A_CAP)
+    #     or not (0.0 < t0 < T0_CAP)
+    #     or not (0.0 < z < 1.0)
+    #     or sv < 0.0
+    #     or not (0.0 <= st < ST_CAP)
+    #     or not (0.0 <= sz < SZ_CAP)
+    #     or (z - sz / 2.0) <= 0.0
+    #     or (z + sz / 2.0) >= 1.0
+    # )
+    # if infeasible and output != "all":
+    #     return 1e7
+    #
+    # rt = np.asarray(rt, dtype=float).ravel()
+    # choice = np.asarray(choice).ravel().astype(int)
+    # ev_risky = np.asarray(ev_risky, dtype=float).ravel()
+    # safe = np.asarray(safe, dtype=float).ravel()
+    #
+    # v_mean = v_coef * (ev_risky - safe)          # per-trial mean drift
+    # nll, logdens = _wfpt_nll(rt, choice, v_mean, a, t0, z, sv, st, sz,
+    #                          n_st=n_st, n_sz=n_sz)
+    #
+    # if output == "all":
+    #     return {
+    #         "params": [v_coef, a, t0, z, sv, st, sz],
+    #         "rt": rt, "choice": choice,
+    #         "ev_risky": ev_risky, "safe": safe,
+    #         "v": v_mean, "sv": sv, "st": st, "sz": sz,
+    #         "logdens": logdens, "nll": nll,
+    #     }
+    # return calc_fval(nll, params, prior=prior, output=output)
 
 
 def ddm7_lotto_sim_paths(params, ntrials: int = 25, dt: float = 1e-3,
@@ -994,33 +1055,35 @@ def ddm7_lotto_sim_paths(params, ntrials: int = 25, dt: float = 1e-3,
     (1 = RISKY/upper, 0 = SAFE/lower), ``crossed``, ``rt``, ``v``, ``v_draw``,
     ``ev_risky``, ``safe``, ``t0_draw``, ``z_draw`` and ``params``.
     """
-    params = np.asarray(params, dtype=float).reshape(-1)
-    if params.shape[0] != 7:
-        raise ValueError(
-            "params must be a single subject's 7-vector: [v_coef, a, t0, z, sv, st, sz]")
-    v_coef, a, t0, z, sv, st, sz = (float(p) for p in params)
-    _validate_core(np.array([a]), np.array([t0]), np.array([z]), max_time)
-    _validate_variability(np.array([sv]), np.array([st]), np.array([sz]), np.array([z]))
-    if rng is None:
-        rng = np.random.default_rng()
-
-    ev_risky, safe = _draw_lotto_task(ntrials, rng)
-    v_mean = v_coef * (ev_risky - safe)
-    v_draw = v_mean + sv * rng.standard_normal(ntrials)
-    z_draw = z + sz * (rng.random(ntrials) - 0.5)
-    t0_draw = t0 + st * (rng.random(ntrials) - 0.5)
-
-    ts, xs, choice, crossed, rt = _simulate_paths(
-        v_draw, a, z_draw, t0_draw, dt, max_time, rng)
-
-    return {
-        "params": params.copy(),
-        "t": ts, "x": xs,
-        "choice": choice, "crossed": crossed, "rt": rt,
-        "v": v_mean, "v_draw": v_draw,
-        "ev_risky": ev_risky, "safe": safe,
-        "t0_draw": t0_draw, "z_draw": z_draw,
-    }
+    raise NotImplementedError(_DDM7_NOT_SUPPORTED)
+    # --- disabled in this release; preserved for future support ---
+    # params = np.asarray(params, dtype=float).reshape(-1)
+    # if params.shape[0] != 7:
+    #     raise ValueError(
+    #         "params must be a single subject's 7-vector: [v_coef, a, t0, z, sv, st, sz]")
+    # v_coef, a, t0, z, sv, st, sz = (float(p) for p in params)
+    # _validate_core(np.array([a]), np.array([t0]), np.array([z]), max_time)
+    # _validate_variability(np.array([sv]), np.array([st]), np.array([sz]), np.array([z]))
+    # if rng is None:
+    #     rng = np.random.default_rng()
+    #
+    # ev_risky, safe = _draw_lotto_task(ntrials, rng)
+    # v_mean = v_coef * (ev_risky - safe)
+    # v_draw = v_mean + sv * rng.standard_normal(ntrials)
+    # z_draw = z + sz * (rng.random(ntrials) - 0.5)
+    # t0_draw = t0 + st * (rng.random(ntrials) - 0.5)
+    #
+    # ts, xs, choice, crossed, rt = _simulate_paths(
+    #     v_draw, a, z_draw, t0_draw, dt, max_time, rng)
+    #
+    # return {
+    #     "params": params.copy(),
+    #     "t": ts, "x": xs,
+    #     "choice": choice, "crossed": crossed, "rt": rt,
+    #     "v": v_mean, "v_draw": v_draw,
+    #     "ev_risky": ev_risky, "safe": safe,
+    #     "t0_draw": t0_draw, "z_draw": z_draw,
+    # }
 
 
 ddm4_lotto_desc = """Four-parameter drift-diffusion model (DDM) of a
@@ -1061,6 +1124,7 @@ docstring's Recoverability note); ddm4_lotto is recommended for recovery.
 Free parameters: v_coef (drift scaling), a (boundary separation),
 t0 (non-decision time), z (start-point bias), sv (drift SD),
 st (non-decision-time width), sz (start-point width)."""
+# NOTE: ddm7/ddm7_lotto are disabled in this release (functions raise NotImplementedError).
 ddm7_lotto_id = "ddm7_lotto"
 ddm7_lotto_spec = {
     "task": "safe_vs_risky_gamble",

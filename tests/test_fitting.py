@@ -165,8 +165,7 @@ def test_glm_ar_fit():
     assert res.NPL.shape == (nsubjects,)
 
 
-def test_recover_populates_outfit_and_all_data():
-    import warnings
+def test_recover_populates_outfit_and_all_data(capsys):
     import numpy as np
     from pyem.api import EMModel
     from pyem.models.rl_mf import rw1a1b_model
@@ -174,12 +173,10 @@ def test_recover_populates_outfit_and_all_data():
     true_params = _simulate_rw_params(10)
     model = EMModel(all_data=None, fit_func=rw1a1b_model.fit, param_names=["beta", "alpha"],
                     simulate_func=rw1a1b_model.sim)
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        model.recover(true_params, pr_inputs=["choices", "rewards"], nblocks=2, ntrials=10,
-                      fit_kwargs={"seed": 0, "mstep_maxit": 5, "njobs": 1})
-    # recover() warns that it overwrites all_data
-    assert any("all_data" in str(wi.message) for wi in w)
+    model.recover(true_params, pr_inputs=["choices", "rewards"], nblocks=2, ntrials=10,
+                  fit_kwargs={"seed": 0, "mstep_maxit": 5, "njobs": 1})
+    # recover() prints a short note that it repurposed the model's data/outfit
+    assert "recover()" in capsys.readouterr().out
     # all_data is now populated (simulated dataset), so get_outfit()/.outfit work
     assert model.all_data is not None and len(model.all_data) == 10
     of = model.get_outfit()
