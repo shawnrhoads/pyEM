@@ -1,8 +1,3 @@
----
-title: Home
-class: hide-title
----
-
 <img class="pyem-logo pyem-logo--light" src="assets/pyem-logo-horizontal-editable.svg" alt="pyEM" width="420">
 <img class="pyem-logo pyem-logo--dark" src="assets/pyem-logo-horizontal-dark-editable.svg" alt="pyEM" width="420">
 

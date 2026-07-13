@@ -60,7 +60,9 @@
 [data-md-color-scheme="default"] .pyem-logo--dark { display: none; }
 [data-md-color-scheme="slate"] .pyem-logo--light { display: none; }
 
-/* Only hides h1 when the page has the "hide-title" class */
-.hide-title h1 {
+/* Hides h1 only on the main index/home page */
+.home h1, 
+[data-md-component="main"] :data(role="main") h1 {
     display: none;
 }
+
