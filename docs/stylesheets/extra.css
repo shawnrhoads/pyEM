@@ -61,7 +61,7 @@
 [data-md-color-scheme="slate"] .pyem-logo--light { display: none; }
 
 /* Hides h1 only on the main index/home page */
-.home h1, 
+.index h1, 
 [data-md-component="main"] :data(role="main") h1 {
     display: none;
 }
