@@ -98,12 +98,12 @@ nav:
   - FAQ: faq.md
   - Troubleshooting: troubleshooting.md
   - Examples:
-      - General Linear Model: examples/glm.ipynb
-      - Prospect Theory: examples/pt.ipynb
-      - Discounting Models: examples/discounting.ipynb
-      - Signal Detection Theory: examples/sdt.ipynb
       - Model-Free Reinforcement Learning: examples/rl_mf.ipynb
       - Model-Based Reinforcement Learning: examples/rl_mb.ipynb
       - Bayesian Inference: examples/bayes.ipynb
+      - General Linear Model: examples/glm.ipynb
+      - Discounting Models: examples/discounting.ipynb
+      - Prospect Theory: examples/pt.ipynb
+      - Signal Detection Theory: examples/sdt.ipynb
       - Drift-Diffusion Models: examples/ddm.ipynb
   - References: references.md
