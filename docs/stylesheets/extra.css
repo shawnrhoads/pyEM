@@ -59,3 +59,8 @@
    follows the theme switch. Light logo on the light page, dark logo on dark. */
 [data-md-color-scheme="default"] .pyem-logo--dark { display: none; }
 [data-md-color-scheme="slate"] .pyem-logo--light { display: none; }
+
+/* Only hides h1 when the page has the "hide-title" class */
+.hide-title h1 {
+    display: none;
+}
