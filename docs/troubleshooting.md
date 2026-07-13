@@ -1,13 +1,5 @@
 # Troubleshooting
 
-## `TypeError` from `EMModel.recover()` when using a GLM model
-
-**Symptom:** Calling `model.recover(true_params, pr_inputs=[...])` on a GLM family raises a `TypeError` complaining that `simulate_func` must return a dict.
-
-**Cause:** `recover()` requires `simulate_func` to return a dict of named arrays so it can select fields by name via `pr_inputs`. The GLM family's `*_sim` functions return an `(X, Y)` tuple instead, which isn't compatible with that mechanism.
-
-**Fix:** Don't use `recover()` for GLM models. Either fit the GLM directly with `EMModel(...).fit(...)` using the `(X, Y)` output packaged into `all_data` yourself, or write a thin wrapper around the GLM's `*_sim` that returns `{"X": X, "Y": Y}` if you specifically need the `recover()`/`plot_recovery()` workflow.
-
 ## Every subject's NLL shows up as exactly `1e7`
 
 **Symptom:** `FitResult.NLL` (or the value returned by a `fit_func` call) is suspiciously uniform at `1e7` for some or all subjects, and the EM fit doesn't seem to be learning anything.
@@ -31,11 +23,3 @@
 **Cause:** `mstep_maxit` controls the number of EM iterations and is validated up front; the EM loop cannot run with fewer than one iteration.
 
 **Fix:** Pass `mstep_maxit >= 1` (the default is `200`). If you're trying to do a quick single-pass fit for debugging, use `mstep_maxit=1` rather than `0`.
-
-## `ImportError` when calling `plot_recovery()` or other plotting helpers
-
-**Symptom:** Calling `model.plot_recovery(...)` (or another plotting utility in `pyem.utils.plotting`) raises an `ImportError` mentioning seaborn.
-
-**Cause:** Plotting helpers lazily import seaborn rather than depending on it unconditionally, since it's an optional dependency. If seaborn isn't installed, the import fails at call time with a clear message rather than at package import time.
-
-**Fix:** Install the `viz` extra: `pip install -e ".[viz]"` (or `pip install seaborn` directly in an existing environment).

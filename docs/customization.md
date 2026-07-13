@@ -1,8 +1,6 @@
 # Creating Custom Models
 
-pyEM makes it very easy to generate new models. Every model follows the same template: a pair of `_sim`/`_fit` functions plus a `ModelSpec`
-that bundles them with a hand-authored `id`/`description`/`spec`. To create a custom model, follow the
-same template:
+The entire purpose of pyEM is the make it very easy to generate new models for simulation and fitting. Every model follows the same template: a pair of `_sim`/`_fit` functions plus a `ModelSpec` that bundles them with a hand-authored `id`/`description`/`spec`. To create a custom model, follow the same template:
 
 ```python
 from pyem.core.modelspec import ModelSpec
