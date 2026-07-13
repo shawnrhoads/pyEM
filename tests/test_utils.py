@@ -18,4 +18,5 @@ def test_plotting_has_no_toplevel_seaborn():
     tree = ast.parse(src)
     toplevel = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
     names = [a.name for n in toplevel if isinstance(n, ast.Import) for a in n.names]
-    assert "seaborn" not in names
+    names += [n.module for n in toplevel if isinstance(n, ast.ImportFrom) and n.module]
+    assert not any(n == "seaborn" or n.startswith("seaborn.") for n in names)
