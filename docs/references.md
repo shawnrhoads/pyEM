@@ -1,8 +1,5 @@
 # References
 
-- Source code: [github.com/shawnrhoads/pyEM](https://github.com/shawnrhoads/pyEM)
-- Back to [Home](index.md)
-
 ## Related methods & papers
 
 The model families included in pyEM are implementations of (or are directly inspired by) the following methods and papers.
@@ -76,3 +73,5 @@ The model families included in pyEM are implementations of (or are directly insp
 - Kulkarni, K. R., Berner, L. A., Rhoads, S. A., Fiore, V. G., Schiller, D., & Gu, X. (2026). A computational mechanism linking momentary craving and decision-making in alcohol drinkers and cannabis users. *Nature Mental Health*, 4, 551–565 (2026). https://doi.org/10.1038/s44220-026-00593-w
 - Fu, Q. X., Shevlin, B. R., Davis, A. N., Heflin, M., Kulkarni, K. R., Saez, I., Mayberg, H. S., & Gu, X. (2026). Context-specificity and longitudinal stability of the effects of depressive symptoms on social decision-making. *PsyArXiv*. https://doi.org/10.31234/osf.io/rtda4_v1
 - Rhoads, S. A., Gan, L., Berluti, K., O'Connell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2025). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. *Nature Communications*. 16, 9350. https://doi.org/10.1038/s41467-025-64424-9
+
+\* *please reach out if you would like to list your study here*
