@@ -5,24 +5,32 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyem"
-version = "v0.2.0"
-description = "Hierarchical EM with MAP estimation for behavioral models"
+version = "1.0.0"
+description = "Expectation Maximization with MAP in Python for fitting cognitive computational models to behavioral data"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{name="pyEM maintainers"}]
+authors = [{name="Shawn A. Rhoads"}]
 dependencies = [
   "numpy>=1.22",
   "scipy>=1.10",
   "pandas>=1.5",
+  "matplotlib",
   "joblib>=1.3",
   "typing-extensions>=4.6",
-  "tqdm",
-  "pytest",
-  "matplotlib",
-  "seaborn",
-  "statsmodels",
-  "scikit-learn"
 ]
+
+[project.urls]
+Homepage = "https://github.com/shawnrhoads/pyEM"
+Documentation = "https://shawnrhoadsphd.com/pyEM"
+Repository = "https://github.com/shawnrhoads/pyEM"
+
+[project.optional-dependencies]
+viz = ["seaborn"]
+extras = ["statsmodels", "scikit-learn", "tqdm"]
+dev = ["pytest", "seaborn"]
+
+[tool.setuptools.packages.find]
+include = ["pyem*"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

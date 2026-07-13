@@ -31,7 +31,7 @@ def calc_LME(inv_h: np.ndarray, NPL: np.ndarray) -> tuple[np.ndarray, float, np.
 
 def calc_BICint(
     all_data, param_names, mu, sigma, fit_func, nsamples: int = 2000, func_output: str = "all",
-    nll_key: str = "nll", ntrials_total: int | None = None,
+    nll_key: str = "nll", ntrials_total: int | None = None, njobs: int = -1,
 ) -> float:
     """Integrated BIC via Monte Carlo integration over the group posterior.
 
@@ -73,7 +73,7 @@ def calc_BICint(
         # then gets dropped below instead of contributing its real value.
         iLog = logsumexp(-np.asarray(subnll)) - np.log(nsamples)
         return iLog
-    iLogs = Parallel(n_jobs=-1)(delayed(subj_iLog)(beh) for beh in all_data)
+    iLogs = Parallel(n_jobs=njobs)(delayed(subj_iLog)(beh) for beh in all_data)
     iLogs = np.asarray(iLogs)
     finite = np.isfinite(iLogs)
     if not np.all(finite):

@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 from pyem.api import EMModel
-from pyem.models.rl import (
+from pyem.models.rl_mf import (
     rw1a1b_sim, rw1a1b_fit,
     rw1a1b_sim as rw_simulate, rw1a1b_fit as rw_fit,
     rw2a1b_sim, rw2a1b_fit,
@@ -83,3 +83,41 @@ def test_identify_requires_dict_output():
     mc = ModelComparison([glm_model_instance], ["GLM"])
     with pytest.raises(ValueError, match="did not return a dict"):
         mc.identify(mi_inputs=["choices"], nrounds=1, nsubjects=5, sim_kwargs={"ntrials": ntrials})
+
+
+def test_compare_models_bicint_uses_param_count(monkeypatch):
+    """C1 regression: compare_models must pass the model's real param_names
+    (not an empty list) into calc_BICint for EMModel instances."""
+    from pyem.core import compare as compare_mod
+
+    rng = np.random.default_rng(0)
+    true = np.column_stack([norm2beta(rng.normal(size=6)),
+                            norm2alpha(rng.normal(size=6))])
+    sim = rw1a1b_sim(true, nblocks=2, ntrials=20)
+    all_data = [[sim["choices"][s], sim["rewards"][s]] for s in range(6)]
+    m = EMModel(all_data, rw1a1b_fit, ["beta", "alpha"])
+    m.fit(verbose=0, mstep_maxit=3)
+
+    captured = {}
+    def fake_calc_BICint(all_data, param_names, mu, sigma, fit_func, **kw):
+        captured["param_names"] = list(param_names)
+        return 0.0
+    monkeypatch.setattr(compare_mod, "calc_BICint", fake_calc_BICint)
+
+    compare_models([m], model_names=["rw1"],
+                   bicint_kwargs={"nsamples": 10, "func_output": "all", "nll_key": "nll"})
+    assert captured["param_names"] == ["beta", "alpha"]
+
+
+def test_compare_models_default_names():
+    """H1 regression: model_names=None must not raise."""
+    rng = np.random.default_rng(1)
+    true = np.column_stack([norm2beta(rng.normal(size=5)),
+                            norm2alpha(rng.normal(size=5))])
+    sim = rw1a1b_sim(true, nblocks=2, ntrials=15)
+    all_data = [[sim["choices"][s], sim["rewards"][s]] for s in range(5)]
+    m = EMModel(all_data, rw1a1b_fit, ["beta", "alpha"])
+    m.fit(verbose=0, mstep_maxit=2)
+    rows = compare_models([m],
+                          bicint_kwargs={"nsamples": 30, "func_output": "all", "nll_key": "nll"})
+    assert rows[0].name == "Model_1"

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, List, Sequence
+from typing import Any, List, Optional, Sequence
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -26,13 +26,17 @@ def compare_models(
     rows: List[ComparisonRow] = []
     for mod_idx, item in enumerate(models):
         if hasattr(item, "fit_func") or hasattr(item, "fit"):  # EMModel instance
-            # name = getattr(item, "name", item.fit_func.__name__ if hasattr(item, "fit_func") else "model")
             out = item._out or {}
             all_data = item.all_data
             fit_func = item.fit_func
+            param_names = list(item.param_names)
         else:
             _, out, all_data, fit_func = item  # explicit tuple
-        name = model_names[mod_idx]
+            param_names = list(out.get("param_names", []))
+        if model_names is not None:
+            name = model_names[mod_idx]
+        else:
+            name = f"Model_{mod_idx + 1}"
         LME = None
         if "inv_h" in out and "NPL" in out:
             _, lme, _ = calc_LME(out["inv_h"], out["NPL"])
@@ -40,7 +44,7 @@ def compare_models(
         BICint = None
         if out.get("posterior") is not None and bicint_kwargs is not None:
             mu = out["posterior"]["mu"]; sigma = out["posterior"]["sigma"]
-            BICint = calc_BICint(all_data, out.get("param_names", []), mu, sigma, fit_func, **bicint_kwargs)
+            BICint = calc_BICint(all_data, param_names, mu, sigma, fit_func, **bicint_kwargs)
         R2 = np.nan
         if r2_kwargs is not None and "NLL" in out:
             R2 = pseudo_r2_from_nll(out["NLL"], **r2_kwargs)
@@ -60,7 +64,7 @@ class ModelComparison:
     Class for performing model comparison and identifiability analysis.
     """
     
-    def __init__(self, models: List[Any], model_names: List[str] = None):
+    def __init__(self, models: List[Any], model_names: Optional[List[str]] = None):
         """
         Initialize ModelComparison.
         
@@ -337,7 +341,7 @@ class ModelComparison:
         Args:
             df: DataFrame returned by identify(); if None, uses self.identifiability_matrix
             metric: which metric's winners to visualize: {"LME","BICint","pseudoR2"}
-            rounds: total rounds per Simulated model (if None, inferred per row by sum of winners)
+            nrounds: total rounds per Simulated model (if None, inferred per row by sum of winners)
             cmap: colormap
             annotate: whether to add cell annotations
             figsize: figure size

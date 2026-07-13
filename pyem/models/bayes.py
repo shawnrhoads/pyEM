@@ -16,7 +16,7 @@ def _generate_fishp(lambda1: float, n_fish: int) -> np.ndarray:
     return fishp
 
 def bayes_sim(params: np.ndarray, nblocks: int = 10, ntrials: int = 15,
-             n_fish: int = 3) -> dict:
+             n_fish: int = 3, seed: int | None = None) -> dict:
     """Simulate the fish task described in the repository documentation.
 
     A new coloured fish appears on every trial. Participants guess which pond
@@ -35,7 +35,7 @@ def bayes_sim(params: np.ndarray, nblocks: int = 10, ntrials: int = 15,
     observations = np.empty((n_subjects, nblocks, ntrials), dtype=int)
     probabilities = np.empty((n_subjects, nblocks, ntrials + 1, n_fish))
     ponds = np.empty((n_subjects, nblocks, ntrials), dtype=int)
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     for s in range(n_subjects):
         lambda1 = params[s, 0]
@@ -68,7 +68,8 @@ def bayes_sim(params: np.ndarray, nblocks: int = 10, ntrials: int = 15,
         "ponds": ponds,
     }
 
-def bayes_fit(params, choices, observations, prior=None, output: str = 'npl'):
+def bayes_fit(params, choices, observations, prior=None, output: str = 'npl',
+              n_fish: int | None = None):
     """Likelihood for the fish task.
 
     Parameters are supplied in Gaussian space and transformed to ``lambda1``
@@ -80,7 +81,8 @@ def bayes_fit(params, choices, observations, prior=None, output: str = 'npl'):
     """
     lambda1 = norm2alpha(params[0])
     nblocks, ntrials = choices.shape
-    n_fish = 3
+    if n_fish is None:
+        n_fish = int(max(np.max(np.asarray(observations)), np.max(np.asarray(choices)))) + 1
     fishp = _generate_fishp(lambda1, n_fish)
     nll = 0.0
     for b in range(nblocks):

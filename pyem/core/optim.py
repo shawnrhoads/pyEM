@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable, Any, Optional
 import numpy as np
 from scipy.optimize import minimize, OptimizeResult
+from .priors import Prior
 
 ObjectiveFn = Callable[..., float]
 
@@ -11,14 +12,13 @@ class OptimConfig:
     method: str = "BFGS"                 # full inverse Hessian available
     options: dict | None = None
     max_restarts: int = 2                # extra random initializations if not successful
-    tol: float = 1e-6                    # fun convergence tolerance
     x_scale: float = 0.1                 # scale of random initializations
 
 def single_subject_minimize(
     objfunc: ObjectiveFn,
     obj_args: Iterable[Any],
     nparams: int,
-    prior: Any,
+    prior: Prior,
     config: OptimConfig,
     rng: np.random.Generator
 ) -> tuple[np.ndarray, np.ndarray, float, float, bool, OptimizeResult]:
@@ -34,7 +34,7 @@ def single_subject_minimize(
     for attempt in range(1 + config.max_restarts):
         x0 = config.x_scale * rng.standard_normal(nparams)
         result = minimize(
-            lambda x, *args: objfunc(x, *args, prior),
+            lambda x, *args: objfunc(x, *args, prior=prior),
             x0=x0,
             args=tuple(obj_args),
             method=config.method,

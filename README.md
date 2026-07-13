@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://shawnrhoadsphd.com/pyEM/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/source/pyem-logo-horizontal-dark-editable.svg">
+      <img alt="pyEM" src="assets/source/pyem-logo-horizontal-editable.svg" width="420">
+    </picture>
+  </a>
+</p>
+
 <div align="center">
 
 <a target="_blank" rel="noopener noreferrer" href="https://doi.org/10.5281/zenodo.10415396">![DOI:10.5281/zenodo.10415396](https://zenodo.org/badge/DOI/10.5281/zenodo.10415396.svg)</a> <a target="_blank" rel="noopener noreferrer" href="https://github.com/shawnrhoads/pyEM">![GitHub last update](https://img.shields.io/github/last-commit/shawnrhoads/pyEM?color=blue&label=last%20update)</a> [![PyTest](https://github.com/shawnrhoads/pyEM/actions/workflows/pytest.yml/badge.svg)](https://github.com/shawnrhoads/pyEM/actions/workflows/pytest.yml) <a target="_blank" rel="noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/LICENSE-CC%20BY--NC--SA%204.0-teal.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)</a> <a target="_blank" rel="noopener noreferrer" href="https://www.buymeacoffee.com/shawnrhoads">![BuyMeACoffee](https://img.shields.io/static/v1?message=support%20development&label=%20&style=square&logo=Buy%20Me%20A%20Coffee&labelColor=5c5c5c&color=lightgrey)</a>
@@ -11,7 +20,7 @@
 
 > Rhoads, S. A., Gan, L., Berluti, K., O'Connell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2025). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. In press at *Nature Communications*. https://doi.org/10.1038/s41467-025-64424-9
 
-This is a Python implementation of the Hierarchical Expectation Maximization algorithm with MAP estimation for fitting models to behavioral data. [See below](#key-concepts) for more information on the algorithm.
+pyEM is a Python implementation of Expectation Maximization with MAP for fitting cognitive computational models to behavioral data. [See below](#key-concepts) for more information on the algorithm.
 
 ## Quick Start
 
@@ -28,7 +37,7 @@ from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
-from pyem.models.rl import rw1a1b_model  # bundles rw1a1b_sim, rw1a1b_fit, and metadata
+from pyem.models.rl_mf import rw1a1b_model  # bundles rw1a1b_sim, rw1a1b_fit, and metadata
 from pyem.core.posterior import parameter_recovery
 
 print(rw1a1b_model.id)      # 'rw1a1b'
@@ -82,7 +91,7 @@ for param_idx, param_label in enumerate(['beta','alpha']):
 
 ### Using `ModelSpec` with the Parameter Registry
 
-`examples/params.py` (see [Creating Custom Models](#creating-custom-models)) provides a
+`docs/examples/params.py` (see [Creating Custom Models](#creating-custom-models)) provides a
 `build_params()` helper that replaces the hand-rolled `truncnorm`/`beta_dist` calls above with one
 call — it returns everything `EMModel` needs (`param_names`, `param_xform`, and natural-space
 `true_params`) in one shot, drawn from a shared registry of named, bounded parameters:
@@ -90,8 +99,8 @@ call — it returns everything `EMModel` needs (`param_names`, `param_xform`, an
 ```python
 import numpy as np
 from pyem import EMModel
-from pyem.models.rl import rw1a1b_model
-from params import build_params  # examples/params.py
+from pyem.models.rl_mf import rw1a1b_model
+from params import build_params  # docs/examples/params.py
 
 # Settings
 nsubjects, nblocks, ntrials = 100, 4, 24
@@ -123,7 +132,7 @@ from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.utils import plotting
 from pyem.utils.math import norm2beta, norm2alpha
-from pyem.models.rl import rw1a1b_model
+from pyem.models.rl_mf import rw1a1b_model
 
 # Settings
 nsubjects, nblocks, ntrials = 100, 4, 24
@@ -167,12 +176,17 @@ When we have two different models, we can use the `ModelComparison` class to com
 * **LME** (Log Model Evidence): Laplace approximation to marginal likelihood (formally: log probability of the observed data given a model)
 * **Integrated BIC** (Integrated Bayesian Information Criterion): Integrates over the distribution of parameters, which incorporates uncertainty about the parameter values into the model selection process while penalizing model complexity
 
+> [!NOTE]
+> The example below calls `display(comparison_df)`, a Jupyter/IPython convenience that is
+> injected automatically into the global namespace inside a notebook. If you run this as a plain
+> `.py` script (no IPython), replace it with `print(comparison_df)`.
+
 ```python
 import numpy as np
 from scipy.stats import truncnorm, beta as beta_dist
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
-from pyem.models.rl import rw1a1b_model, rw2a1b_model
+from pyem.models.rl_mf import rw1a1b_model, rw2a1b_model
 from pyem.utils.math import norm2alpha, norm2beta
 
 # Settings
@@ -264,7 +278,7 @@ You can visualize these results with `plot_identifiability()`, which plots an **
 ```python
 from pyem import EMModel
 from pyem.core.compare import ModelComparison
-from pyem.models.rl import rw1a1b_model, rw2a1b_model
+from pyem.models.rl_mf import rw1a1b_model, rw2a1b_model
 from pyem.utils.math import norm2alpha, norm2beta
 
 # Construct two candidate models
@@ -328,15 +342,9 @@ transformed_alpha = alpha_transform(0.3)
 
 ## Available Models
 
-The package includes several pre-implemented models, each described by both its `_sim`/`_fit`
-functions and a `ModelSpec` (`<name>_model`) carrying its `.id`/`.desc`/`.spec`.
+The package includes several pre-implemented models, each described by both its `_sim`/`_fit` functions and a `ModelSpec` (`<name>_model`) carrying its `.id`/`.desc`/`.spec`.
 
-### Reinforcement Learning Models (`pyem.models.rl`)
-
-* **`rw1a1b_sim/fit`** (id: `rw1a1b`): Rescorla-Wagner model with a single learning rate. Free parameters: `beta`, `alpha`.
-* **`rw2a1b_sim/fit`** (id: `rw2a1b`): Rescorla-Wagner model with separate learning rates for positive vs. negative prediction errors (valence bias). Free parameters: `beta`, `alpha_pos`, `alpha_neg`.
-* **`rw3a1b_sim/fit`** (id: `rw3a1b`): two-option task with three binary outcome channels (self/other/no one); combines self/other/no-one prediction errors into a single expected-value update ([Lockwood et al., 2016](https://doi.org/10.1073/pnas.1603198113)). Free parameters: `beta`, `alpha_self`, `alpha_other`, `alpha_noone`.
-* **`rw4a1b_sim/fit`** (id: `rw4a1b`): four-option task where each trial shows a pair of options; one shared inverse temperature and four learning rates split by outcome recipient (self/other) and valence (positive/negative) ([Rhoads et al., 2025](https://doi.org/10.1038/s41467-025-64424-9)). Free parameters: `beta`, `alpha_self_pos`, `alpha_self_neg`, `alpha_other_pos`, `alpha_other_neg`.
+These built-in model families are included for **teaching** and **demonstrations** of this package's flexibility. They can also be used for model fitting in your own research, but please note that they use specific task structures that might not match your own study design or research question. I am happy to chat if you have any questions about this. You can easily create your own custom model by following the [custom model template](#creating-custom-models). pyEM also provides utilities for model comparison and parameter recovery, which can be used to evaluate the identifiability of your own models.
 
 ### Linear Models (`pyem.models.glm`)
 
@@ -346,9 +354,55 @@ functions and a `ModelSpec` (`<name>_model`) carrying its `.id`/`.desc`/`.spec`.
 * **`logit_decay_sim/fit`** (id: `logit_decay`): logistic regression with exponentially discounted predictors. Free parameters: regression weights, `gamma`.
 * **`glm_ar_sim/fit`** (id: `glm_ar`): Gaussian linear regression with an AR(1) autoregressive term on the residuals. Free parameters: regression weights, `phi` (AR(1) coefficient, in `(-1,1)`).
 
+### Model-Free Reinforcement Learning Models (`pyem.models.rl_mf`)
+
+* **`rw1a1b_sim/fit`** (id: `rw1a1b`): Rescorla-Wagner model with a single learning rate. Free parameters: `beta`, `alpha`.
+* **`rw2a1b_sim/fit`** (id: `rw2a1b`): Rescorla-Wagner model with separate learning rates for positive vs. negative prediction errors (valence bias). Free parameters: `beta`, `alpha_pos`, `alpha_neg`.
+* **`rw3a1b_sim/fit`** (id: `rw3a1b`): two-option task with three binary outcome channels (self/other/no one); combines self/other/no-one prediction errors into a single expected-value update ([Lockwood et al., 2016](https://doi.org/10.1073/pnas.1603198113)). Free parameters: `beta`, `alpha_self`, `alpha_other`, `alpha_noone`.
+* **`rw4a1b_sim/fit`** (id: `rw4a1b`): four-option task where each trial shows a pair of options; one shared inverse temperature and four learning rates split by outcome recipient (self/other) and valence (positive/negative) ([Rhoads et al., 2025](https://doi.org/10.1038/s41467-025-64424-9)). Free parameters: `beta`, `alpha_self_pos`, `alpha_self_neg`, `alpha_other_pos`, `alpha_other_neg`.
+
+### Model-Based Reinforcement Learning Models (`pyem.models.rl_mb`)
+
+Three learners for the Daw et al. (2011) two-step task ([Daw et al., 2011](https://doi.org/10.1016/j.neuron.2011.02.027)). All fit `beta1`/`beta2` in `(0, inf)` via `exp(x)`, the learning rates / trace / weight in `[0,1]`, and the first-stage stickiness `r` in `(-inf, inf)`.
+
+* **`sarsa_lambda_sim/fit`** (id: `sarsa_lambda`): model-free SARSA(&lambda;) learner (`omega = 0`). Free parameters: `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `r`.
+* **`model_based_sim/fit`** (id: `model_based`): model-based Bellman learner (`omega = 1`; `alpha1` and `lambda` drop out). Free parameters: `beta1`, `beta2`, `alpha2`, `r`.
+* **`hybrid_mbmf_sim/fit`** (id: `hybrid_mbmf`): hybrid that mixes model-based and model-free first-stage values with weight `omega` (Daw's `w`). Free parameters: `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `omega`, `r`.
+
 ### Bayesian Inference (`pyem.models.bayes`)
 
 * **`bayes_sim/fit`** (id: `bayes`): Bayesian belief-updating over which of three sources (e.g. "ponds") an observation came from, given no feedback. Free parameter: `lambda1` (belief-update rate, in `[0,1]`).
+
+### Discounting Models (`pyem.models.discounting`)
+
+Five discounting domains, all sharing the same shape: a block-level discounting variable (social
+distance, delay, odds against, or effort level) discounts one option's utility, and choice follows
+a logistic rule on the resulting value difference (`sigmoid(delta_V)`).
+
+* **`sd_hyp_wk_sim/fit`** (id: `sd_hyp_wk`): hyperbolic social discounting with a free other-regarding weight, `U_other(N) = w_other*r_other / (1 + k*N)`. Free parameters: `w_other`, `k`.
+* **`sd_hyp_k_sim/fit`** (id: `sd_hyp_k`): hyperbolic social discounting with the weight fixed at 1, `U_other(N) = r_other / (1 + k*N)`. Free parameter: `k`.
+* **`sd_par_k_sim/fit`** (id: `sd_par_k`): parabolic social discounting, `U_other(N) = r_other - k*N**2`. Free parameter: `k`.
+* **`sd_lin_k_sim/fit`** (id: `sd_lin_k`): linear social discounting, `U_other(N) = r_other - k*N`. Free parameter: `k`.
+* **`td_hyp_k_sim/fit`** (id: `td_hyp_k`): hyperbolic temporal (delay) discounting ([Mazur, 1987](https://doi.org/10.4324/9781315798260)) in a smaller-sooner vs. larger-later choice. Free parameter: `k`.
+* **`prd_hyp_k_sim/fit`** (id: `prd_hyp_k`): hyperbolic probability discounting ([Rachlin, Raineri, & Cross, 1991](https://doi.org/10.1901/jeab.1991.55-233)). Free parameter: `k`.
+* **`ed_par_k_sim/fit`** (id: `ed_par_k`): parabolic effort discounting (accelerating effort cost). Free parameter: `k`.
+* **`ped_par_k_sim/fit`** (id: `ped_par_k`): parabolic prosocial effort discounting with a single discount rate shared across self/other. Free parameter: `k`.
+* **`ped_par_2k_sim/fit`** (id: `ped_par_2k`): parabolic prosocial effort discounting with separate self/other discount rates. Free parameters: `k_self`, `k_other`.
+
+See `docs/examples/discounting.ipynb` for worked examples of all nine variants.
+
+### Prospect Theory (`pyem.models.pt`)
+
+* **`pt_sim/fit`** (id: `pt`): Prospect Theory ([Tversky & Kahneman, 1992](https://doi.org/10.1007/BF00122574)) model of choices between a certain amount and a two-outcome gamble; a power value function with separate gain/loss curvature and a loss-aversion multiplier, combined with a one-parameter probability weighting function and a logistic choice rule. Free parameters: `alpha` (gain curvature), `beta` (loss curvature), `lambda` (loss aversion), `gamma` (probability weighting), `mu` (choice temperature).
+
+### Signal Detection Theory (`pyem.models.sdt`)
+
+* **`sdt_sim/fit`** (id: `sdt`): equal-variance Gaussian signal detection theory model of an old/new recognition memory task. Free parameters: `dprime` (sensitivity, `d' >= 0`), `criterion` (response bias, `c`).
+
+### Drift-Diffusion Model (`pyem.models.ddm`)
+
+* **`ddm4_sim/fit`** (id: `ddm4`): four-parameter DDM of a HIGH-vs-LOW value choice (two certain amounts per trial, choose the higher); a two-boundary Wiener diffusion (upper = high/correct, lower = low/error) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(value_high - value_low). Free parameters: `v_coef`, `a`, `t0`, `z`. Across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width) are set to 0, marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz.
+* **`ddm4_lotto_sim/fit`** (id: `ddm4_lotto`): four-parameter DDM of a safe-vs-risky GAMBLE (risky gamble EV=p*payoff vs safe certain amount); a two-boundary Wiener diffusion (upper = risky, lower = safe) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(EV_risky - safe). Free parameters: `v_coef`, `a`, `t0`, `z`. Across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width) are set to 0, marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz.
 
 ### Creating Custom Models
 
@@ -356,10 +410,17 @@ Every model above follows the same template: a pair of `_sim`/`_fit` functions p
 that bundles them with a hand-authored id/description/spec. To create a custom model, follow the
 same shape:
 
+> [!NOTE]
+> Both `EMModel.fit()`'s EM loop and `model.recover()` always call your `_fit` function with
+> `prior=...` passed as a **keyword** argument (never positionally). This works whether your
+> function lists its data arguments explicitly (`params, choices, rewards, *, prior=None,
+> output="npl"`, as below) or captures them variadically (`params, *data, prior=None,
+> output="npl"` — `*data` already forces everything after it to be keyword-only, so no extra `*`
+> is needed in that case). Either keyword-only style is safe to use with `EMModel.fit`.
+
 ```python
 from pyem.core.modelspec import ModelSpec
 from pyem.utils.math import norm2alpha, norm2beta, calc_fval
-
 
 def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
     """Fit function for your custom model.
@@ -413,13 +474,14 @@ def my_model_sim(params, **kwargs):
     """
 
     # ---- YOUR CODE HERE  ---- 
-    # 
+    # Simulate trials/choices/rewards for your task and populate output arrays
     # ------------------------- 
 
-    fval = calc_fval(nll, params, output="nll")
+    # (Optional) If you want to compute a likelihood value for debugging, define
+    # it explicitly here; otherwise remove this line.
+    # fval = calc_fval(nll, params, output="nll")
 
     return {"params": params, "choices": choices, "rewards": rewards}
-
 
 # Wrapper metadata, following the same shape as every model in pyem.models.*
 my_model_desc = "One-sentence description of what this model does and its free parameters."
@@ -438,9 +500,9 @@ describe itself.
 
 If you'd like a reusable pattern for generating named, bounded "true" parameters for simulation
 (rather than hand-rolling `truncnorm`/`beta_dist` calls every time, as the examples above do), see
-`examples/params.py`. It defines a `ParamDef`/`PARAM_REGISTRY` pattern
+`docs/examples/params.py`. It defines a `ParamDef`/`PARAM_REGISTRY` pattern
 (`build_params(["beta", "alpha"], nsubjects)` → `(param_names, param_xform, true_params)`) that the
-example notebooks use. This lives in `examples/`, not the installed package, by design — `pyem`
+example notebooks use. This lives in `docs/examples/`, not the installed package, by design — `pyem`
 itself stays agnostic about what parameters any given model uses, so this is a copyable starting
 point for your own model collection rather than a package dependency.
 
@@ -499,7 +561,57 @@ class ModelComparison:
 * **Parameter transformations** (`pyem.utils.math`): `norm2alpha()`, `norm2beta()`, `alpha2norm()`, `beta2norm()`
 * **Statistics** (`pyem.utils.stats`): `calc_BICint()`, `calc_LME()`, `pseudo_r2_from_nll()`
 * **Plotting** (`pyem.utils.plotting`): `plot_scatter()`
-* **Parameter registry** (`examples/params.py`, not part of the installed package): `ParamDef`, `PARAM_REGISTRY`, `build_params()`, `validate_params()`
+* **Parameter registry** (`docs/examples/params.py`, not part of the installed package): `ParamDef`, `PARAM_REGISTRY`, `build_params()`, `validate_params()`
+
+## EM & Optimizer Configuration
+
+`EMModel.fit()` exposes two layers of configuration, matching the two nested loops that make up
+hierarchical EM:
+
+* **Outer EM loop** (`EMConfig`): alternates an E-step (fit each subject given the current
+  population-level prior) and an M-step (update the population-level prior from all subjects'
+  fits) until convergence.
+* **Inner per-subject optimizer** (`OptimConfig`): the `scipy.optimize.minimize` call used
+  *inside* each subject's E-step to find that subject's MAP parameter estimate.
+
+You never construct `EMConfig`/`OptimConfig` directly — `fit()` builds them for you from its
+keyword arguments:
+
+```python
+result = model.fit(
+    mstep_maxit=200,             # EMConfig: max outer EM iterations
+    convergence_method="sum",    # EMConfig: "sum" | "mean" | "median" aggregation of per-subject deltas
+    convergence_custom=None,     # EMConfig: None | "relative_npl" | "running_average"
+    convergence_crit=1e-3,       # EMConfig: convergence threshold
+    convergence_precision=6,     # EMConfig: decimal precision for convergence comparisons
+    njobs=-2,                    # EMConfig: parallel jobs (joblib) across subjects within an E-step
+    seed=None,                   # EMConfig: RNG seed for the EM loop / optimizer restarts
+    mstep="gaussian",            # EMConfig: population-distribution family fit by the M-step
+    optim_method="BFGS",         # OptimConfig: scipy.optimize.minimize method for each subject
+    optim_options=None,          # OptimConfig: extra options merged into {"gtol": 1e-4, "eps": 1e-4}
+    max_restarts=2,              # OptimConfig: extra random-restart attempts if not successful
+)
+```
+
+> [!NOTE]
+> `OptimConfig` also has an `x_scale` field (scale of the random initial guess drawn for each
+> optimizer attempt; default `0.1`), but `fit()` does not currently expose a matching keyword for
+> it — its default always applies when fitting through `EMModel`.
+
+### M-step distribution families (`mstep=...`)
+
+By default the M-step fits a Gaussian population distribution per parameter (`mstep="gaussian"`),
+matching the classic Huys/Daw hierarchical EM formulation. Heavier-tailed alternatives can improve
+robustness to outlier subjects:
+
+```python
+result = model.fit(mstep="laplace")
+```
+
+* `"gaussian"` (default): Normal population distribution.
+* `"laplace"`: Laplace (double-exponential) distribution — heavier tails than Gaussian.
+* `"student_t"`: Student's t distribution (default 8 degrees of freedom) — heavier tails still.
+* `"cauchy"`: Cauchy distribution (Student's t with 1 degree of freedom) — very heavy tails.
 
 ## Installation
 
@@ -526,20 +638,68 @@ pip install -e .
 
 ## Requirements
 
+Core (installed automatically with `pip install pyem` or `pip install -e .`):
+
 * Python >= 3.10
 * numpy >= 1.22
 * scipy >= 1.10
 * pandas >= 1.5
-* matplotlib >= 3.5
+* matplotlib
 * joblib >= 1.3
+* typing-extensions >= 4.6
+
+Optional extras (installed via `pip install`'s extras syntax):
+
+* `pyem[viz]`: `seaborn` — used by some plotting helpers (imported lazily; not required for core `EMModel`/`ModelComparison` usage).
+* `pyem[extras]`: `statsmodels`, `scikit-learn`, `tqdm` — used by some example notebooks.
+* `pyem[dev]`: `pytest` — for running the test suite.
+
+To install everything needed to run the example notebooks:
+
+```bash
+pip install 'pyem[viz,extras]'
+```
 
 ## Examples
 
-See the `examples/` directory for detailed tutorials:
+See the `docs/examples/` directory for detailed tutorials:
 
-* `examples/rl.ipynb`: Reinforcement Learning
-* `examples/bayes.ipynb`: Bayesian Inference
-* `examples/glm.ipynb`: Simple linear modeling
+* `docs/examples/rl_mf.ipynb`: Model-Free Reinforcement Learning — free params `beta`, `alpha` (and variants: `alpha_pos`/`alpha_neg`, `alpha_self`/`alpha_other`/`alpha_noone`, `alpha_self_pos`/`alpha_self_neg`/`alpha_other_pos`/`alpha_other_neg`)
+* `docs/examples/rl_mb.ipynb`: Model-Based Reinforcement Learning — Daw two-step task, three models (`sarsa_lambda`, `model_based`, `hybrid_mbmf`), free params `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `omega`, `r`
+* `docs/examples/bayes.ipynb`: Bayesian Inference — free param `lambda1`
+* `docs/examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
+* `docs/examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
+* `docs/examples/pt.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
+* `docs/examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
+* `docs/examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm4_lotto), parameter recovery + across-trial-variability visualizations
+
+## Documentation
+
+The full documentation site — API reference, guides, and the rendered example
+notebooks — is built with [MkDocs](https://www.mkdocs.org/) and the
+[Material](https://squidfunk.github.io/mkdocs-material/) theme, and is published at
+**https://shawnrhoadsphd.com/pyEM/**.
+
+### Building and viewing the docs locally
+
+From the repository root:
+
+```bash
+# 1) Install the package (so the API reference can import pyem) + the doc toolchain
+pip install -e .
+pip install -r requirements-docs.txt
+
+# 2) Live preview with auto-reload — open the URL it prints (default http://127.0.0.1:8000/)
+mkdocs serve
+
+# 3) …or build the static site into ./site/ (this is what CI runs;
+#    --strict turns any warning into an error)
+mkdocs build --strict
+```
+
+The doc dependencies are version-pinned in `requirements-docs.txt` for reproducible
+builds, and the notebooks under `docs/examples/` are rendered directly by
+`mkdocs-jupyter`.
 
 ## Testing
 
@@ -593,7 +753,7 @@ We are effectively combining the likelihood and the prior in a way that biases t
 <blockquote>Rhoads, S. A., Gan, L., Berluti, K., O'Connell, K., Cutler, J., Lockwood, P. L., & Marsh, A. A. (2025). Neurocomputational basis of learning when choices simultaneously affect both oneself and others. Nature Communications. 16, 9350. https://doi.org/10.1038/s41467-025-64424-9</blockquote>
 
 See also:
-<blockquote>Daw, N. D. (2011). Trial-by-trial data analysis using computational models. Decision making, affect, and learning: Attention and performance XXIII, 23(1). https://doi.org/10.1093/acprof:oso/9780199600434.003.0001 [<a href="https://www.princeton.edu/~ndaw/d10.pdf">pdf</a>]</blockquote>
+<blockquote>Daw, N. D. (2009). Trial-by-trial data analysis using computational models. Decision making, affect, and learning: Attention and performance XXIII, 23(1). https://doi.org/10.1093/acprof:oso/9780199600434.003.0001 [<a href="https://www.princeton.edu/~ndaw/d10.pdf">pdf</a>]</blockquote>
 
 <blockquote>Huys, Q. J., Cools, R., Gölzer, M., Friedel, E., Heinz, A., Dolan, R. J., & Dayan, P. (2011). Disentangling the roles of approach, activation and valence in instrumental and pavlovian responding. PLoS computational biology, 7(4), e1002028. https://doi.org/10.1371/journal.pcbi.1002028 </blockquote>
 

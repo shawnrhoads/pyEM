@@ -1,0 +1,61 @@
+/* pyEM docs — tighten body text to single line-spacing.
+   Material's default typeset line-height is ~1.6 (quite airy); this brings it
+   down to a compact, single-spaced feel. Adjust the value if it reads too tight. */
+.md-typeset {
+  line-height: 1.3;
+}
+
+/* Left-nav: render the top-level entries (Home, Installation, API Reference, …)
+   as uppercase, heading-style labels. Child pages (e.g. Overview under API
+   Reference) stay normal-case and indented beneath their parent — indentation
+   comes from using `navigation.expand` instead of `navigation.sections`. */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+/* Hides the site title link at the top of the left navigation menu */
+.md-nav--primary > .md-nav__title {
+  display: none;
+}
+
+/* Wrap long lines in code blocks (Markdown pages AND rendered notebooks)
+   instead of scrolling horizontally. Line numbers (pymdownx linenums) mark the
+   start of each logical line; wrapped continuations share that line's number. */
+.md-content pre,
+.md-content pre > code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* --- Brand palette: Deep Teal in light mode, Soft Mint in dark mode --- */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        #0f5b63;  /* Deep Teal */
+  --md-primary-fg-color--light: #157079;
+  --md-primary-fg-color--dark:  #0a444a;
+  --md-accent-fg-color:         #0f5b63;
+}
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #7ec8bc;  /* Soft Mint */
+  --md-primary-fg-color--light: #98d4ca;
+  --md-primary-fg-color--dark:  #5fb0a3;
+  --md-primary-bg-color:        #1f252b;  /* charcoal text/icons on the light mint header */
+  --md-primary-bg-color--light: rgba(31, 37, 43, 0.7);
+  --md-accent-fg-color:         #7ec8bc;
+}
+
+/* Header logo. The header bar is Deep Teal (dark) in light mode and Soft Mint
+   (light) in dark mode, so the logo ink must flip to stay legible: light-ink
+   avatar on the teal header (default, via theme.logo), dark-ink avatar on the
+   mint header (slate). */
+[data-md-color-scheme="slate"] .md-header__button.md-logo img {
+  content: url("../assets/pyem-avatar-dark-editable.svg");
+}
+
+/* Home-page (index.md) logo: swap by Material's palette TOGGLE
+   (data-md-color-scheme) rather than the OS `prefers-color-scheme`, so it
+   follows the theme switch. Light logo on the light page, dark logo on dark. */
+[data-md-color-scheme="default"] .pyem-logo--dark { display: none; }
+[data-md-color-scheme="slate"] .pyem-logo--light { display: none; }

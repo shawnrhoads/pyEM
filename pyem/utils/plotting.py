@@ -1,7 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
+
+
+def _require_seaborn():
+    """Lazily import seaborn, raising a clear error if missing."""
+    try:
+        import seaborn as sns
+        return sns
+    except ImportError as e:  # pragma: no cover
+        raise ImportError(
+            "This plotting helper needs seaborn. Install the optional extra: "
+            "pip install -e \".[viz]\""
+        ) from e
+
 
 def plot_choices(choices_A, filename=None):
     """
@@ -11,6 +23,7 @@ def plot_choices(choices_A, filename=None):
         - choices_A (np.array): subject choices for option A
         - filename (str): filename to save figure to (if None, figure is not saved)
     """
+    sns = _require_seaborn()
     nsubjects, nblocks, ntrials = choices_A.shape
     choices_B = np.ones_like(choices_A) - choices_A
     df_a = pd.DataFrame(np.mean(choices_A, axis=1), 
@@ -68,6 +81,7 @@ def plot_scatter(
     Returns:
         matplotlib.axes.Axes: The axes the plot was drawn on.
     """
+    sns = _require_seaborn()
     x = np.asarray(x)
     y = np.asarray(y)
 
