@@ -342,8 +342,9 @@ transformed_alpha = alpha_transform(0.3)
 
 ## Available Models
 
-The package includes several pre-implemented models, each described by both its `_sim`/`_fit`
-functions and a `ModelSpec` (`<name>_model`) carrying its `.id`/`.desc`/`.spec`.
+The package includes several pre-implemented models, each described by both its `_sim`/`_fit` functions and a `ModelSpec` (`<name>_model`) carrying its `.id`/`.desc`/`.spec`.
+
+These built-in model families are included for **teaching** and **demonstrations** of this package's flexibility. They can also be used for model fitting in your own research, but please note that they use specific task structures that might not match your own study design or research question. I am happy to chat if you have any questions about this. You can easily create your own custom model by following the same [template](#creating-custom-models) as the built-in models. pyEM also provides utilities for model comparison and parameter recovery, which can be used to evaluate the identifiability of your own models.
 
 ### Model-Free Reinforcement Learning Models (`pyem.models.rl_mf`)
 
