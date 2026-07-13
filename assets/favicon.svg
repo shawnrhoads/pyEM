@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220" role="img" aria-labelledby="title desc">
+<title id="title">pyEM editable symbol master</title>
+<desc id="desc">Expectation Maximization with MAP in Python for fitting computational models to behavioral data</desc>
+
+<g id="artwork"><g id="pyem-symbol-master" transform="translate(0 0) scale(1)">
+  <path id="pyem-symbol-master-outer-distribution" d="M20 190 C68 190 76 24 160 24 C244 24 252 190 300 190" fill="none" stroke="#0F5B63" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"></path>
+  <path id="pyem-symbol-master-inner-fill" d="M87 190 C112 190 116 92 160 92 C204 92 208 190 233 190 Z M144 190 A16 16 0 0 1 176 190 Z" fill-rule="evenodd" fill="#7EC8BC" fill-opacity="0.3"></path>
+  <path id="pyem-symbol-master-inner-distribution" d="M87 190 C112 190 116 92 160 92 C204 92 208 190 233 190" fill="none" stroke="#7EC8BC" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"></path>
+  <line id="pyem-symbol-master-estimate-line" x1="160" y1="52" x2="160" y2="168" stroke="#0F5B63" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 10"></line>
+  <circle id="pyem-symbol-master-dot-ring" cx="160" cy="190" r="16" fill="none"></circle>
+  <circle id="pyem-symbol-master-point-estimate" cx="160" cy="190" r="12" fill="#1F252B"></circle>
+</g></g>
+<g id="construction-guides" display="none">
+  <line x1="160" y1="0" x2="160" y2="220" stroke="#FF00FF" stroke-width="1"></line>
+  <line x1="0" y1="190" x2="320" y2="190" stroke="#FF00FF" stroke-width="1"></line>
+</g>
+</svg>
