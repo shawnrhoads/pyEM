@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyem"
-version = "1.0.0"
+version = "1.0.1"
 description = "Expectation Maximization with MAP in Python for fitting cognitive computational models to behavioral data"
 readme = "README.md"
 requires-python = ">=3.10"
