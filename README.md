@@ -346,6 +346,14 @@ The package includes several pre-implemented models, each described by both its 
 
 These built-in model families are included for **teaching** and **demonstrations** of this package's flexibility. They can also be used for model fitting in your own research, but please note that they use specific task structures that might not match your own study design or research question. I am happy to chat if you have any questions about this. You can easily create your own custom model by following the [custom model template](#creating-custom-models). pyEM also provides utilities for model comparison and parameter recovery, which can be used to evaluate the identifiability of your own models.
 
+### Linear Models (`pyem.models.glm`)
+
+* **`glm_sim/fit`** (id: `glm`): standard Gaussian linear regression. Free parameters: regression weights (intercept + covariates).
+* **`glm_decay_sim/fit`** (id: `glm_decay`): Gaussian linear regression with exponentially discounted predictors. Free parameters: regression weights, `gamma` (discount factor, in `[0,1]`).
+* **`logit_sim/fit`** (id: `logit`): standard logistic regression. Free parameters: regression weights (intercept + covariates).
+* **`logit_decay_sim/fit`** (id: `logit_decay`): logistic regression with exponentially discounted predictors. Free parameters: regression weights, `gamma`.
+* **`glm_ar_sim/fit`** (id: `glm_ar`): Gaussian linear regression with an AR(1) autoregressive term on the residuals. Free parameters: regression weights, `phi` (AR(1) coefficient, in `(-1,1)`).
+
 ### Model-Free Reinforcement Learning Models (`pyem.models.rl_mf`)
 
 * **`rw1a1b_sim/fit`** (id: `rw1a1b`): Rescorla-Wagner model with a single learning rate. Free parameters: `beta`, `alpha`.
@@ -360,14 +368,6 @@ Three learners for the Daw et al. (2011) two-step task ([Daw et al., 2011](https
 * **`sarsa_lambda_sim/fit`** (id: `sarsa_lambda`): model-free SARSA(&lambda;) learner (`omega = 0`). Free parameters: `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `r`.
 * **`model_based_sim/fit`** (id: `model_based`): model-based Bellman learner (`omega = 1`; `alpha1` and `lambda` drop out). Free parameters: `beta1`, `beta2`, `alpha2`, `r`.
 * **`hybrid_mbmf_sim/fit`** (id: `hybrid_mbmf`): hybrid that mixes model-based and model-free first-stage values with weight `omega` (Daw's `w`). Free parameters: `beta1`, `beta2`, `alpha1`, `alpha2`, `lambda`, `omega`, `r`.
-
-### Linear Models (`pyem.models.glm`)
-
-* **`glm_sim/fit`** (id: `glm`): standard Gaussian linear regression. Free parameters: regression weights (intercept + covariates).
-* **`glm_decay_sim/fit`** (id: `glm_decay`): Gaussian linear regression with exponentially discounted predictors. Free parameters: regression weights, `gamma` (discount factor, in `[0,1]`).
-* **`logit_sim/fit`** (id: `logit`): standard logistic regression. Free parameters: regression weights (intercept + covariates).
-* **`logit_decay_sim/fit`** (id: `logit_decay`): logistic regression with exponentially discounted predictors. Free parameters: regression weights, `gamma`.
-* **`glm_ar_sim/fit`** (id: `glm_ar`): Gaussian linear regression with an AR(1) autoregressive term on the residuals. Free parameters: regression weights, `phi` (AR(1) coefficient, in `(-1,1)`).
 
 ### Bayesian Inference (`pyem.models.bayes`)
 
