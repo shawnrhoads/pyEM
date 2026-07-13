@@ -97,8 +97,10 @@ def EMfit(
     if hasattr(prior, "init_moments"):
         pm, ps = prior.init_moments()
         post_mu, post_sigma = np.asarray(pm, float).copy(), np.asarray(ps, float).copy()
+    elif hasattr(prior, "mu") and hasattr(prior, "sigma"):
+        post_mu, post_sigma = np.asarray(prior.mu, float).copy(), np.asarray(prior.sigma, float).copy()
     else:
-        post_mu, post_sigma = prior.mu.copy(), prior.sigma.copy()
+        raise TypeError("prior must define init_moments() or expose .mu/.sigma (GaussianPrior-like)")
     last_good_hyper = None
 
     with Parallel(n_jobs=config.njobs) as parallel:
