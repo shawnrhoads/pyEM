@@ -390,11 +390,6 @@ a logistic rule on the resulting value difference (`sigmoid(delta_V)`).
 
 See `docs/examples/discounting.ipynb` for worked examples of all nine variants.
 
-### Drift-Diffusion Model (`pyem.models.ddm`)
-
-* **`ddm4_sim/fit`** (id: `ddm4`): four-parameter DDM of a HIGH-vs-LOW value choice (two certain amounts per trial, choose the higher); a two-boundary Wiener diffusion (upper = high/correct, lower = low/error) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(value_high - value_low). Free parameters: `v_coef`, `a`, `t0`, `z`. Across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width) are set to 0, marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz.
-* **`ddm4_lotto_sim/fit`** (id: `ddm4_lotto`): four-parameter DDM of a safe-vs-risky GAMBLE (risky gamble EV=p*payoff vs safe certain amount); a two-boundary Wiener diffusion (upper = risky, lower = safe) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(EV_risky - safe). Free parameters: `v_coef`, `a`, `t0`, `z`. Across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width) are set to 0, marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz.
-
 ### Prospect Theory (`pyem.models.pt`)
 
 * **`pt_sim/fit`** (id: `pt`): Prospect Theory ([Tversky & Kahneman, 1992](https://doi.org/10.1007/BF00122574)) model of choices between a certain amount and a two-outcome gamble; a power value function with separate gain/loss curvature and a loss-aversion multiplier, combined with a one-parameter probability weighting function and a logistic choice rule. Free parameters: `alpha` (gain curvature), `beta` (loss curvature), `lambda` (loss aversion), `gamma` (probability weighting), `mu` (choice temperature).
@@ -402,6 +397,11 @@ See `docs/examples/discounting.ipynb` for worked examples of all nine variants.
 ### Signal Detection Theory (`pyem.models.sdt`)
 
 * **`sdt_sim/fit`** (id: `sdt`): equal-variance Gaussian signal detection theory model of an old/new recognition memory task. Free parameters: `dprime` (sensitivity, `d' >= 0`), `criterion` (response bias, `c`).
+
+### Drift-Diffusion Model (`pyem.models.ddm`)
+
+* **`ddm4_sim/fit`** (id: `ddm4`): four-parameter DDM of a HIGH-vs-LOW value choice (two certain amounts per trial, choose the higher); a two-boundary Wiener diffusion (upper = high/correct, lower = low/error) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(value_high - value_low). Free parameters: `v_coef`, `a`, `t0`, `z`. Across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width) are set to 0, marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz.
+* **`ddm4_lotto_sim/fit`** (id: `ddm4_lotto`): four-parameter DDM of a safe-vs-risky GAMBLE (risky gamble EV=p*payoff vs safe certain amount); a two-boundary Wiener diffusion (upper = risky, lower = safe) with the Navarro & Fuss (2009) WFPT likelihood; drift v = v_coef*(EV_risky - safe). Free parameters: `v_coef`, `a`, `t0`, `z`. Across-trial variability `sv`, `st`, `sz` (drift SD, non-decision-time width, start-point width) are set to 0, marginalized analytically for `sv` (Ratcliff & Tuerlinckx, 2002) and by Gauss-Legendre quadrature for `st`, `sz.
 
 ### Creating Custom Models
 
@@ -668,9 +668,9 @@ See the `docs/examples/` directory for detailed tutorials:
 * `docs/examples/bayes.ipynb`: Bayesian Inference — free param `lambda1`
 * `docs/examples/glm.ipynb`: Simple linear modeling — free params: regression weights (plus `gamma` for `*_decay` variants, `phi` for `glm_ar`)
 * `docs/examples/discounting.ipynb`: Social/temporal/probability/effort discounting — free params `w_other`, `k` (or `k_self`/`k_other` for the prosocial-effort model), see [Discounting Models](#discounting-models-pyemmodelsdiscounting)
-* `docs/examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm4_lotto), parameter recovery + across-trial-variability visualizations
 * `docs/examples/pt.ipynb`: Prospect Theory — free params `alpha`, `beta`, `lambda`, `gamma`, `mu`
 * `docs/examples/sdt.ipynb`: Signal Detection Theory — free params `dprime`, `criterion`
+* `docs/examples/ddm.ipynb`: Drift-Diffusion Models — high-vs-low value and safe-vs-risky gamble tasks, four models (ddm4/ddm4_lotto), parameter recovery + across-trial-variability visualizations
 
 ## Documentation
 
