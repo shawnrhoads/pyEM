@@ -37,7 +37,7 @@ from ..utils.math import softmax, norm2alpha, norm2beta, calc_fval
 from ..core.modelspec import ModelSpec
 
 def _identity(x):
-    """Gaussian -> (-inf, inf); matches ``rep = x*eye(2)`` in llm2b2alr.m."""
+    """Gaussian -> (-inf, inf)"""
     return x
 
 # Task constants (Daw et al., 2011). The common first-stage transition occurs
@@ -435,7 +435,7 @@ model_based_model = ModelSpec(
 # ===========================================================================
 
 def hybrid_mbmf_sim(params: np.ndarray, ntrials: int = 200, seed: int | None = None):
-    """Simulate the hybrid MB/MF learner (Daw et al., 2011; llm2b2alr.m).
+    """Simulate the hybrid MB/MF learner (Daw et al., 2011).
 
     ``params`` are **natural**-space, shape ``(nsubjects, 7)`` =
     ``[beta1, beta2, alpha1, alpha2, lambda, omega, r]``.
@@ -526,11 +526,11 @@ def hybrid_mbmf_fit(params, choices1, states2, choices2, rewards,
 
 
 hybrid_mbmf_desc = """Hybrid model-based / model-free learner for the Daw et al.
-(2011) two-step task (llm2b2alr.m). First-stage net values are a
-weighted sum of model-based (Bellman) and model-free (SARSA(lambda)) values,
-w*Q_MB + (1-w)*Q_MF, plus first-stage perseveration; choices at both stages are
-softmax over these values. Nests the pure model-free (omega=0) and model-based
-(omega=1) learners. Free parameters: beta1, beta2, alpha1, alpha2, lambda,
+(2011) two-step task. First-stage net values are a weighted sum of model-based (Bellman) 
+and model-free (SARSA(lambda)) values, w*Q_MB + (1-w)*Q_MF, plus first-stage perseveration; 
+choices at both stages are softmax over these values. Nests the pure model-free (omega=0) 
+and model-based (omega=1) learners. 
+Free parameters: beta1, beta2, alpha1, alpha2, lambda,
 omega, r."""
 hybrid_mbmf_id = "hybrid_mbmf"
 hybrid_mbmf_spec = {
