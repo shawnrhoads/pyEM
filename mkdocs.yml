@@ -105,5 +105,4 @@ nav:
       - Discounting Models: examples/discounting.ipynb
       - Prospect Theory: examples/pt.ipynb
       - Signal Detection Theory: examples/sdt.ipynb
-      - Drift-Diffusion Models: examples/ddm.ipynb
   - References: references.md
