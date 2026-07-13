@@ -5,7 +5,7 @@ authors:
   given-names: "Shawn A."
   orcid: "https://orcid.org/0000-0003-1350-9458"
 title: "pyEM: Expectation Maximization with MAP estimation in Python"
-version: 1.0.0
+version: 1.0.1
 doi: 10.5281/zenodo.10415396
-date-released: 2026-07-12
+date-released: 2023-12-21
 url: "https://github.com/shawnrhoads/pyEM"
