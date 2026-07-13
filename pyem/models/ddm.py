@@ -1,5 +1,5 @@
 """Drift-diffusion models (DDM) for two value-based choice tasks, each in a
-four-parameter and a seven-parameter ("full DDM") form — four models sharing a
+four-parameter and a seven-parameter form — four models sharing a
 single Wiener first-passage-time (WFPT) likelihood.
 
 Two tasks

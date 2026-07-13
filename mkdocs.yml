@@ -12,7 +12,7 @@ exclude_docs: |
 
 theme:
   name: material
-  logo: assets/pyem-avatar-dark-editable.svg
+  logo: assets/pyem-avatar-light-editable.svg
   favicon: assets/favicon.svg
   icon:
     repo: fontawesome/brands/github

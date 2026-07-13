@@ -51,7 +51,7 @@
    avatar on the teal header (default, via theme.logo), dark-ink avatar on the
    mint header (slate). */
 [data-md-color-scheme="slate"] .md-header__button.md-logo img {
-  content: url("../assets/pyem-avatar-light-editable.svg");
+  content: url("../assets/pyem-avatar-dark-editable.svg");
 }
 
 /* Home-page (index.md) logo: swap by Material's palette TOGGLE
