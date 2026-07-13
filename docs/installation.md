@@ -29,8 +29,11 @@ Some functionality (plotting helpers, additional model-fitting utilities) is gat
 # seaborn, for plotting helpers such as plot_recovery()
 pip install -e ".[viz]"
 
-# statsmodels, scikit-learn, tqdm — used by some model/analysis utilities
+# statsmodels, scikit-learn, tqdm, for additional model-fitting utilities (not required for core EM functionality)
 pip install -e ".[extras]"
+
+# for all optional dependencies at once
+pip install -e ".[dev,extras]"
 ```
 
 ## Documentation dependencies

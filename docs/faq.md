@@ -2,7 +2,7 @@
 
 ## Why are my fitted parameters unbounded, and why don't they match the natural range of my model (e.g. a learning rate outside `[0, 1]`)?
 
-The EM optimizer searches in **unbounded Gaussian space**, not in the natural parameter space of your model. You supply a `param_xform` list of transform functions (e.g. `norm2beta`, `norm2alpha` from `pyem.utils.math`) when constructing `EMModel`; these map each Gaussian-space value to its natural range (`norm2beta` → `(0, 20)`, `norm2alpha` → `(0, 1)`). Raw values on `result.posterior_mu`/`posterior_sigma` and anything you pull directly out of the optimizer are in Gaussian space — call `model.subject_params()` to get MAP estimates already mapped into natural space via `param_xform`.
+The EM optimizer searches in **unbounded Gaussian space**, not in the natural parameter space of your model. You supply a `param_xform` list of transform functions (e.g. `norm2beta`, `norm2alpha` from `pyem.utils.math`) when constructing `EMModel`; these map each Gaussian-space value to its natural range (`norm2beta` → `(0, 20)`, `norm2alpha` → `(0, 1)`). Raw values on `result.posterior_mu`/`posterior_sigma` and anything you pull directly out of the optimizer are in Gaussian space — call `model.subject_params()` to get MAP estimates already mapped into natural space via `param_xform`. See [Daw (2009)](https://www.princeton.edu/~ndaw/d10.pdf) for a discussion of why EM is done in Gaussian space rather than natural space.
 
 ## `GaussianPrior.sigma` looks too large compared to the standard deviation I expected — what is it?
 
@@ -10,7 +10,7 @@ The EM optimizer searches in **unbounded Gaussian space**, not in the natural pa
 
 ## What does my model's `fit_func` need to return, and what is `output="all"` for?
 
-A model's fit function has the signature `fit_func(params, *data, prior=None, output="npl")`. For `output="npl"` (negative posterior likelihood, the default used during EM) or `output="nll"` (negative log-likelihood), it must return a single scalar objective. For `output="all"`, it should instead return a diagnostics dictionary for that subject (containing at least an `"nll"` key, plus whatever per-trial quantities are useful for inspection — expected values, prediction errors, etc.). `output="all"` is what utilities like `get_outfit()`/`.outfit` and BIC/LME computations use to pull detailed per-subject fit information after the EM loop has converged.
+A model's fit function has the signature `fit_func(params, *data, prior=None, output="npl")`. For `output="npl"` (negative posterior likelihood, the default used during EM) or `output="nll"` (negative log-likelihood), it must return a single scalar objective. For `output="all"`, it should instead return a diagnostics dictionary for that subject (containing at least an `"nll"` key, plus whatever per-trial quantities are useful for inspection — expected values, prediction errors, etc.). `output="all"` is what utilities like `get_outfit()`/`.outfit` and BIC/LME computations use to pull detailed per-subject fit information after the EM loop has converged. You can also use this to inspect and visualize trialwise model predictions for each subject after fitting.
 
 ## How do I choose which M-step distribution family to use?
 
