@@ -11,7 +11,7 @@ def _require_seaborn():
     except ImportError as e:  # pragma: no cover
         raise ImportError(
             "This plotting helper needs seaborn. Install the optional extra: "
-            "pip install 'pyem[viz]'"
+            "pip install -e \".[viz]\""
         ) from e
 
 

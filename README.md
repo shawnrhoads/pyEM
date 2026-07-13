@@ -422,7 +422,6 @@ same shape:
 from pyem.core.modelspec import ModelSpec
 from pyem.utils.math import norm2alpha, norm2beta, calc_fval
 
-
 def my_model_fit(params, choices, rewards, *, prior=None, output="npl"):
     """Fit function for your custom model.
 
@@ -475,13 +474,14 @@ def my_model_sim(params, **kwargs):
     """
 
     # ---- YOUR CODE HERE  ---- 
-    # 
+    # Simulate trials/choices/rewards for your task and populate output arrays
     # ------------------------- 
 
-    fval = calc_fval(nll, params, output="nll")
+    # (Optional) If you want to compute a likelihood value for debugging, define
+    # it explicitly here; otherwise remove this line.
+    # fval = calc_fval(nll, params, output="nll")
 
     return {"params": params, "choices": choices, "rewards": rewards}
-
 
 # Wrapper metadata, following the same shape as every model in pyem.models.*
 my_model_desc = "One-sentence description of what this model does and its free parameters."
